@@ -8,6 +8,7 @@ import { jsonError } from "@/lib/http";
 import { reviewCommit } from "@/lib/llm/review";
 import { LlmError } from "@/lib/llm/structured";
 import { withLlm } from "@/lib/llm/route";
+import { hasAnthropicKey, MISSING_ANTHROPIC_KEY } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -78,8 +79,8 @@ async function handlePost(request: Request) {
     return jsonError(`リクエストの内容が正しくありません。${detail}`, 400);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return jsonError("サーバーに ANTHROPIC_API_KEY が設定されていません", 500);
+  if (!hasAnthropicKey()) {
+    return jsonError(MISSING_ANTHROPIC_KEY, 500);
   }
 
   try {

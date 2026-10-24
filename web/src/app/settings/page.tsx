@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConnectionsSection } from "@/components/settings/ConnectionsSection";
 import { Segmented } from "@/components/settings/Segmented";
 import type { LlmEffort, LlmModel } from "@/lib/api-types";
 import { useDemoMode } from "@/lib/demo/mode";
@@ -28,7 +29,7 @@ import {
   modelLabel,
 } from "@/lib/llm/models";
 
-// S-8 AI の設定と使用量（F-17）
+// S-8 設定：接続（F-18）、使う AI と使用量（F-17）
 
 const base = LLM_MODELS.find((m) => m.id === DEFAULT_MODEL)!.price.input;
 
@@ -82,10 +83,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-xl font-bold">AI の設定と使用量</h1>
+        <h1 className="text-xl font-bold">設定</h1>
         <p className="mt-1 text-sm text-gray-600">
-          機能ごとに、使う Claude
-          のモデルとエフォートを切り替えられます。上げるほど質が上がる見込みですが、料金と待ち時間も増えます。設定はこのブラウザに保存され、すぐに反映されます。
+          Claude API キーと GitHub
+          トークンをつなぎ、機能ごとに使う AI を選びます。使った量と料金の目安もここで見られます。
         </p>
         {demoMode && (
           <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -94,6 +95,8 @@ export default function SettingsPage() {
           </p>
         )}
       </div>
+
+      <ConnectionsSection />
 
       <section>
         <div className="flex items-center justify-between gap-3">
@@ -108,6 +111,9 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
+        <p className="mt-1 text-sm text-gray-600">
+          上げるほど質が上がる見込みですが、料金と待ち時間も増えます。このブラウザに保存され、すぐに反映されます。
+        </p>
         <div className="mt-3 space-y-3">
           {LLM_FEATURES.map((f) => {
             const s = settings[f.id];

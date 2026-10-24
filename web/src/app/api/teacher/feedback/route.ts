@@ -10,6 +10,7 @@ import {
   validationMessage,
 } from "@/lib/llm/teacher";
 import { withLlm } from "@/lib/llm/route";
+import { hasAnthropicKey, MISSING_ANTHROPIC_KEY } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,8 +21,8 @@ async function handlePost(request: Request) {
   if (!parsed.success) {
     return jsonError(validationMessage(parsed.error), 400);
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return jsonError("サーバーに ANTHROPIC_API_KEY が設定されていません", 500);
+  if (!hasAnthropicKey()) {
+    return jsonError(MISSING_ANTHROPIC_KEY, 500);
   }
   try {
     const result = await giveFeedback(parsed.data);

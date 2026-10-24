@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { MISSING_ANTHROPIC_KEY } from "@/lib/secrets";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReviewRequest } from "@/lib/api-types";
 
@@ -438,7 +439,7 @@ describe("POST /api/review", () => {
     const res = await post(req);
     expect(res.status).toBe(500);
     expect((await res.json()).error).toBe(
-      "サーバーに ANTHROPIC_API_KEY が設定されていません",
+      MISSING_ANTHROPIC_KEY,
     );
   });
 

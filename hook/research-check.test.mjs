@@ -198,7 +198,7 @@ test("parseTranscript: 最後がツールで終わっていれば直前の文章
   assert.deepEqual(parseObservedErrors(null, ""), []);
 });
 
-test("parseDotenv と loadConfig: 環境変数を優先し、無ければ web/.env.local から読む", () => {
+test("parseDotenv と loadConfig: 環境変数 → web/.env.local → アプリの設定ファイルの順に読む", () => {
   const parsed = parseDotenv(
     ['# コメント', 'A=1', 'export B="two words"', "C='3'", "D=4 # 後ろのコメント", "", "bad line"].join("\n"),
   );
@@ -213,11 +213,18 @@ test("parseDotenv と loadConfig: 環境変数を優先し、無ければ web/.e
       'RESEARCH_CHECK_TOKEN="from-file"\nRESEARCH_CHECK_URL=http://localhost:4000/\n',
     );
     const scriptDir = path.join(dir, "hook");
-    assert.deepEqual(loadConfig({}, scriptDir), { token: "from-file", url: "http://localhost:4000" });
-    assert.equal(loadConfig({ RESEARCH_CHECK_TOKEN: "from-env" }, scriptDir).token, "from-env");
-    assert.deepEqual(loadConfig({}, path.join(dir, "nowhere", "hook")), {
-      token: "", url: "http://localhost:3000",
-    });
+    const appConfig = path.join(dir, "config.json");
+    const none = { TAZUNA_CONFIG: path.join(dir, "missing.json") };
+    assert.deepEqual(loadConfig(none, scriptDir), { token: "from-file", url: "http://localhost:4000" });
+    assert.equal(loadConfig({ ...none, RESEARCH_CHECK_TOKEN: "from-env" }, scriptDir).token, "from-env");
+    const nowhere = path.join(dir, "nowhere", "hook");
+    assert.deepEqual(loadConfig(none, nowhere), { token: "", url: "http://localhost:3000" });
+
+    writeFileSync(appConfig, JSON.stringify({ researchCheckToken: "from-app" }));
+    assert.equal(loadConfig({ TAZUNA_CONFIG: appConfig }, nowhere).token, "from-app");
+    assert.equal(loadConfig({ TAZUNA_CONFIG: appConfig }, scriptDir).token, "from-file");
+    writeFileSync(appConfig, "{ broken");
+    assert.equal(loadConfig({ TAZUNA_CONFIG: appConfig }, nowhere).token, "");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -243,6 +250,7 @@ const GIT_ENV = {
   ...process.env,
   GIT_CONFIG_GLOBAL: "/dev/null",
   GIT_CONFIG_NOSYSTEM: "1",
+  TAZUNA_CONFIG: "/dev/null/tazuna-test/config.json", // 本物の ~/.tazuna を読まない
 };
 
 function git(cwd, ...args) {

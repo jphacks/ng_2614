@@ -19,6 +19,10 @@ import { LLM_HEADERS } from "./llm/models";
 import type {
   ApiError,
   CommitsResponse,
+  ConnectionsResponse,
+  ConnectionsUpdateRequest,
+  ConnectionTestRequest,
+  ConnectionTestResponse,
   DiffResponse,
   HookChangeResponse,
   HookChangesResponse,
@@ -205,4 +209,28 @@ export function postMapUpdate(
 ): Promise<MapUpdateResponse> {
   if (isDemoMode()) return demo(1500, () => demoMapUpdate(payload));
   return postJson<MapUpdateResponse>("/api/map/update", payload, "map");
+}
+
+// 接続の設定（F-18）。デモモードでも本物のサーバーに聞く（キーの値は返ってこない）
+export function fetchConnections(): Promise<ConnectionsResponse> {
+  return request<ConnectionsResponse>("/api/settings/connections");
+}
+
+export function saveConnections(
+  payload: ConnectionsUpdateRequest,
+): Promise<ConnectionsResponse> {
+  return request<ConnectionsResponse>("/api/settings/connections", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function testConnection(
+  payload: ConnectionTestRequest,
+): Promise<ConnectionTestResponse> {
+  return postJson<ConnectionTestResponse>(
+    "/api/settings/connections/test",
+    payload,
+  );
 }

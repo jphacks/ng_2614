@@ -25,6 +25,7 @@ import {
 } from "@/lib/workspace/parse";
 import { buildSkeleton } from "@/lib/workspace/skeleton";
 import { withLlm } from "@/lib/llm/route";
+import { hasAnthropicKey } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -193,7 +194,7 @@ async function handlePost(request: Request) {
     };
 
     // キーが無いときは AI を飛ばす（目的は空のまま）
-    const hasAi = Boolean(process.env.ANTHROPIC_API_KEY);
+    const hasAi = hasAnthropicKey();
     const fresh =
       hasAi && draft.tasks.length > 0
         ? await enrichMap({ theme, map: draft, docs })

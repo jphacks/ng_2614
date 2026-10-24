@@ -1,6 +1,6 @@
 // GitHub REST API からリポジトリの一覧・コミット・差分を取得する（サーバー側だけで使う）。
 // 差分は後で LLM に渡すので、サイズに上限を設けて切り詰める。
-// GITHUB_TOKEN の値は、ログにもエラーメッセージにも出さない。
+// GitHub トークン（設定画面で入れた値か GITHUB_TOKEN。lib/secrets.ts）の値は、ログにもエラーメッセージにも出さない。
 
 import type {
   CommitsResponse,
@@ -10,6 +10,7 @@ import type {
   RepoSummary,
   ReposResponse,
 } from "./api-types";
+import { githubToken } from "./secrets";
 
 const GITHUB_API_BASE = "https://api.github.com";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -104,7 +105,7 @@ export function parseSha(raw: string | null | undefined): string {
 // ---- GitHub への問い合わせ ----
 
 export function hasGithubToken(): boolean {
-  return Boolean(process.env.GITHUB_TOKEN?.trim());
+  return githubToken().value !== "";
 }
 
 function buildHeaders(): Record<string, string> {
@@ -112,7 +113,7 @@ function buildHeaders(): Record<string, string> {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
   };
-  const token = process.env.GITHUB_TOKEN?.trim();
+  const token = githubToken().value;
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -132,7 +133,7 @@ function isRateLimited(res: Response): boolean {
 export function mapGithubError(res: Response): GithubApiError {
   if (res.status === 401) {
     return new GithubApiError(
-      "GitHub のトークンが無効です。GITHUB_TOKEN を確認してください",
+      "GitHub のトークンが無効です。設定画面の「接続」で GitHub トークン（GITHUB_TOKEN）を確かめてください",
       401,
     );
   }
@@ -181,6 +182,13 @@ export async function githubGet(path: string): Promise<unknown> {
   } catch {
     throw new GithubApiError("GitHub API の応答を読み取れませんでした", 502);
   }
+}
+
+// トークンの持ち主（接続を確かめるとき。F-18）
+export async function fetchViewer(): Promise<{ login: string }> {
+  const login = str(asRecord(await githubGet("/user"))?.login);
+  if (!login) throw invalidResponse();
+  return { login };
 }
 
 function invalidResponse(): GithubApiError {
