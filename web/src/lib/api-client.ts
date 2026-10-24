@@ -11,12 +11,14 @@ import {
   demoTeacherTurn,
 } from "./demo/data";
 import { isDemoMode } from "./demo/mode";
+import { demoRepos } from "./demo/repos";
 import type {
   ApiError,
   CommitsResponse,
   DiffResponse,
   HookChangeResponse,
   HookChangesResponse,
+  ReposResponse,
   ReviewRequest,
   ReviewResponse,
   TeacherFeedbackRequest,
@@ -70,6 +72,13 @@ function demo<T>(ms: number, make: () => T): Promise<T> {
       }
     }, ms);
   });
+}
+
+export function fetchRepos(): Promise<ReposResponse> {
+  if (isDemoMode()) {
+    return demo(400, () => ({ tokenSet: true, repos: demoRepos }));
+  }
+  return request<ReposResponse>("/api/github/repos");
 }
 
 export function fetchCommits(repo: string): Promise<CommitsResponse> {

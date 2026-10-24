@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCommits,
   fetchDiff,
+  fetchRepos,
   GithubApiError,
   isLockfile,
   limitDiffFiles,
   mapCommit,
   mapDiff,
   mapGithubError,
+  mapRepo,
   MAX_DIFF_FILES,
   MAX_PATCH_CHARS_PER_FILE,
   MAX_PATCH_CHARS_TOTAL,
@@ -358,5 +360,76 @@ describe("fetchCommits / fetchDiff", () => {
     fetchMock.mockResolvedValue(new Response("not json", { status: 200 }));
     const err = await fetchCommits(repo).catch((e: unknown) => e);
     expect((err as GithubApiError).status).toBe(502);
+  });
+});
+
+describe("mapRepo", () => {
+  it("一覧に使う項目だけを取り出す", () => {
+    expect(
+      mapRepo({
+        full_name: "o/r",
+        private: true,
+        description: null,
+        language: "Python",
+        pushed_at: "2026-10-24T00:00:00Z",
+        html_url: "https://github.com/o/r",
+        owner: { login: "o" },
+      }),
+    ).toEqual({
+      fullName: "o/r",
+      private: true,
+      description: "",
+      language: "Python",
+      pushedAt: "2026-10-24T00:00:00Z",
+      url: "https://github.com/o/r",
+    });
+  });
+
+  it("full_name が無ければ 502", () => {
+    expectApiError(() => mapRepo({ name: "r" }), 502);
+  });
+});
+
+describe("fetchRepos", () => {
+  const fetchMock = vi.fn();
+  const originalToken = process.env.GITHUB_TOKEN;
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    delete process.env.GITHUB_TOKEN;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    if (originalToken === undefined) delete process.env.GITHUB_TOKEN;
+    else process.env.GITHUB_TOKEN = originalToken;
+  });
+
+  it("トークンが無ければ GitHub を呼ばず、tokenSet: false と空の一覧を返す", async () => {
+    expect(await fetchRepos()).toEqual({ tokenSet: false, repos: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("トークンがあれば、最後に push した順の自分のリポジトリを取る", async () => {
+    process.env.GITHUB_TOKEN = FAKE_TOKEN;
+    fetchMock.mockResolvedValue(jsonResponse([{ full_name: "o/r" }]));
+    const res = await fetchRepos();
+    expect(res.tokenSet).toBe(true);
+    expect(res.repos.map((r) => r.fullName)).toEqual(["o/r"]);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "https://api.github.com/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member",
+    );
+    expect(init.headers.Authorization).toBe(`Bearer ${FAKE_TOKEN}`);
+  });
+
+  it("トークンが無効なら 401 の GithubApiError（トークンはメッセージに出さない）", async () => {
+    process.env.GITHUB_TOKEN = FAKE_TOKEN;
+    fetchMock.mockResolvedValue(new Response("{}", { status: 401 }));
+    const err = await fetchRepos().catch((e: unknown) => e);
+    expect((err as GithubApiError).status).toBe(401);
+    expect((err as GithubApiError).message).not.toContain(FAKE_TOKEN);
   });
 });
