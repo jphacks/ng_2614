@@ -143,13 +143,13 @@ flowchart LR
 
 ## 7. 画面・UX
 
-| ID | 画面 | 内容 |
-| --- | --- | --- |
-| S-1 | 研究テーマ一覧・登録 | 研究テーマと研究の目的（問い・手法・評価）の登録と一覧（F-1） |
-| S-2 | 変更の取り込み | 作業の目的の入力と、GitHub のコミットの選択（F-2、F-3） |
-| S-3 | 判定結果 | 変更を「目的どおり／隠れた問題／余計な追加」に分けて表示。隠れた問題には研究への影響を表示し、保存できる（F-4〜F-6） |
-| S-4 | 問題ログ | 保存した問題を研究テーマごとに時系列で一覧。詳細でエラー内容・対処方法・研究への影響を見る（F-7） |
-| S-5 | 先生モード | AIの質問に答え、フィードバックを受ける。答えられなかった点が残る（F-8） |
+| ID | 画面 | URL | 内容 |
+| --- | --- | --- | --- |
+| S-1 | 研究テーマ一覧・登録 | `/` | 研究テーマと研究の目的（問い・手法・評価）の登録と一覧（F-1） |
+| S-4 | 研究テーマの詳細・問題ログ | `/themes/[themeId]` | 研究の目的の表示と編集、取り込んだ変更の一覧、保存した問題を時系列で一覧。詳細でエラー内容・対処方法・研究への影響を見る（F-1、F-7） |
+| S-2 | 変更の取り込み | `/themes/[themeId]/reviews/new` | 作業の目的の入力と、GitHub のコミットの選択（F-2、F-3） |
+| S-3 | 判定結果 | `/reviews/[reviewId]` | 変更を「目的どおり／隠れた問題／余計な追加」に分けて表示。隠れた問題には研究への影響を表示し、保存できる（F-4〜F-6） |
+| S-5 | 先生モード | `/themes/[themeId]/teacher` | AIの質問に答え、フィードバックを受ける。答えられなかった点が残る（F-8） |
 
 操作の順番：S-1 → S-2 → S-3 →（保存）→ S-4 ⇄ S-5
 
@@ -173,6 +173,7 @@ type Review = {
   themeId: string;
   purpose: string;        // 作業の目的
   commitSha: string;
+  commitMessage: string;
   createdAt: string;
   findings: Finding[];
 };
@@ -199,6 +200,7 @@ type TeacherSession = {
   items: {
     layer: "research" | "implementation";
     question: string;
+    findingId?: string;    // 保存した問題についての質問なら、その Finding の id
     answer: string;
     feedback: string;
     understood: boolean;   // false のものを「答えられなかった点」として残す
@@ -217,6 +219,8 @@ type TeacherSession = {
 | `POST /api/teacher/feedback` | 質問と回答を受け取り、フィードバックと `understood` を返す |
 
 LLM の出力は JSON で受け取り、型に合うか検証してから画面に出す。
+
+リクエストとレスポンスの型は `web/src/lib/api-types.ts` に定義する。画面側も API 側もこの型に合わせる。
 
 ## 10. 外部サービスと環境変数
 
@@ -276,3 +280,4 @@ LLM の出力は JSON で受け取り、型に合うか検証してから画面�
 | 2026-10-24 | 雛形を作成。テーマを記載 |
 | 2026-10-24 | 想定ユーザー、解決する課題（A＋C）、スコープ外（B）、形態（Web アプリ）、チーム人数を記載 |
 | 2026-10-24 | 初版を作成。壁打ちの決定事項に未決部分を【仮】で埋め、全章を記載 |
+| 2026-10-24 | 実装開始に合わせ、画面の URL、`Review.commitMessage`、`TeacherSession.items[].findingId` を追加。アプリは `web/` に置く |

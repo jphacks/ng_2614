@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* ライトテーマだけで作る（OS がダークモードでも白背景のまま表示する） */
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
+    Meiryo, sans-serif;
+}
