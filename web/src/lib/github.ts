@@ -1,4 +1,4 @@
-// GitHub REST API からコミットと差分を取得する（サーバー側だけで使う）。
+// GitHub REST API からリポジトリの一覧・コミット・差分を取得する（サーバー側だけで使う）。
 // 差分は後で LLM に渡すので、サイズに上限を設けて切り詰める。
 // GITHUB_TOKEN の値は、ログにもエラーメッセージにも出さない。
 
@@ -7,6 +7,8 @@ import type {
   CommitSummary,
   DiffFile,
   DiffResponse,
+  RepoSummary,
+  ReposResponse,
 } from "./api-types";
 
 const GITHUB_API_BASE = "https://api.github.com";
@@ -14,6 +16,9 @@ const FETCH_TIMEOUT_MS = 15_000;
 
 // コミット一覧の取得件数
 export const COMMITS_PER_PAGE = 30;
+
+// リポジトリの一覧の取得件数（1 ページだけ取る）
+export const REPOS_PER_PAGE = 100;
 
 // 差分のサイズ上限（LLM に送るため）
 export const MAX_DIFF_FILES = 50;
@@ -97,6 +102,10 @@ export function parseSha(raw: string | null | undefined): string {
 }
 
 // ---- GitHub への問い合わせ ----
+
+export function hasGithubToken(): boolean {
+  return Boolean(process.env.GITHUB_TOKEN?.trim());
+}
 
 function buildHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
@@ -189,6 +198,36 @@ function str(value: unknown): string {
 
 function num(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+// ---- リポジトリの一覧 ----
+
+export function mapRepo(raw: unknown): RepoSummary {
+  const item = asRecord(raw);
+  if (!item || typeof item.full_name !== "string") throw invalidResponse();
+  return {
+    fullName: item.full_name,
+    private: item.private === true,
+    description: str(item.description),
+    language: str(item.language),
+    pushedAt: str(item.pushed_at),
+    url: str(item.html_url),
+  };
+}
+
+export function mapRepos(raw: unknown): RepoSummary[] {
+  if (!Array.isArray(raw)) throw invalidResponse();
+  return raw.map(mapRepo);
+}
+
+// トークンで読める自分のリポジトリ（自分のもの・共同編集者・所属する組織）を、最後に push した順に返す。
+// トークンが無ければ GitHub を呼ばずに空の一覧を返す（トークン無しでは「自分」が分からないため）
+export async function fetchRepos(): Promise<ReposResponse> {
+  if (!hasGithubToken()) return { tokenSet: false, repos: [] };
+  const raw = await githubGet(
+    `/user/repos?per_page=${REPOS_PER_PAGE}&sort=pushed&affiliation=owner,collaborator,organization_member`,
+  );
+  return { tokenSet: true, repos: mapRepos(raw) };
 }
 
 // ---- コミット一覧 ----

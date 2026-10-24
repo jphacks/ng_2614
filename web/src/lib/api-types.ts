@@ -12,6 +12,20 @@ import type {
 // すべての API は失敗時にこの形で返す（HTTP ステータスは 4xx / 5xx）
 export type ApiError = { error: string };
 
+// GET /api/github/repos（新しいプロジェクト S-6 のリポジトリの一覧）
+export type RepoSummary = {
+  fullName: string; // owner/name
+  private: boolean;
+  description: string;
+  language: string;
+  pushedAt: string; // ISO 8601。最後に push した日時
+  url: string; // GitHub 上のリポジトリの URL
+};
+export type ReposResponse = {
+  tokenSet: boolean; // サーバーに GITHUB_TOKEN が無ければ false（一覧は空。手で入力してもらう）
+  repos: RepoSummary[]; // 最後に push した順
+};
+
 // GET /api/github/commits?repo=owner/name
 export type CommitSummary = {
   sha: string;

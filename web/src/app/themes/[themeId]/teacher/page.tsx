@@ -171,9 +171,9 @@ export default function TeacherPage() {
   if (theme === null) {
     return (
       <div>
-        <p>研究テーマが見つかりません。</p>
+        <p>プロジェクトが見つかりません。</p>
         <Link href="/" className="mt-2 inline-block text-blue-700 underline">
-          研究テーマ一覧へ戻る
+          プロジェクト一覧へ戻る
         </Link>
       </div>
     );
