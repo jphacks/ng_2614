@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchCommits, fetchDiff, postReview } from "@/lib/api-client";
 import type { CommitSummary } from "@/lib/api-types";
+import { saveDiff } from "@/lib/diff-store";
 import { getTheme, newId, nowIso, saveReview } from "@/lib/storage";
 import type { ResearchTheme, Review } from "@/lib/types";
 import { CommitPicker } from "@/components/review/CommitPicker";
@@ -108,6 +109,7 @@ export default function NewReviewPage() {
         findings,
       };
       saveReview(review);
+      await saveDiff(review.id, diff);
       router.push(`/reviews/${review.id}`);
     } catch (err) {
       setSubmit({ status: "error", message: errorMessage(err) });

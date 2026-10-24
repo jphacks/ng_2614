@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-client";
 import type { DiffResponse, HookChange } from "@/lib/api-types";
 import { buildHookReviewRequest, hookPurpose } from "@/lib/hook-review";
+import { saveDiff } from "@/lib/diff-store";
 import { findThemeByRepo, newId, nowIso, saveHookReview } from "@/lib/storage";
 import type { Review } from "@/lib/types";
 import { headline } from "@/components/review/labels";
@@ -103,7 +104,8 @@ export function HookInbox() {
           createdAt: nowIso(),
           findings,
         };
-        saveHookReview(review, commit);
+        saveHookReview(review);
+        await saveDiff(review.id, commit);
         upsert({
           id: change.id,
           kind: "done",

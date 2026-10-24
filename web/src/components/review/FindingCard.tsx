@@ -1,9 +1,12 @@
+import type { DiffFile } from "@/lib/api-types";
 import type { Finding, FindingType } from "@/lib/types";
+import { FindingDiffs } from "./DiffView";
 import { FileList } from "./FileList";
 import { FindingTypeSelect } from "./FindingTypeSelect";
 
 type Props = {
   finding: Finding;
+  diffFiles: DiffFile[]; // この項目に関係するファイルの差分（F-14）
   onChangeType: (type: FindingType) => void;
   onToggleSaved: (saved: boolean) => void;
 };
@@ -27,7 +30,12 @@ function Field({
   );
 }
 
-function HiddenProblemCard({ finding, onChangeType, onToggleSaved }: Props) {
+function HiddenProblemCard({
+  finding,
+  diffFiles,
+  onChangeType,
+  onToggleSaved,
+}: Props) {
   const impact = finding.researchImpact;
   const saved = finding.saved === true;
   return (
@@ -91,6 +99,7 @@ function HiddenProblemCard({ finding, onChangeType, onToggleSaved }: Props) {
           </div>
         )}
         <FileList files={finding.files} />
+        <FindingDiffs files={diffFiles} />
       </div>
 
       <div className="mt-3 flex justify-end">
@@ -100,7 +109,7 @@ function HiddenProblemCard({ finding, onChangeType, onToggleSaved }: Props) {
   );
 }
 
-function ExtraAdditionCard({ finding, onChangeType }: Props) {
+function ExtraAdditionCard({ finding, diffFiles, onChangeType }: Props) {
   return (
     <article className="rounded-lg border border-orange-200 bg-orange-50/40 p-4">
       <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[11px] font-medium text-orange-800">
@@ -109,8 +118,9 @@ function ExtraAdditionCard({ finding, onChangeType }: Props) {
       <p className="mt-2 whitespace-pre-wrap text-sm text-gray-900">
         {finding.summary}
       </p>
-      <div className="mt-2">
+      <div className="mt-2 space-y-2">
         <FileList files={finding.files} />
+        <FindingDiffs files={diffFiles} />
       </div>
       <div className="mt-3 flex justify-end">
         <FindingTypeSelect value={finding.type} onChange={onChangeType} />
@@ -119,12 +129,13 @@ function ExtraAdditionCard({ finding, onChangeType }: Props) {
   );
 }
 
-function OnPurposeCard({ finding, onChangeType }: Props) {
+function OnPurposeCard({ finding, diffFiles, onChangeType }: Props) {
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-3 text-gray-600">
       <p className="whitespace-pre-wrap text-sm">{finding.summary}</p>
-      <div className="mt-2">
+      <div className="mt-2 space-y-2">
         <FileList files={finding.files} />
+        <FindingDiffs files={diffFiles} />
       </div>
       <div className="mt-2 flex justify-end">
         <FindingTypeSelect value={finding.type} onChange={onChangeType} />
