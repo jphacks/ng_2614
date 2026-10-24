@@ -24,6 +24,9 @@ build/
 .next/
 out/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # OS / editor
 .DS_Store
 .vscode/
