@@ -422,7 +422,7 @@ function evaluationQuestion(evaluation: string): DemoQuestion {
     homework:
       "linear と cosine の差が、seed による標準偏差より大きいかを確かめておいてください。",
     aiDidIt:
-      "評価の仕方を決めるのはあなたです。研究の問いに照らして、何を測りたいのか説明してください。",
+      "評価の仕方は AI ではなく研究の問いで決まります。この評価で、何を測りたいのですか？",
   };
 }
 
@@ -536,7 +536,7 @@ export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
     "それは、あなたの研究の問いにどう関係しますか？";
   let message: string;
   if (q && isAiDidIt(last)) message = q.aiDidIt;
-  else if (isDontKnow(last)) message = `では、ここから考えてください。${probe}`;
+  else if (isDontKnow(last)) message = probe;
   else if (covered.length === req.covered.length)
     message = `それでは理由になっていません。${probe}`;
   else message = probe;
