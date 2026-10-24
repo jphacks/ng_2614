@@ -30,33 +30,46 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
   }
   return (
     <ul className="space-y-2">
-      {reviews.map((review) => (
-        <li key={review.id}>
-          <Link
-            href={`/reviews/${review.id}`}
-            className="block rounded-md border border-gray-200 p-3 hover:border-blue-400 hover:bg-blue-50"
-          >
-            <p className="text-sm font-medium text-gray-900">
-              {firstLine(review.commitMessage) || "(コミットメッセージなし)"}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {formatDate(review.createdAt)}
-              <span className="mx-2">・</span>
-              <span className="font-mono">{shortSha(review.commitSha)}</span>
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {TYPE_LABELS.map(({ type, label, className }) => (
-                <span
-                  key={type}
-                  className={`rounded px-2 py-0.5 text-xs ${className}`}
-                >
-                  {label} {review.findings.filter((f) => f.type === type).length}
-                </span>
-              ))}
-            </div>
-          </Link>
-        </li>
-      ))}
+      {reviews.map((review) => {
+        const isHook = review.source === "claude_code_hook";
+        return (
+          <li key={review.id}>
+            <Link
+              href={`/reviews/${review.id}`}
+              className="block rounded-md border border-gray-200 p-3 hover:border-blue-400 hover:bg-blue-50"
+            >
+              <p className="text-sm font-medium text-gray-900">
+                {isHook
+                  ? firstLine(review.purpose) || "（依頼文なし）"
+                  : firstLine(review.commitMessage) ||
+                    "(コミットメッセージなし)"}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {formatDate(review.createdAt)}
+                <span className="mx-2">・</span>
+                {isHook ? (
+                  "Claude Code の作業"
+                ) : (
+                  <span className="font-mono">
+                    {shortSha(review.commitSha)}
+                  </span>
+                )}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {TYPE_LABELS.map(({ type, label, className }) => (
+                  <span
+                    key={type}
+                    className={`rounded px-2 py-0.5 text-xs ${className}`}
+                  >
+                    {label}{" "}
+                    {review.findings.filter((f) => f.type === type).length}
+                  </span>
+                ))}
+              </div>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }
