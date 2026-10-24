@@ -73,7 +73,7 @@ export function HookInbox() {
       upsert({ id: change.id, kind: "judging", title });
       try {
         const theme = findThemeByRepo(change.repo);
-        if (!theme) throw new Error("研究テーマが見つかりません。");
+        if (!theme) throw new Error("プロジェクトが見つかりません。");
         const purpose = hookPurpose(change.prompt, change.earlierPrompts);
         const commit: DiffResponse = {
           sha: "",
@@ -88,6 +88,7 @@ export function HookInbox() {
             observedErrors: change.observedErrors,
             generatedFiles: change.generatedFiles,
             headMoved: change.headMoved,
+            aiReport: change.aiReport,
           }),
         );
         const review: Review = {
@@ -101,6 +102,7 @@ export function HookInbox() {
           observedErrors: change.observedErrors, // 保存時に500文字へ切られる
           generatedFiles: change.generatedFiles,
           headMoved: change.headMoved,
+          aiReport: change.aiReport,
           createdAt: nowIso(),
           findings,
         };
@@ -260,11 +262,18 @@ function NoticeBody({
         <>
           <p>
             {notice.repo
-              ? `Claude Code から変更が届いています（リポジトリ：${notice.repo}）。この研究テーマが登録されていないため判定できません。`
+              ? `Claude Code から変更が届いています（リポジトリ：${notice.repo}）。このリポジトリのプロジェクトが登録されていないため判定できません。`
               : "Claude Code から変更が届いていますが、リポジトリを特定できなかったため判定できません。"}
           </p>
-          <Link href="/" className="text-blue-700 underline">
-            研究テーマを登録する
+          <Link
+            href={
+              notice.repo
+                ? `/projects/new?repo=${encodeURIComponent(notice.repo)}`
+                : "/projects/new"
+            }
+            className="text-blue-700 underline"
+          >
+            プロジェクトを登録する
           </Link>
         </>
       );

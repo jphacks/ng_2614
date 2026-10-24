@@ -53,6 +53,7 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
+        covered: [],
         turns: [...start, { role: "student", text: "エラーが出たから" }],
       });
       expect(res.done).toBe(false);
@@ -63,9 +64,10 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
+        covered: [],
         turns: [
           ...start,
-          { role: "student", text: "除外で件数が減り、データに偏りが出て比較の条件が変わるからです" },
+          { role: "student", text: "正規化したまま測ると、元のスケールで測る README の評価と値の意味が変わるからです" },
         ],
       });
       expect(res).toMatchObject({ done: true, understood: true });
@@ -75,6 +77,7 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
+        covered: [],
         turns: [
           ...start,
           { role: "student", text: "分かりません" },
@@ -90,10 +93,35 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
+        covered: [],
         turns: [...start, { role: "student", text: "AIがやったので分かりません" }],
       });
       expect(res.done).toBe(false);
-      expect(res.message).toContain("dropna");
+      expect(res.message).toContain("normalize");
+    });
+
+    it("質問には必須の観点が付き、言えた観点は積み上がる", () => {
+      expect(q.viewpoints.some((v) => v.required)).toBe(true);
+      const first = demoTeacherTurn({
+        theme,
+        question: q,
+        covered: [],
+        turns: [...start, { role: "student", text: "元のスケールのまま測っていないので README と違います" }],
+      });
+      expect(first.done).toBe(false);
+      expect(first.covered).toEqual(["v2"]);
+      const second = demoTeacherTurn({
+        theme,
+        question: q,
+        covered: first.covered,
+        turns: [
+          ...start,
+          { role: "student", text: "元のスケールのまま測っていないので README と違います" },
+          { role: "teacher", text: first.message },
+          { role: "student", text: "だから前の結果とそのまま比べられません" },
+        ],
+      });
+      expect(second).toMatchObject({ done: true, understood: true, covered: ["v2", "v3"] });
     });
   });
 

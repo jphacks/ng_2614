@@ -43,6 +43,8 @@ export type ReviewSource = "commit" | "claude_code_hook";
 
 // 会話記録から取り出した、失敗したコマンドとその出力（F-13）
 export type ObservedError = {
+  // 失敗したコマンド（"failed"）か、成功したコマンドの出力に出たエラー（"in_output"）か。無いときは "failed"
+  kind?: "failed" | "in_output";
   tool: string; // "Bash" など
   input: string; // 実行したコマンドなど
   output: string; // エラーの出力（送るときは2,000文字、保存するときは500文字まで）
@@ -60,12 +62,20 @@ export type Review = {
   earlierPrompts?: string[]; // 同じ会話でそれまでにした依頼文（古い順、直近5件まで）
   observedErrors?: ObservedError[]; // 作業中に実際に起きたエラー
   generatedFiles?: string[]; // 実行でできたファイル（実験の出力。中身は送らない）
+  aiReport?: string; // AI の最終報告（3,000文字まで）
   headMoved?: boolean; // 作業中に pull やブランチの切り替えがあった
   createdAt: string; // ISO 8601
   findings: Finding[];
 };
 
 export type QuestionLayer = "research" | "implementation";
+
+// 先生が想定している解答の観点（F-8 の採点に使う）
+export type Viewpoint = {
+  id: string; // 質問の中で一意（"v1" など）
+  text: string; // 1つの観点に1つの主張
+  required: boolean; // true の観点がすべて言えたら「理解できた」で終える
+};
 
 // 先生モードの1つの質問の中のやりとり（問い返し）
 export type TeacherTurn = {
@@ -81,6 +91,8 @@ export type TeacherItem = {
   feedback: string; // 最後の講評
   understood: boolean; // false のものを「答えられなかった点」として残す
   turns?: TeacherTurn[]; // 最初の質問からのやりとり全体（問い返し型になる前の記録には無い）
+  viewpoints?: Viewpoint[]; // 想定解答の観点（観点による採点の前の記録には無い）
+  covered?: string[]; // 言えた観点の id
 };
 
 // 先生モード

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { MapUpdateRequest } from "@/lib/api-types";
 import type { Review } from "@/lib/types";
 import {
-  CLASS_WEIGHT_SUMMARY,
+  CLIP_SUMMARY,
   DEMO_THEME_ID,
-  DROPNA_SUMMARY,
   MAIN_SHA,
+  NORMALIZE_SUMMARY,
   README_SHA,
   demoReviewFindings,
   demoTheme,
@@ -32,9 +32,9 @@ function makeReview(sha: string): Review {
   return {
     id: "review-1",
     themeId: DEMO_THEME_ID,
-    purpose: "学習・評価スクリプトを作る",
+    purpose: "cosine スケジュールを追加して linear と比較する",
     commitSha: sha,
-    commitMessage: "学習・評価スクリプトを追加",
+    commitMessage: "cosine スケジュールを追加して linear と比較",
     createdAt: NOW,
     findings: demoReviewFindings(sha),
   };
@@ -104,21 +104,23 @@ describe("デモの作業フローマップ（取り込み前）", () => {
 });
 
 describe("デモの作業フローマップの更新（取り込み後）", () => {
-  it("学習・評価スクリプトのコミットで見せ場の変更を返す", () => {
+  it("cosine スケジュールと比較スクリプトのコミットで見せ場の変更を返す", () => {
     const review = makeReview(MAIN_SHA);
     const { ops, workspaceSha } = demoMapUpdate(makeUpdateReq(review));
     expect(workspaceSha).toBeTruthy();
-    expect(ops).toHaveLength(8);
+    expect(ops).toHaveLength(9);
 
     const updates = ops.filter((o) => o.op === "update_task");
     expect(updates.map((o) => o.taskId)).toEqual([
       "demo-task-i1",
-      "demo-task-r3-drop",
+      "demo-task-r3-normalize",
+      "demo-task-r3-clip",
       "demo-task-v1",
     ]);
     expect(updates[0]).toMatchObject({ status: "done", statusSource: "record" });
     expect(updates[1]).toMatchObject({ status: "doing", statusSource: "ai" });
-    expect(updates[2]).toMatchObject({ status: "todo", statusSource: "record" });
+    expect(updates[2]).toMatchObject({ status: "doing", statusSource: "ai" });
+    expect(updates[3]).toMatchObject({ status: "todo", statusSource: "record" });
 
     const adds = ops.filter((o) => o.op === "add_task");
     expect(adds).toHaveLength(2);
@@ -142,24 +144,24 @@ describe("デモの作業フローマップの更新（取り込み後）", () =
     const review = makeReview(MAIN_SHA);
     const req = makeUpdateReq(review);
     const { ops } = demoMapUpdate(req);
-    const dropnaId = review.findings.find((f) => f.summary === DROPNA_SUMMARY)?.id;
-    const classWeightId = review.findings.find((f) => f.summary === CLASS_WEIGHT_SUMMARY)?.id;
-    expect(dropnaId).toBeTruthy();
-    expect(classWeightId).toBeTruthy();
+    const normalizeId = review.findings.find((f) => f.summary === NORMALIZE_SUMMARY)?.id;
+    const clipId = review.findings.find((f) => f.summary === CLIP_SUMMARY)?.id;
+    expect(normalizeId).toBeTruthy();
+    expect(clipId).toBeTruthy();
 
     const links = ops.filter((o) => o.op === "add_link");
     expect(links).toHaveLength(2);
     expect(links[0]).toMatchObject({
       kind: "impact",
       fromTaskId: "demo-task-i1",
-      toTaskId: "demo-task-s1-b1",
-      findingId: dropnaId,
+      toTaskId: "demo-task-s1-b2",
+      findingId: normalizeId,
     });
     expect(links[1]).toMatchObject({
       kind: "impact",
       fromTaskId: "demo-task-i1",
       toTaskId: "demo-task-s1-b3",
-      findingId: classWeightId,
+      findingId: clipId,
     });
 
     // op の参照先（add_task の tempId を除く）は、マップに存在する
@@ -186,16 +188,16 @@ describe("デモの作業フローマップの更新（取り込み後）", () =
     );
     const { ops } = demoMapUpdate(makeUpdateReq(review));
     expect(ops.filter((o) => o.op === "add_link")).toHaveLength(0);
-    expect(ops).toHaveLength(6);
+    expect(ops).toHaveLength(5);
   });
 
   it("片方の隠れた問題しか無ければ、その impact だけ出る", () => {
     const review = makeReview(MAIN_SHA);
-    review.findings = review.findings.filter((f) => f.summary !== CLASS_WEIGHT_SUMMARY);
+    review.findings = review.findings.filter((f) => f.summary !== CLIP_SUMMARY);
     const { ops } = demoMapUpdate(makeUpdateReq(review));
     const links = ops.filter((o) => o.op === "add_link");
     expect(links).toHaveLength(1);
-    expect(links[0]).toMatchObject({ toTaskId: "demo-task-s1-b1" });
+    expect(links[0]).toMatchObject({ toTaskId: "demo-task-s1-b2" });
   });
 
   it("ほかのコミットなら空の一覧を返す", () => {

@@ -1,5 +1,5 @@
 // デモモード（F-12）で使う、作業フローマップ（F-15）のデモデータ。
-// 題材は data.ts と同じ「健診データの疾患分類」。research-workspace の形式の、小さな架空のワークスペースから作ったマップ。
+// 題材は data.ts と同じ「DDPM のノイズスケジュール（cosine は linear より生成の質が上がるか）」。research-workspace の形式の、小さな架空のワークスペースから作ったマップ。
 // 【担当：サブエージェント B。シグネチャは api-client.ts（親）が使うので変えない】
 
 import type { MapGenerateRequest, MapUpdateRequest, MapUpdateResponse } from "@/lib/api-types";
@@ -14,28 +14,28 @@ import type {
   WorkflowMap,
 } from "@/lib/types";
 import {
-  CLASS_WEIGHT_SUMMARY,
+  CLIP_SUMMARY,
   DEMO_THEME_ID,
-  DROPNA_SUMMARY,
   MAIN_SHA,
+  NORMALIZE_SUMMARY,
   demoCommits,
 } from "./data";
 
 // 架空のワークスペース（demo-lab/research-workspace）
 const WORKSPACE_REPO = "demo-lab/research-workspace";
-const WORKSPACE_PROJECT = ".research/lab/projects/health-checkup-classification";
+const WORKSPACE_PROJECT = ".research/lab/projects/ddpm-noise-schedule";
 const WORKSPACE_SHA_BEFORE = "e41b7d09c3a85f2e6b1d4c7a9f0e3b5d8c2a6f14";
 const WORKSPACE_SHA_AFTER = "7c2e9a4f1b6d03e85a7c9b2d4f6e1a3c5b8d0e97";
 
 const WS = WORKSPACE_PROJECT;
-const BRAINSTORM_PATH = ".research/secretary/notes/brainstorm/2026-10-20-model-candidates.md";
-const PAPER_PATH = ".research/secretary/notes/papers/2026-10-20-lightgbm.md";
+const BRAINSTORM_PATH = ".research/secretary/notes/brainstorm/2026-10-20-schedule-candidates.md";
+const PAPER_PATH = ".research/secretary/notes/papers/2026-10-20-improved-ddpm.md";
 const METRIC_BRAINSTORM_PATH = ".research/secretary/notes/brainstorm/2026-10-21-metric.md";
-const SPEC_PATH = `${WS}/specs/2026-10-21-model-comparison-spec.md`;
+const SPEC_PATH = `${WS}/specs/2026-10-21-schedule-comparison-spec.md`;
 const METRIC_SPEC_PATH = `${WS}/specs/2026-10-23-metric-spec.md`;
 const MEETING_PATH = `${WS}/meetings/2026-10-22-seminar.md`;
 const MATERIAL_PATH = `${WS}/materials/2026-10-midterm-report.md`;
-const EXPERIMENT_PATH = `${WS}/experiments/2026-10-24-cv-comparison.md`;
+const EXPERIMENT_PATH = `${WS}/experiments/2026-10-24-seed-comparison.md`;
 
 // ---- ID ----
 
@@ -56,14 +56,15 @@ const MILESTONE = {
 const TASK = {
   candidates: "demo-task-r1",
   metrics: "demo-task-r2",
-  missing: "demo-task-r3",
-  missingDrop: "demo-task-r3-drop",
+  stable: "demo-task-r3",
+  stableNormalize: "demo-task-r3-normalize",
+  stableClip: "demo-task-r3-clip",
   specCompare: "demo-task-s1",
-  specCompareB1: "demo-task-s1-b1",
+  specCompareB2: "demo-task-s1-b2",
   specCompareB3: "demo-task-s1-b3",
   specMetric: "demo-task-s2",
-  trainPy: "demo-task-i1",
-  cv: "demo-task-v1",
+  script: "demo-task-i1",
+  seeds: "demo-task-v1",
   seminar: "demo-task-m1",
   midterm: "demo-task-m2",
 } as const;
@@ -121,7 +122,7 @@ const PHASES: MapPhase[] = [
 ];
 
 const MILESTONES: MapMilestone[] = [
-  { id: MILESTONE.compare, title: "LightGBM とロジスティック回帰を同じ条件で比べる", done: false },
+  { id: MILESTONE.compare, title: "linear と cosine を同じ条件で比べる", done: false },
   { id: MILESTONE.metric, title: "評価指標を決める", done: false },
   { id: MILESTONE.seminar, title: "ゼミで中間報告する", done: false },
 ];
@@ -133,9 +134,9 @@ function demoTasks(): MapTask[] {
   const brainstorm: MapSource = {
     kind: "brainstorm",
     path: BRAINSTORM_PATH,
-    label: "手法の候補の壁打ち",
+    label: "スケジュールの候補の壁打ち",
   };
-  const paper: MapSource = { kind: "paper", path: PAPER_PATH, label: "LightGBM の論文メモ" };
+  const paper: MapSource = { kind: "paper", path: PAPER_PATH, label: "Improved DDPM の論文メモ" };
   const metricBrainstorm: MapSource = {
     kind: "brainstorm",
     path: METRIC_BRAINSTORM_PATH,
@@ -152,45 +153,45 @@ function demoTasks(): MapTask[] {
       phaseId: PHASE.research,
       milestoneId: m1,
       order: 0,
-      title: "比較する手法の候補を洗い出す",
-      purpose: "「LightGBM はロジスティック回帰を上回るか」を問うために、何と何を比べるかを決める。",
+      title: "比べるノイズスケジュールの候補を洗い出す",
+      purpose: "「cosine は linear より生成の質が上がるか」を問うために、何と何を比べるかを決める。",
       status: "done",
-      result: "LightGBM とロジスティック回帰の2つに絞った",
+      result: "linear と cosine の2つに絞った",
       sources: [brainstorm, paper],
     }),
     task({
-      id: "demo-task-r1-lgbm",
+      id: "demo-task-r1-linear",
       phaseId: PHASE.research,
       parentId: TASK.candidates,
       milestoneId: m1,
       order: 0,
-      title: "LightGBM（欠損値をそのまま扱える）",
-      purpose: "研究の問いで上回るかを確かめたい提案手法を、候補として押さえる。",
+      title: "linear（β を 1e-4 から 0.02 まで線形）",
+      purpose: "cosine が上回ったと言うための、比べる相手（ベースライン）を決める。",
       status: "done",
       sources: [brainstorm],
     }),
     task({
-      id: "demo-task-r1-logreg",
+      id: "demo-task-r1-cosine",
       phaseId: PHASE.research,
       parentId: TASK.candidates,
       milestoneId: m1,
       order: 1,
-      title: "ロジスティック回帰（ベースライン）",
-      purpose: "LightGBM が上回ったと言うための、比べる相手（従来手法）を決める。",
+      title: "cosine（Nichol & Dhariwal, 2021）",
+      purpose: "研究の問いで linear より良いかを確かめたい提案側を、候補として押さえる。",
       status: "done",
-      sources: [brainstorm],
+      sources: [brainstorm, paper],
     }),
     task({
-      id: "demo-task-r1-rf",
+      id: "demo-task-r1-sigmoid",
       phaseId: PHASE.research,
       parentId: TASK.candidates,
       milestoneId: m1,
       order: 2,
-      title: "ランダムフォレスト",
+      title: "sigmoid スケジュールも比べる",
       purpose: "第3の候補として検討したが、研究の問いに答える比較には含めないと決めた。",
       status: "rejected",
       statusSource: "ai",
-      rejectReason: "LightGBM と性質が近く、比べても問いに答えにくい",
+      rejectReason: "3つ以上で比べると差の原因を切り分けにくく、問いは linear との比較だけで答えられる",
       sources: [brainstorm],
     }),
     task({
@@ -199,75 +200,75 @@ function demoTasks(): MapTask[] {
       milestoneId: m2,
       order: 1,
       title: "評価指標の検討",
-      purpose: "どの数字で「上回った」と言うかを決めないと、比較の結論が出せない。",
+      purpose: "どの数字で「生成の質が上がった」と言うかを決めないと、比較の結論が出せない。",
       status: "done",
-      result: "マクロ F1 を使う方向",
+      result: "sliced Wasserstein 距離を使う方向",
       sources: [metricBrainstorm],
     }),
     task({
-      id: "demo-task-r2-f1",
+      id: "demo-task-r2-sw",
       phaseId: PHASE.research,
       parentId: TASK.metrics,
       milestoneId: m2,
       order: 0,
-      title: "マクロ F1",
-      purpose: "陽性が少ないデータでも、陽性・陰性の両方の出来を同じ重みで見られる指標にする。",
+      title: "sliced Wasserstein 距離",
+      purpose: "生成した点と本物の点に1対1の対応が無くても、点の集まりどうしの近さを1つの数で測れる指標にする。",
       status: "done",
       sources: [metricBrainstorm],
     }),
     task({
-      id: "demo-task-r2-acc",
+      id: "demo-task-r2-fid",
       phaseId: PHASE.research,
       parentId: TASK.metrics,
       milestoneId: m2,
       order: 1,
-      title: "正解率",
-      purpose: "分かりやすい指標として検討したが、このデータでは手法の差を測れない。",
+      title: "FID・IS だけで評価する",
+      purpose: "画像の生成でよく使われる指標として検討したが、このデータでは生成の質を測れない。",
       status: "rejected",
       statusSource: "ai",
-      rejectReason: "陽性が約12%なので、すべて陰性と予測しても約88%になる",
+      rejectReason: "画像用の分類器が前提で、2次元のトイデータ（swiss roll）には使えない",
       sources: [metricBrainstorm],
     }),
     task({
-      id: TASK.missing,
+      id: TASK.stable,
       phaseId: PHASE.research,
       milestoneId: m1,
       order: 2,
-      title: "欠損値の扱いを調べる",
+      title: "学習とサンプリングを安定させる方法を調べる",
       purpose:
-        "欠損値の扱いで比較の結果が変わりうるので、両手法を公平に比べられる扱い方を決める。",
+        "安定させる方法で比較の結果が変わりうるので、linear と cosine を公平に比べられる扱い方を決める。",
       status: "doing",
       statusRaw: "exploratory",
       sources: [brainstorm],
     }),
     task({
-      id: TASK.missingDrop,
+      id: TASK.stableNormalize,
       phaseId: PHASE.research,
-      parentId: TASK.missing,
+      parentId: TASK.stable,
       milestoneId: m1,
       order: 0,
-      title: "欠損のある行を除外する",
-      purpose: "扱いが簡単だが、データ件数が減り、比べるデータそのものが変わらないかを確かめる。",
+      title: "データを正規化する",
+      purpose: "学習が発散しにくくなるが、評価に使う値のスケールが変わらないかを確かめる。",
       status: "todo",
     }),
     task({
-      id: "demo-task-r3-median",
+      id: TASK.stableClip,
       phaseId: PHASE.research,
-      parentId: TASK.missing,
+      parentId: TASK.stable,
       milestoneId: m1,
       order: 1,
-      title: "中央値で補完する",
-      purpose: "データを減らさずに両手法へ同じデータを渡せるかを確かめる。",
+      title: "cosine の β に上限を付ける",
+      purpose: "サンプルの飛び散りを抑えられるが、比べているのが論文の cosine のままかを確かめる。",
       status: "todo",
     }),
     task({
-      id: "demo-task-r3-keep",
+      id: "demo-task-r3-lr",
       phaseId: PHASE.research,
-      parentId: TASK.missing,
+      parentId: TASK.stable,
       milestoneId: m1,
       order: 2,
-      title: "LightGBM には欠損のまま渡す",
-      purpose: "LightGBM の強み（欠損をそのまま扱える）を生かすと、比較の条件がどう変わるかを確かめる。",
+      title: "学習率を下げる",
+      purpose: "スケジュールの条件を変えずに、学習を安定させられるかを確かめる。",
       status: "todo",
     }),
 
@@ -278,30 +279,30 @@ function demoTasks(): MapTask[] {
       milestoneId: m1,
       order: 0,
       title: "比較実験の spec",
-      purpose: "2つの手法を同じ条件で比べるための実験の約束事を決める。",
+      purpose: "2つのスケジュールを同じ条件で比べるための実験の約束事を決める。",
       status: "done",
       statusRaw: "approved",
       sources: [spec],
     }),
     task({
-      id: TASK.specCompareB1,
+      id: "demo-task-s1-b1",
       phaseId: PHASE.select,
       parentId: TASK.specCompare,
       milestoneId: m1,
       order: 0,
-      title: "B1 前処理と特徴量を両手法で揃える",
-      purpose: "手法以外の差が結果に混ざらないよう、入力のデータを同じにする。",
+      title: "B1 データ・モデル・T・学習の設定を両者で揃える",
+      purpose: "スケジュール以外の差が結果に混ざらないよう、変えるのはスケジュールだけにする。",
       status: "done",
       sources: [spec],
     }),
     task({
-      id: "demo-task-s1-b2",
+      id: TASK.specCompareB2,
       phaseId: PHASE.select,
       parentId: TASK.specCompare,
       milestoneId: m1,
       order: 1,
-      title: "B2 層化5分割・seed 42 で分割を揃える",
-      purpose: "同じ分割で両手法を評価し、結果の差を分割のばらつきと区別できるようにする。",
+      title: "B2 評価はデータの元のスケールのまま測る",
+      purpose: "距離の値の意味をそろえ、前の結果や README の基準と比べられるようにする。",
       status: "done",
       sources: [spec],
     }),
@@ -311,8 +312,8 @@ function demoTasks(): MapTask[] {
       parentId: TASK.specCompare,
       milestoneId: m1,
       order: 2,
-      title: "B3 不均衡への対処を両手法で揃える",
-      purpose: "陽性が約12%の不均衡への対処を片方にだけ入れず、手法の差だけを比べられるようにする。",
+      title: "B3 cosine は論文どおりの定義（β の上限 0.999）で使う",
+      purpose: "比べているのが本来の cosine だと言えるようにし、結論を cosine そのものについて述べられるようにする。",
       status: "done",
       sources: [spec],
     }),
@@ -333,54 +334,54 @@ function demoTasks(): MapTask[] {
       parentId: TASK.specMetric,
       milestoneId: m2,
       order: 0,
-      title: "マクロ F1 の平均と標準偏差を報告する",
-      purpose: "5分割の結果のばらつきまで示し、差が偶然ではないかを読めるようにする。",
+      title: "seed 3 つの平均と標準偏差を報告する",
+      purpose: "seed によるばらつきまで示し、linear と cosine の差が偶然ではないかを読めるようにする。",
       status: "doing",
       sources: [metricSpec],
     }),
 
     // 実装
     task({
-      id: TASK.trainPy,
+      id: TASK.script,
       phaseId: PHASE.implement,
       milestoneId: m1,
       order: 0,
-      title: "学習・評価スクリプト（train.py）",
-      purpose: "spec の約束どおりに、2つの手法を学習してマクロ F1 を出すコードを用意する。",
+      title: "cosine スケジュールと比較スクリプト（ddpm.py・compare.py）",
+      purpose: "spec の約束どおりに、linear と cosine を学習して sliced Wasserstein 距離を出すコードを用意する。",
       status: "todo",
       sources: [spec],
     }),
 
     // 検証
     task({
-      id: TASK.cv,
+      id: TASK.seeds,
       phaseId: PHASE.verify,
       milestoneId: m1,
       order: 0,
-      title: "5分割交差検証で比較する",
-      purpose: "研究の問い「LightGBM はロジスティック回帰を上回るか」に、数字で答える。",
+      title: "seed 3 つで linear と cosine を比較する",
+      purpose: "研究の問い「cosine は linear より生成の質が上がるか」に、数字で答える。",
       status: "waiting",
-      statusRaw: "学習スクリプト待ち",
-      sources: [{ kind: "experiment", path: EXPERIMENT_PATH, label: "交差検証の実験記録" }],
+      statusRaw: "比較スクリプト待ち",
+      sources: [{ kind: "experiment", path: EXPERIMENT_PATH, label: "seed 比較の実験記録" }],
     }),
     task({
-      id: "demo-task-v1-logreg",
+      id: "demo-task-v1-linear",
       phaseId: PHASE.verify,
-      parentId: TASK.cv,
+      parentId: TASK.seeds,
       milestoneId: m1,
       order: 0,
-      title: "ロジスティック回帰のマクロ F1",
+      title: "linear の sliced Wasserstein 距離（平均±標準偏差）",
       purpose: "比べる相手（ベースライン）の基準の数字を得る。",
       status: "todo",
     }),
     task({
-      id: "demo-task-v1-lgbm",
+      id: "demo-task-v1-cosine",
       phaseId: PHASE.verify,
-      parentId: TASK.cv,
+      parentId: TASK.seeds,
       milestoneId: m1,
       order: 1,
-      title: "LightGBM のマクロ F1",
-      purpose: "提案手法の数字を得て、ベースラインを上回るかを判断する。",
+      title: "cosine の sliced Wasserstein 距離（平均±標準偏差）",
+      purpose: "提案側の数字を得て、linear より小さいか（質が上がったか）を判断する。",
       status: "todo",
     }),
 
@@ -401,8 +402,8 @@ function demoTasks(): MapTask[] {
       parentId: TASK.seminar,
       milestoneId: m3,
       order: 0,
-      title: "評価は正解率ではなくマクロ F1 にする（先生の指摘）",
-      purpose: "不均衡データで手法の差を測れる指標に直すよう言われた。評価指標の検討に戻す。",
+      title: "評価は点の集まりどうしの距離で測る（先生の指摘）",
+      purpose: "生成した点に1対1の対応が無いので、分布どうしの近さを測るよう言われた。評価指標の検討に戻す。",
       status: "done",
       sources: [meeting],
     }),
@@ -425,7 +426,7 @@ function demoLinks(): MapLink[] {
       "demo-link-1",
       TASK.candidates,
       TASK.specCompare,
-      "比べる手法が決まったので、比較実験の約束事を決めた",
+      "比べるスケジュールが決まったので、比較実験の約束事を決めた",
     ),
     flow(
       "demo-link-2",
@@ -436,14 +437,14 @@ function demoLinks(): MapLink[] {
     flow(
       "demo-link-3",
       TASK.specCompare,
-      TASK.trainPy,
-      "承認された spec にもとづいて、学習・評価スクリプトを実装する",
+      TASK.script,
+      "承認された spec にもとづいて、cosine スケジュールと比較スクリプトを実装する",
     ),
     flow(
       "demo-link-4",
-      TASK.trainPy,
-      TASK.cv,
-      "スクリプトができたら、交差検証を実行する",
+      TASK.script,
+      TASK.seeds,
+      "スクリプトができたら、seed 3 つの比較を実行する",
     ),
     flow(
       "demo-link-5",
@@ -479,7 +480,7 @@ export function demoWorkflowMap(req: MapGenerateRequest, now: string): WorkflowM
 // ---- 場面3：取り込んだ変更からの更新 ----
 
 // 場面3：取り込んだ変更（判定）から、マップへの変更の一覧を返す。
-// デモの学習・評価スクリプトのコミットなら見せ場の変更を返し、それ以外は空の一覧を返す
+// デモの cosine スケジュールと比較スクリプトのコミットなら見せ場の変更を返し、それ以外は空の一覧を返す
 export function demoMapUpdate(req: MapUpdateRequest): MapUpdateResponse {
   const { review } = req;
   if (review.commitSha !== MAIN_SHA) return { ops: [] };
@@ -492,97 +493,112 @@ export function demoMapUpdate(req: MapUpdateRequest): MapUpdateResponse {
     ...(commit ? { url: commit.url } : {}),
     label: `commit ${shortSha}`,
   };
-  const dropna = review.findings.find((f) => f.summary === DROPNA_SUMMARY);
-  const classWeight = review.findings.find((f) => f.summary === CLASS_WEIGHT_SUMMARY);
+  const normalize = review.findings.find((f) => f.summary === NORMALIZE_SUMMARY);
+  const clip = review.findings.find((f) => f.summary === CLIP_SUMMARY);
+  const extra = review.findings.some((f) => f.type === "extra_addition");
 
   const ops: MapOp[] = [
     {
       op: "update_task",
-      taskId: TASK.trainPy,
+      taskId: TASK.script,
       status: "done",
       statusSource: "record",
       result: `コミット ${shortSha} で実装済み`,
-      reason: "学習・評価スクリプト train.py のコミットを取り込んだので、実装を完了にした",
+      reason: "cosine スケジュールと比較スクリプトのコミットを取り込んだので、実装を完了にした",
     },
     {
       op: "add_task",
       tempId: "demo-temp-commit",
       phaseId: PHASE.implement,
-      parentId: TASK.trainPy,
+      parentId: TASK.script,
       milestoneId: MILESTONE.compare,
-      title: `commit ${shortSha} 学習・評価スクリプトを追加`,
-      purpose: "spec の比較実験を実行できるよう、2つの手法を5分割交差検証で評価するコードを入れた。",
+      title: `commit ${shortSha} cosine スケジュールを追加して linear と比較`,
+      purpose: "spec の比較実験を実行できるよう、linear と cosine を seed 3 つで学習して距離を出すコードを入れた。",
       status: "done",
       statusSource: "record",
       sources: [commitSource],
       commitShas: [review.commitSha],
       reviewIds: [review.id],
-      reason: "取り込んだコミットを、実装「train.py」のサブタスクとして記録した",
+      reason: "取り込んだコミットを、実装「ddpm.py・compare.py」のサブタスクとして記録した",
     },
     {
       op: "link_task",
-      taskId: TASK.trainPy,
+      taskId: TASK.script,
       commitShas: [review.commitSha],
       reviewIds: [review.id],
-      reason: "このコミットと判定を、実装「train.py」に結び付けた",
+      reason: "このコミットと判定を、実装「ddpm.py・compare.py」に結び付けた",
     },
-    {
-      op: "update_task",
-      taskId: TASK.missingDrop,
-      status: "doing",
-      statusSource: "ai",
-      result: "AI が train.py で採用（比較の途中のまま）",
-      reason:
-        "AI が欠損のある行を除外して実装したため、比較中の「除外する」案が、検討を経ずに採用された状態になった",
-    },
-    ...(dropna
+    ...(normalize
       ? [
           {
-            op: "add_link",
-            fromTaskId: TASK.trainPy,
-            toTaskId: TASK.specCompareB1,
-            kind: "impact",
-            findingId: dropna.id,
+            op: "update_task",
+            taskId: TASK.stableNormalize,
+            status: "doing",
+            statusSource: "ai",
+            result: "AI が compare.py で採用（比較の途中のまま）",
             reason:
-              "欠損行の除外でデータ件数が減り、B1「前処理と特徴量を両手法で揃える」の前提（同じデータで比べる）に影響する",
+              "AI がデータを正規化して実装したため、比較中の「正規化する」案が、検討を経ずに採用された状態になった",
+          } satisfies MapOp,
+          {
+            op: "add_link",
+            fromTaskId: TASK.script,
+            toTaskId: TASK.specCompareB2,
+            kind: "impact",
+            findingId: normalize.id,
+            reason:
+              "正規化した空間のまま距離を測っているので、B2「評価はデータの元のスケールのまま測る」の前提に影響する",
           } satisfies MapOp,
         ]
       : []),
-    ...(classWeight
+    ...(clip
       ? [
           {
+            op: "update_task",
+            taskId: TASK.stableClip,
+            status: "doing",
+            statusSource: "ai",
+            result: "AI が ddpm.py で採用（比較の途中のまま）",
+            reason:
+              "AI が β の上限を 0.02 にして実装したため、比較中の「上限を付ける」案が、検討を経ずに採用された状態になった",
+          } satisfies MapOp,
+          {
             op: "add_link",
-            fromTaskId: TASK.trainPy,
+            fromTaskId: TASK.script,
             toTaskId: TASK.specCompareB3,
             kind: "impact",
-            findingId: classWeight.id,
+            findingId: clip.id,
             reason:
-              "class_weight をロジスティック回帰にだけ入れたので、B3「不均衡への対処を両手法で揃える」が満たされていない",
+              "β の上限を 0.02 にしたので、B3「cosine は論文どおりの定義（上限 0.999）で使う」が満たされていない",
+          } satisfies MapOp,
+        ]
+      : []),
+    ...(extra
+      ? [
+          {
+            op: "add_task",
+            tempId: "demo-temp-extra",
+            phaseId: PHASE.implement,
+            title: "記録のない実装：散布図の保存と --quick オプション",
+            purpose:
+              "どの spec にも無いのに、samples.png の保存と学習ステップを減らす --quick が入った。--quick の結果を本番の比較と混ぜていないか確かめる必要がある。",
+            status: "done",
+            statusSource: "record",
+            statusRaw: "どの spec にも無い",
+            sources: [commitSource],
+            commitShas: [review.commitSha],
+            reviewIds: [review.id],
+            flag: "unrecorded",
+            reason: "頼んでいない散布図の保存と --quick がコミットに含まれていたが、記録のどこにも出てこないため",
           } satisfies MapOp,
         ]
       : []),
     {
-      op: "add_task",
-      tempId: "demo-temp-optuna",
-      phaseId: PHASE.implement,
-      title: "記録のない実装：Optuna によるハイパーパラメータ探索",
-      purpose: "どの spec にも無いのに、LightGBM にだけ50試行の探索が入った。比較の公平さを確かめる必要がある。",
-      status: "done",
-      statusSource: "record",
-      statusRaw: "どの spec にも無い",
-      sources: [commitSource],
-      commitShas: [review.commitSha],
-      reviewIds: [review.id],
-      flag: "unrecorded",
-      reason: "頼んでいない Optuna の探索がコミットに含まれていたが、記録のどこにも出てこないため",
-    },
-    {
       op: "update_task",
-      taskId: TASK.cv,
+      taskId: TASK.seeds,
       status: "todo",
       statusSource: "record",
       statusRaw: "実行できる",
-      reason: "学習スクリプトができたので、「学習スクリプト待ち」が解けた",
+      reason: "比較スクリプトができたので、「比較スクリプト待ち」が解けた",
     },
   ];
 

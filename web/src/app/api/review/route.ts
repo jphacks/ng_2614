@@ -45,6 +45,7 @@ const requestSchema = z.object({
   observedErrors: z
     .array(
       z.object({
+        kind: z.enum(["failed", "in_output"]).optional(),
         tool: clipped(100),
         input: clipped(500),
         output: clipped(2000),
@@ -54,6 +55,7 @@ const requestSchema = z.object({
     .optional(),
   generatedFiles: z.array(clipped(500)).max(200).optional(),
   headMoved: z.boolean().optional(),
+  aiReport: clipped(3000).optional(),
 });
 
 export async function POST(request: Request) {

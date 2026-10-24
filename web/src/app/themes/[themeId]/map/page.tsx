@@ -36,7 +36,7 @@ function load(themeId: string): Loaded {
   return { status: "ready", theme, map: getWorkflowMap(themeId) };
 }
 
-// S-6 作業フローマップ
+// S-7 作業フローマップ
 export default function WorkflowMapPage() {
   const { themeId } = useParams<{ themeId: string }>();
   const [state, setState] = useState<Loaded>({ status: "loading" });

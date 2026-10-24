@@ -35,9 +35,9 @@ function makeReview(): Review {
     id: "review-1",
     themeId: DEMO_THEME_ID,
     source: "commit",
-    purpose: "学習・評価スクリプトを作る",
+    purpose: "cosine スケジュールを追加して linear と比較する",
     commitSha: MAIN_SHA,
-    commitMessage: "学習・評価スクリプトを追加",
+    commitMessage: "cosine スケジュールを追加して linear と比較",
     createdAt: NOW,
     findings: demoReviewFindings(MAIN_SHA),
   };
@@ -60,15 +60,15 @@ describe("デモの作業フローマップの自動更新", () => {
     expect(result.applied).toHaveLength(ops.length);
 
     const next = result.map;
-    const train = next.tasks.find((t) => t.id === "demo-task-i1")!;
-    expect(train.status).toBe("done");
-    expect(train.commitShas).toContain(MAIN_SHA);
-    expect(train.reviewIds).toContain(review.id);
+    const script = next.tasks.find((t) => t.id === "demo-task-i1")!;
+    expect(script.status).toBe("done");
+    expect(script.commitShas).toContain(MAIN_SHA);
+    expect(script.reviewIds).toContain(review.id);
 
     // 隠れた問題から選定レーンの spec へ、逆向きの矢印が2本
     const impacts = next.links.filter((l) => l.kind === "impact");
     expect(impacts.map((l) => l.toTaskId).sort()).toEqual([
-      "demo-task-s1-b1",
+      "demo-task-s1-b2",
       "demo-task-s1-b3",
     ]);
 
@@ -96,16 +96,16 @@ describe("デモの作業フローマップの自動更新", () => {
     const review = makeReview();
     const edited = editTaskText(
       makeMap(),
-      "demo-task-r3-drop",
-      { title: "欠損行の除外（自分で確認する）" },
+      "demo-task-r3-normalize",
+      { title: "データの正規化（自分で確認する）" },
       NOW,
     );
     const { ops } = demoMapUpdate({ theme: purpose, map: edited, review });
     const next = applyMapOps(edited, ops, review.id, LATER).map;
 
-    const drop = next.tasks.find((t) => t.id === "demo-task-r3-drop")!;
-    expect(drop.title).toBe("欠損行の除外（自分で確認する）");
-    expect(drop.status).toBe("todo"); // edited は状態も上書きしない
+    const normalize = next.tasks.find((t) => t.id === "demo-task-r3-normalize")!;
+    expect(normalize.title).toBe("データの正規化（自分で確認する）");
+    expect(normalize.status).toBe("todo"); // edited は状態も上書きしない
   });
 
   it("人が消したものと同じタイトルの提案は足されない", () => {
@@ -113,12 +113,12 @@ describe("デモの作業フローマップの自動更新", () => {
     const base = makeMap();
     const { ops } = demoMapUpdate({ theme: purpose, map: base, review });
     const first = applyMapOps(base, ops, review.id, LATER).map;
-    const optuna = first.tasks.find((t) => t.flag === "unrecorded")!;
+    const unrecorded = first.tasks.find((t) => t.flag === "unrecorded")!;
 
     // 消したあと、同じ変更がもう一度来ても足さない
-    const deleted = deleteTask(first, optuna.id, "探索は使わないと決めた", LATER);
+    const deleted = deleteTask(first, unrecorded.id, "--quick は使わないと決めた", LATER);
     const again = applyMapOps(deleted, ops, "review-2", LATER);
-    expect(again.map.tasks.some((t) => t.title === optuna.title)).toBe(false);
+    expect(again.map.tasks.some((t) => t.title === unrecorded.title)).toBe(false);
   });
 
   it("検証のタスクから研究の問いの側へ、目的のつながりをたどれる", () => {

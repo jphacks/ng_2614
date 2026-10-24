@@ -25,6 +25,7 @@ import type {
 } from "@/lib/types";
 import { Conversation } from "@/components/teacher/conversation";
 import { LayerBadge } from "@/components/teacher/layer-badge";
+import { ViewpointList } from "@/components/teacher/viewpoint-list";
 import {
   UnansweredList,
   collectMisses,
@@ -52,6 +53,7 @@ export default function TeacherPage() {
   const [index, setIndex] = useState(0);
   const [items, setItems] = useState<TeacherItem[]>([]);
   const [turns, setTurns] = useState<TeacherTurn[]>([]); // 今の質問のやりとり
+  const [covered, setCovered] = useState<string[]>([]); // 今の質問で言えた観点の id
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +76,7 @@ export default function TeacherPage() {
 
   function openQuestion(q: TeacherQuestion) {
     setTurns([{ role: "teacher", text: q.question }]);
+    setCovered([]);
     setAnswer("");
     setResult(null);
     setError(null);
@@ -119,9 +122,11 @@ export default function TeacherPage() {
           ? problems.find((p) => p.id === q.findingId)
           : undefined,
         turns: sent,
+        covered,
       });
       const next: TeacherTurn[] = [...sent, { role: "teacher", text: res.message }];
       setTurns(next);
+      setCovered(res.covered);
       setAnswer("");
       if (!res.done) return;
 
@@ -137,6 +142,8 @@ export default function TeacherPage() {
           feedback: res.message,
           understood: res.understood,
           turns: next,
+          viewpoints: q.viewpoints,
+          covered: res.covered,
         },
       ];
       setItems(nextItems);
@@ -171,9 +178,9 @@ export default function TeacherPage() {
   if (theme === null) {
     return (
       <div>
-        <p>研究テーマが見つかりません。</p>
+        <p>プロジェクトが見つかりません。</p>
         <Link href="/" className="mt-2 inline-block text-blue-700 underline">
-          研究テーマ一覧へ戻る
+          プロジェクト一覧へ戻る
         </Link>
       </div>
     );
@@ -240,6 +247,8 @@ export default function TeacherPage() {
             <LayerBadge layer={current.layer} />
             {result === null && (
               <span className="text-xs text-gray-500">
+                言えた観点 {covered.length} / {current.viewpoints.length}
+                {" ・ "}
                 あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます
               </span>
             )}
@@ -301,6 +310,9 @@ export default function TeacherPage() {
                 <p className="mt-2 text-sm whitespace-pre-wrap">
                   {result.feedback}
                 </p>
+                <div className="mt-3 border-t border-black/10 pt-3">
+                  <ViewpointList viewpoints={current.viewpoints} covered={covered} />
+                </div>
               </div>
               <button
                 type="button"

@@ -1,30 +1,40 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  ProjectList,
+  type ProjectCard,
+} from "@/components/project/ProjectList";
 import { demoTheme } from "@/lib/demo/data";
 import { useDemoMode } from "@/lib/demo/mode";
-import { listThemes, newId, saveTheme } from "@/lib/storage";
-import type { ResearchTheme } from "@/lib/types";
-import { ThemeForm, type ThemeFormValues } from "@/components/theme/ThemeForm";
-import { ThemeList } from "@/components/theme/ThemeList";
+import {
+  listReviews,
+  listSavedProblems,
+  listThemes,
+  saveTheme,
+} from "@/lib/storage";
 
-// S-1 研究テーマ一覧・登録
+// S-1 プロジェクトの選択（ホーム）
 export default function Home() {
-  const [themes, setThemes] = useState<ResearchTheme[] | null>(null);
-  const [formKey, setFormKey] = useState(0);
+  const [projects, setProjects] = useState<ProjectCard[] | null>(null);
   const router = useRouter();
   const demoMode = useDemoMode();
 
   useEffect(() => {
-    setThemes(listThemes());
+    setProjects(
+      listThemes().map((theme) => {
+        const reviews = listReviews(theme.id); // 新しい順
+        return {
+          theme,
+          reviewCount: reviews.length,
+          savedProblemCount: listSavedProblems(theme.id).length,
+          lastImportedAt: reviews[0]?.createdAt,
+        };
+      }),
+    );
   }, []);
-
-  const handleSubmit = (values: ThemeFormValues) => {
-    saveTheme({ id: newId(), ...values, updatedAt: "" }); // updatedAt は保存時に付く
-    setThemes(listThemes());
-    setFormKey((k) => k + 1); // フォームを空に戻す
-  };
 
   const handleCreateDemo = () => {
     saveTheme({ ...demoTheme, updatedAt: "" });
@@ -32,45 +42,53 @@ export default function Home() {
   };
 
   return (
-    <div className="space-y-10">
-      <section>
-        <h1 className="text-xl font-bold">研究テーマ</h1>
-        {demoMode && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
-            <p className="text-amber-900">
-              デモ用の研究テーマ（健診データの疾患分類）で、取り込み → 判定 → 先生モードを試せます。
-            </p>
-            <button
-              type="button"
-              onClick={handleCreateDemo}
-              className="rounded-md bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700"
-            >
-              デモ用の研究テーマを作る
-            </button>
-          </div>
-        )}
-        <div className="mt-4">
-          {themes === null ? (
-            <p className="text-sm text-gray-500">読み込み中...</p>
-          ) : (
-            <ThemeList themes={themes} />
-          )}
-        </div>
-      </section>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold">プロジェクト</h1>
+        <Link
+          href="/projects/new"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          ＋ 新しいプロジェクト
+        </Link>
+      </div>
 
-      <section>
-        <h2 className="text-lg font-bold">研究テーマを登録する</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          研究の目的（問い・手法・評価）を書いておくと、AI の変更が研究にどう影響するかを照らし合わせられます。
-        </p>
-        <div className="mt-4">
-          <ThemeForm
-            key={formKey}
-            submitLabel="登録する"
-            onSubmit={handleSubmit}
-          />
+      {demoMode && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
+          <p className="text-amber-900">
+            デモ用のプロジェクトで、取り込み → 判定 → 先生モードを試せます。
+          </p>
+          <button
+            type="button"
+            onClick={handleCreateDemo}
+            className="rounded-md bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700"
+          >
+            デモ用のプロジェクトを作る
+          </button>
         </div>
-      </section>
+      )}
+
+      {projects === null ? (
+        <p className="text-sm text-gray-500">読み込み中...</p>
+      ) : projects.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+          <p className="font-medium text-gray-900">
+            最初のプロジェクトを作りましょう
+          </p>
+          <p className="mt-1 text-sm text-gray-600">
+            研究のリポジトリを選び、研究の目的（問い・手法・評価）を書くと、AI
+            の変更をその目的と照らし合わせられます。
+          </p>
+          <Link
+            href="/projects/new"
+            className="mt-4 inline-block rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            新しいプロジェクトを作る
+          </Link>
+        </div>
+      ) : (
+        <ProjectList projects={projects} />
+      )}
     </div>
   );
 }

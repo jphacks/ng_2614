@@ -46,7 +46,7 @@ export default function ReviewPage() {
       <div className="space-y-3">
         <p>判定結果が見つかりませんでした。</p>
         <Link href="/" className="text-blue-700 underline">
-          研究テーマ一覧に戻る
+          プロジェクト一覧に戻る
         </Link>
       </div>
     );
@@ -81,7 +81,7 @@ export default function ReviewPage() {
           href={`/themes/${current.themeId}`}
           className="text-sm text-blue-700 underline"
         >
-          ← 研究テーマに戻る
+          ← プロジェクトに戻る
         </Link>
         <h1 className="text-2xl font-bold">
           {isHook

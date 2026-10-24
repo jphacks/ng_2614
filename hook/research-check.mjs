@@ -42,6 +42,7 @@ export const MAX_OUTBOX = 20;
 export const MAX_OBSERVED_ERRORS = 10;
 export const MAX_ERROR_INPUT_CHARS = 500;
 export const MAX_ERROR_OUTPUT_CHARS = 2_000;
+export const MAX_AI_REPORT_CHARS = 3_000;
 
 // 差分の中身を送らず、ファイル名だけ送る拡張子（実験の出力によくあるもの）
 export const GENERATED_EXTENSIONS = [
@@ -306,7 +307,7 @@ export function detectHeadMoved(root, baseHead) {
   return authors.some((a) => a.toLowerCase() !== me);
 }
 
-// ---- 会話記録から失敗したコマンドを取り出す ----
+// ---- 会話記録から、実際に起きたエラーと AI の最終報告を取り出す ----
 
 function contentToText(content) {
   if (typeof content === "string") return content;
@@ -332,13 +333,57 @@ function isPermissionDenial(text) {
   return /doesn't want to proceed|user rejected/i.test(text);
 }
 
-// transcript（JSONL）から、promptAt 以降に失敗したツール呼び出しを最大10件取る。
-// 形式は公開された仕様ではないので、読めなければ []（例外は投げない）
-export function parseObservedErrors(transcriptText, promptAt) {
+// コマンドが実際に失敗したときの Bash の結果は "Exit code N" で始まる。
+// それ以外の is_error（許可の確認、コマンドの検査で止めたものなど）は Claude Code 自身のメッセージ
+function isCommandFailure(text) {
+  return /^\s*Exit code \d+/.test(text);
+}
+
+// 成功したコマンドの出力の中の、エラーらしい行
+const ERROR_LINE =
+  /Traceback \(most recent call last\)|\b[A-Z]\w*(?:Error|Exception|Warning)\b|\bfailed\b|\bFAILED\b/;
+
+// エラーらしい行のまわり（前2行・後ろ3行）だけを取り出す。無ければ ""
+export function pickErrorLines(text) {
+  const lines = String(text).split("\n");
+  const keep = new Set();
+  lines.forEach((line, i) => {
+    if (!ERROR_LINE.test(line)) return;
+    for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 3); j++) keep.add(j);
+  });
+  if (keep.size === 0) return "";
+  const out = [];
+  let prev = -2;
+  for (const i of [...keep].sort((x, y) => x - y)) {
+    if (i !== prev + 1 && out.length > 0) out.push("…");
+    out.push(lines[i]);
+    prev = i;
+  }
+  return out.join("\n");
+}
+
+function toolInput(use) {
+  const tool = use?.name ?? "unknown";
+  const rawInput = use?.input ?? {};
+  if (tool === "Bash" && typeof rawInput.command === "string") return rawInput.command;
+  try {
+    return JSON.stringify(rawInput);
+  } catch {
+    return "";
+  }
+}
+
+// transcript（JSONL）から、promptAt 以降の
+// - errors：失敗したコマンド（kind "failed"）と、成功したコマンドの出力に出たエラー（kind "in_output"）。最大10件
+// - aiReport：AI の最後の返事の文章（最後のツール呼び出しより後の文章）
+// を取り出す。形式は公開された仕様ではないので、読めなければ空（例外は投げない）
+export function parseTranscript(transcriptText, promptAt) {
   try {
     const since = promptAt ? Date.parse(promptAt) : 0;
     const toolUses = new Map();
-    const results = [];
+    const errors = [];
+    let reportParts = []; // 最後のツールの動きより後の AI の文章
+    let lastReport = ""; // ツールの動きで区切られる前の、直近の文章（最後が文章で終わらないとき用）
     for (const line of String(transcriptText).split("\n")) {
       if (!line.trim()) continue;
       let entry;
@@ -350,52 +395,60 @@ export function parseObservedErrors(transcriptText, promptAt) {
       const blocks = entry?.message?.content;
       if (!Array.isArray(blocks)) continue;
       const time = Date.parse(entry.timestamp);
+      const inRange = time >= since; // timestamp が無い・古いものは対象外
       if (entry.type === "assistant") {
         for (const b of blocks) {
-          if (b?.type === "tool_use" && typeof b.id === "string") toolUses.set(b.id, b);
+          if (b?.type === "tool_use" && typeof b.id === "string") {
+            toolUses.set(b.id, b);
+            if (inRange && reportParts.length > 0) {
+              lastReport = reportParts.join("\n");
+              reportParts = [];
+            }
+          } else if (inRange && b?.type === "text" && typeof b.text === "string" && b.text.trim()) {
+            reportParts.push(b.text);
+          }
         }
-      } else if (entry.type === "user") {
-        if (!(time >= since)) continue; // timestamp が無い・古いものは対象外
+      } else if (entry.type === "user" && inRange) {
         for (const b of blocks) {
-          if (b?.type === "tool_result" && isErrorFlag(b.is_error)) results.push(b);
+          if (b?.type !== "tool_result") continue;
+          const use = toolUses.get(b.tool_use_id);
+          if (use?.name !== "Bash") continue; // プログラムのエラーは Bash の結果にだけ出る
+          const output = contentToText(b.content);
+          if (isErrorFlag(b.is_error)) {
+            if (isPermissionDenial(output) || !isCommandFailure(output)) continue;
+            errors.push({ kind: "failed", tool: "Bash", input: toolInput(use), output });
+          } else {
+            const picked = pickErrorLines(output);
+            if (picked) errors.push({ kind: "in_output", tool: "Bash", input: toolInput(use), output: picked });
+          }
         }
       }
     }
-    const errors = [];
-    for (const r of results) {
-      const output = contentToText(r.content);
-      if (isPermissionDenial(output)) continue;
-      const use = toolUses.get(r.tool_use_id);
-      const tool = use?.name ?? "unknown";
-      const rawInput = use?.input ?? {};
-      const input =
-        tool === "Bash" && typeof rawInput.command === "string"
-          ? rawInput.command
-          : (() => {
-              try {
-                return JSON.stringify(rawInput);
-              } catch {
-                return "";
-              }
-            })();
-      errors.push({
-        tool,
-        input: cap(input, MAX_ERROR_INPUT_CHARS),
-        output: capHeadTail(output, MAX_ERROR_OUTPUT_CHARS),
-      });
-    }
-    return errors.slice(-MAX_OBSERVED_ERRORS);
+    const report = (reportParts.length > 0 ? reportParts.join("\n") : lastReport).trim();
+    return {
+      errors: errors.slice(-MAX_OBSERVED_ERRORS).map((e) => ({
+        ...e,
+        input: cap(e.input, MAX_ERROR_INPUT_CHARS),
+        output: capHeadTail(e.output, MAX_ERROR_OUTPUT_CHARS),
+      })),
+      aiReport: capHeadTail(report, MAX_AI_REPORT_CHARS),
+    };
   } catch {
-    return [];
+    return { errors: [], aiReport: "" };
   }
 }
 
-function readObservedErrors(transcriptPath, promptAt) {
+// 以前の呼び方（エラーだけ）
+export function parseObservedErrors(transcriptText, promptAt) {
+  return parseTranscript(transcriptText, promptAt).errors;
+}
+
+function readTranscript(transcriptPath, promptAt) {
   try {
-    if (!transcriptPath) return [];
-    return parseObservedErrors(readFileSync(transcriptPath, "utf8"), promptAt);
+    if (!transcriptPath) return { errors: [], aiReport: "" };
+    return parseTranscript(readFileSync(transcriptPath, "utf8"), promptAt);
   } catch {
-    return [];
+    return { errors: [], aiReport: "" };
   }
 }
 
@@ -547,7 +600,7 @@ async function handleStop(ctx, input) {
 
   const idx = state.prompts.lastIndexOf(state.lastPrompt);
   const earlier = (idx >= 0 ? state.prompts.slice(0, idx) : state.prompts).slice(-MAX_EARLIER_PROMPTS);
-  const errors = readObservedErrors(input.transcript_path, state.promptAt);
+  const { errors, aiReport } = readTranscript(input.transcript_path, state.promptAt);
 
   const payload = {
     repo: parseRepo(gitOut(["remote", "get-url", "origin"], { cwd: ctx.root })),
@@ -557,11 +610,13 @@ async function handleStop(ctx, input) {
     diff: maskSecrets(diff),
     generatedFiles,
     observedErrors: errors.map((e) => ({
+      kind: e.kind,
       tool: e.tool,
       input: maskSecrets(e.input),
       output: maskSecrets(e.output),
     })),
     headMoved: detectHeadMoved(ctx.root, state.baseHead),
+    ...(aiReport ? { aiReport: maskSecrets(aiReport) } : {}),
     createdAt: new Date().toISOString(),
   };
 
