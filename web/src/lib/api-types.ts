@@ -49,6 +49,7 @@ export type ReviewRequest = {
   observedErrors?: ObservedError[]; // 10件まで、output は2,000文字まで
   generatedFiles?: string[]; // 実行でできたファイル（中身は送らない）
   headMoved?: boolean; // 作業中に pull やブランチの切り替えがあった
+  aiReport?: string; // AI の最終報告（3,000文字まで）。AI の自己申告
 };
 export type ReviewResponse = {
   findings: Finding[]; // id はサーバーで振る。saved は false
@@ -104,6 +105,7 @@ export type HookChangePayload = {
   generatedFiles: string[]; // 実行でできたファイル（中身は送らない）
   observedErrors: ObservedError[]; // 10件まで、output は2,000文字まで
   headMoved: boolean;
+  aiReport?: string; // AI の最終報告（3,000文字まで）。会話記録が読めなければ無い
   createdAt: string; // フックで作った時刻（ISO 8601）
 };
 // 202 で返す

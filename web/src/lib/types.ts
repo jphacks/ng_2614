@@ -43,6 +43,8 @@ export type ReviewSource = "commit" | "claude_code_hook";
 
 // 会話記録から取り出した、失敗したコマンドとその出力（F-13）
 export type ObservedError = {
+  // 失敗したコマンド（"failed"）か、成功したコマンドの出力に出たエラー（"in_output"）か。無いときは "failed"
+  kind?: "failed" | "in_output";
   tool: string; // "Bash" など
   input: string; // 実行したコマンドなど
   output: string; // エラーの出力（送るときは2,000文字、保存するときは500文字まで）
@@ -60,6 +62,7 @@ export type Review = {
   earlierPrompts?: string[]; // 同じ会話でそれまでにした依頼文（古い順、直近5件まで）
   observedErrors?: ObservedError[]; // 作業中に実際に起きたエラー
   generatedFiles?: string[]; // 実行でできたファイル（実験の出力。中身は送らない）
+  aiReport?: string; // AI の最終報告（3,000文字まで）
   headMoved?: boolean; // 作業中に pull やブランチの切り替えがあった
   createdAt: string; // ISO 8601
   findings: Finding[];

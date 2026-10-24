@@ -88,6 +88,7 @@ export function HookInbox() {
             observedErrors: change.observedErrors,
             generatedFiles: change.generatedFiles,
             headMoved: change.headMoved,
+            aiReport: change.aiReport,
           }),
         );
         const review: Review = {
@@ -101,6 +102,7 @@ export function HookInbox() {
           observedErrors: change.observedErrors, // 保存時に500文字へ切られる
           generatedFiles: change.generatedFiles,
           headMoved: change.headMoved,
+          aiReport: change.aiReport,
           createdAt: nowIso(),
           findings,
         };
