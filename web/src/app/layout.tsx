@@ -6,6 +6,7 @@ import {
 } from "@/components/demo/DemoModeToggle";
 import { HookInbox } from "@/components/hook/HookInbox";
 import { MapStrip } from "@/components/map-strip/MapStrip";
+import { NavMenu } from "@/components/nav/NavMenu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,11 +27,17 @@ export default function RootLayout({
         <div className="md:pr-[var(--map-side-w,0px)]">
           <header className="border-b border-gray-200">
             <DemoModeBanner />
-            <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-              <Link href="/" className="font-bold">
-                研究の理解ログ（仮）
-              </Link>
-              <DemoModeToggle />
+            <div className="relative">
+              {/* メニューのボタンは画面の左端に置く。狭い画面では、アプリ名と重ならないよう左を空ける */}
+              <div className="absolute inset-y-0 left-3 flex items-center">
+                <NavMenu />
+              </div>
+              <div className="mx-auto flex max-w-4xl items-center justify-between py-3 pr-4 pl-16 min-[1024px]:pl-4">
+                <Link href="/" className="font-bold">
+                  研究の理解ログ（仮）
+                </Link>
+                <DemoModeToggle />
+              </div>
             </div>
           </header>
           <MapStrip />
