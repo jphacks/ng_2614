@@ -53,7 +53,7 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
-        turns: [...start, { role: "student", text: "エラーが出たから" }],
+        turns: [...start, { role: "student", text: "nan になったから" }],
       });
       expect(res.done).toBe(false);
       expect(res.message).toContain("理由になっていません");
@@ -65,7 +65,10 @@ describe("デモデータ", () => {
         question: q,
         turns: [
           ...start,
-          { role: "student", text: "除外で件数が減り、データに偏りが出て比較の条件が変わるからです" },
+          {
+            role: "student",
+            text: "正規化したまま測ると、元のスケールで測る README の評価と値の意味が変わるからです",
+          },
         ],
       });
       expect(res).toMatchObject({ done: true, understood: true });
@@ -90,10 +93,13 @@ describe("デモデータ", () => {
       const res = demoTeacherTurn({
         theme,
         question: q,
-        turns: [...start, { role: "student", text: "AIがやったので分かりません" }],
+        turns: [
+          ...start,
+          { role: "student", text: "AIがやったので分かりません" },
+        ],
       });
       expect(res.done).toBe(false);
-      expect(res.message).toContain("dropna");
+      expect(res.message).toContain("normalize");
     });
   });
 

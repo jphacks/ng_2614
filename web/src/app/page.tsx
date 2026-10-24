@@ -38,7 +38,8 @@ export default function Home() {
         {demoMode && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
             <p className="text-amber-900">
-              デモ用の研究テーマ（健診データの疾患分類）で、取り込み → 判定 → 先生モードを試せます。
+              デモ用の研究テーマ（拡散モデルのノイズスケジュール）で、取り込み →
+              判定 → 先生モードを試せます。
             </p>
             <button
               type="button"
@@ -61,7 +62,8 @@ export default function Home() {
       <section>
         <h2 className="text-lg font-bold">研究テーマを登録する</h2>
         <p className="mt-1 text-sm text-gray-600">
-          研究の目的（問い・手法・評価）を書いておくと、AI の変更が研究にどう影響するかを照らし合わせられます。
+          研究の目的（問い・手法・評価）を書いておくと、AI
+          の変更が研究にどう影響するかを照らし合わせられます。
         </p>
         <div className="mt-4">
           <ThemeForm
