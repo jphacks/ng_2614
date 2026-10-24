@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  SIDE_OPEN_WIDTH,
   useMediaQuery,
+  useSideWidth,
   useStripOpen,
   useStripOrientation,
 } from "@/lib/map/prefs";
@@ -16,6 +18,7 @@ import {
   REVIEWS_CHANGED_EVENT,
 } from "@/lib/storage";
 import type { WorkflowMap } from "@/lib/types";
+import { SideResizeHandle } from "./SideResizeHandle";
 import { SIDE_WIDTH, SIDE_WIDTH_VAR, WIDE_QUERY } from "./sizes";
 import { StripBody } from "./StripBody";
 import { StripSide } from "./StripSide";
@@ -32,6 +35,7 @@ export function MapStrip() {
   const orientation = useStripOrientation();
   const wide = useMediaQuery(WIDE_QUERY);
   const open = useStripOpen();
+  const sideWidth = useSideWidth();
 
   useEffect(() => {
     function load() {
@@ -59,7 +63,8 @@ export function MapStrip() {
   useEffect(() => {
     const root = document.documentElement;
     if (vertical) {
-      const width = open ? SIDE_WIDTH.open : SIDE_WIDTH.collapsed;
+      // 帯の幅を広げても本文は動かさない（広げた分は本文の上に重ねる）。空けるのは初期の幅まで
+      const width = open ? SIDE_OPEN_WIDTH.initial : SIDE_WIDTH.collapsed;
       root.style.setProperty(SIDE_WIDTH_VAR, `${width}px`);
     } else {
       root.style.removeProperty(SIDE_WIDTH_VAR);
@@ -71,7 +76,12 @@ export function MapStrip() {
 
   if (!loaded) return null;
   if (vertical && loaded.map) {
-    return <StripSide themeId={loaded.themeId} map={loaded.map} />;
+    return (
+      <>
+        <StripSide themeId={loaded.themeId} map={loaded.map} />
+        {open && <SideResizeHandle width={sideWidth} />}
+      </>
+    );
   }
 
   return (

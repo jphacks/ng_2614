@@ -120,3 +120,61 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }
+
+// ---- 縦の帯の幅 ----
+
+// 開いた縦の帯の幅（px）。初期値と、ドラッグで変えられる範囲
+export const SIDE_OPEN_WIDTH = { initial: 208, min: 180, max: 480 } as const;
+
+const SIDE_WIDTH_KEY = "rc.mapSideWidth";
+const SIDE_WIDTH_EVENT = "rc:map-side-width";
+
+// localStorage に書けなかったときだけ使う、この画面の中の値（getStripOpen の fallback と同じ）
+let sideWidthFallback: number | undefined;
+
+// 範囲に収めて整数にする。数でなければ初期値
+export function clampSideWidth(width: number): number {
+  if (!Number.isFinite(width)) return SIDE_OPEN_WIDTH.initial;
+  return Math.round(Math.min(SIDE_OPEN_WIDTH.max, Math.max(SIDE_OPEN_WIDTH.min, width)));
+}
+
+// 開いた縦の帯の幅。キーは "rc.mapSideWidth"、無ければ初期値。想定外の値は範囲に収める
+export function getSideWidth(): number {
+  if (typeof window === "undefined") return SIDE_OPEN_WIDTH.initial;
+  if (sideWidthFallback !== undefined) return sideWidthFallback;
+  try {
+    const raw = window.localStorage.getItem(SIDE_WIDTH_KEY);
+    return raw === null ? SIDE_OPEN_WIDTH.initial : clampSideWidth(Number(raw));
+  } catch {
+    return SIDE_OPEN_WIDTH.initial;
+  }
+}
+
+// 幅を保存する。初期値と同じなら消す
+export function setSideWidth(width: number): void {
+  if (typeof window === "undefined") return;
+  const value = clampSideWidth(width);
+  try {
+    if (value === SIDE_OPEN_WIDTH.initial) window.localStorage.removeItem(SIDE_WIDTH_KEY);
+    else window.localStorage.setItem(SIDE_WIDTH_KEY, String(value));
+    sideWidthFallback = undefined;
+  } catch {
+    // 保存できなくても、この画面の中では変わったことにする
+    sideWidthFallback = value;
+  }
+  window.dispatchEvent(new Event(SIDE_WIDTH_EVENT));
+}
+
+function subscribeSideWidth(onChange: () => void): () => void {
+  window.addEventListener(SIDE_WIDTH_EVENT, onChange);
+  window.addEventListener("storage", onChange); // 別のタブで変えたとき
+  return () => {
+    window.removeEventListener(SIDE_WIDTH_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+// 開いた縦の帯の幅を、ほかの画面・タブでの変更にも追従して返す。サーバー側では初期値
+export function useSideWidth(): number {
+  return useSyncExternalStore(subscribeSideWidth, getSideWidth, () => SIDE_OPEN_WIDTH.initial);
+}
