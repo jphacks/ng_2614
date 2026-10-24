@@ -1,6 +1,15 @@
 // 画面から API（Route Handlers）を呼ぶための関数。型は api-types.ts の契約に従う。
 // 失敗したときは、API が返した error の文言で Error を投げる。
+// デモモード（F-12）のときは、サーバーを呼ばずにデモデータを返す。
 
+import {
+  demoCommits,
+  demoDiff,
+  demoReviewFindings,
+  demoTeacherFeedback,
+  demoTeacherQuestions,
+} from "./demo/data";
+import { isDemoMode } from "./demo/mode";
 import type {
   ApiError,
   CommitsResponse,
@@ -47,29 +56,59 @@ function postJson<T>(path: string, payload: unknown): Promise<T> {
   });
 }
 
+// AI が考えている感じを出すため、デモデータは少し待ってから返す
+function demo<T>(ms: number, make: () => T): Promise<T> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      try {
+        resolve(make());
+      } catch (e) {
+        reject(e);
+      }
+    }, ms);
+  });
+}
+
 export function fetchCommits(repo: string): Promise<CommitsResponse> {
+  if (isDemoMode()) return demo(400, () => ({ commits: demoCommits }));
   const q = new URLSearchParams({ repo });
   return request<CommitsResponse>(`/api/github/commits?${q}`);
 }
 
 export function fetchDiff(repo: string, sha: string): Promise<DiffResponse> {
+  if (isDemoMode()) {
+    return demo(500, () => {
+      const diff = demoDiff(sha);
+      if (!diff) throw new Error("デモデータにこのコミットはありません");
+      return diff;
+    });
+  }
   const q = new URLSearchParams({ repo, sha });
   return request<DiffResponse>(`/api/github/diff?${q}`);
 }
 
 export function postReview(payload: ReviewRequest): Promise<ReviewResponse> {
+  if (isDemoMode()) {
+    return demo(2500, () => ({
+      findings: demoReviewFindings(payload.commit.sha),
+    }));
+  }
   return postJson<ReviewResponse>("/api/review", payload);
 }
 
 export function postTeacherQuestions(
   payload: TeacherQuestionsRequest,
 ): Promise<TeacherQuestionsResponse> {
+  if (isDemoMode()) {
+    return demo(1800, () => ({ questions: demoTeacherQuestions(payload) }));
+  }
   return postJson<TeacherQuestionsResponse>("/api/teacher/questions", payload);
 }
 
 export function postTeacherFeedback(
   payload: TeacherFeedbackRequest,
 ): Promise<TeacherFeedbackResponse> {
+  if (isDemoMode()) return demo(1500, () => demoTeacherFeedback(payload));
   return postJson<TeacherFeedbackResponse>("/api/teacher/feedback", payload);
 }
 

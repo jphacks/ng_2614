@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  DemoModeBanner,
+  DemoModeToggle,
+} from "@/components/demo/DemoModeToggle";
 import { HookInbox } from "@/components/hook/HookInbox";
 import "./globals.css";
 
@@ -18,10 +22,12 @@ export default function RootLayout({
     <html lang="ja">
       <body className="min-h-screen bg-white text-gray-900 antialiased">
         <header className="border-b border-gray-200">
+          <DemoModeBanner />
           <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
             <Link href="/" className="font-bold">
               研究の理解ログ（仮）
             </Link>
+            <DemoModeToggle />
           </div>
         </header>
         <HookInbox />
