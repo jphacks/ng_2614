@@ -29,7 +29,9 @@ function payload(overrides: Record<string, unknown> = {}) {
     earlierPrompts: ["最初の依頼"],
     diff: DIFF,
     generatedFiles: ["results.csv"],
-    observedErrors: [{ tool: "Bash", input: "python train.py", output: "boom" }],
+    observedErrors: [
+      { tool: "Bash", input: "python train.py", output: "boom" },
+    ],
     headMoved: false,
     createdAt: "2026-10-24T00:00:00.000Z",
     ...overrides,
@@ -77,6 +79,47 @@ afterEach(() => {
 });
 
 describe("POST /api/hook/changes", () => {
+  it("AI の最終報告とエラーの種類を受け取り、取り出したときに返す（報告は3,000文字まで）", async () => {
+    const res = await POST(
+      post(
+        payload({
+          aiReport: "あ".repeat(4000),
+          observedErrors: [
+            {
+              kind: "in_output",
+              tool: "Bash",
+              input: "python a.py",
+              output: "ValueError: x",
+            },
+          ],
+        }),
+      ),
+    );
+    expect(res.status).toBe(202);
+    const { id } = (await res.json()) as { id: string };
+    const taken = await DELETE(appRequest("DELETE", `${URL_BASE}/${id}`), {
+      params: Promise.resolve({ id }),
+    });
+    const { change } = (await taken.json()) as {
+      change: { aiReport?: string; observedErrors: { kind?: string }[] };
+    };
+    expect(change.aiReport).toHaveLength(3000);
+    expect(change.observedErrors[0].kind).toBe("in_output");
+  });
+
+  it("エラーの種類が決まった値でなければ 400", async () => {
+    const res = await POST(
+      post(
+        payload({
+          observedErrors: [
+            { kind: "other", tool: "Bash", input: "", output: "" },
+          ],
+        }),
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("正しいリクエストは 202 で id を返し、受け取り箱に置く", async () => {
     const res = await POST(post(payload()));
     expect(res.status).toBe(202);
@@ -168,10 +211,9 @@ describe("POST /api/hook/changes", () => {
     );
     expect(res.status).toBe(202);
     const { id } = (await res.json()) as HookChangeAccepted;
-    const taken = await DELETE(
-      appRequest("DELETE", `${URL_BASE}/${id}`),
-      { params: Promise.resolve({ id }) },
-    );
+    const taken = await DELETE(appRequest("DELETE", `${URL_BASE}/${id}`), {
+      params: Promise.resolve({ id }),
+    });
     const { change } = (await taken.json()) as HookChangeResponse;
     expect(change.earlierPrompts).toEqual(["p3", "p4", "p5", "p6", "p7"]);
     expect(change.observedErrors).toHaveLength(10);

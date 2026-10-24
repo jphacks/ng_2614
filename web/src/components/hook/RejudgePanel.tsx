@@ -61,6 +61,7 @@ export function RejudgePanel({ review, diff, onUpdated }: Props) {
           observedErrors: review.observedErrors ?? [],
           generatedFiles: review.generatedFiles ?? [],
           headMoved: review.headMoved ?? false,
+          aiReport: review.aiReport,
         }),
       );
       // 同じ id のまま、目的と判定を差し替える（保存済みの印は付け直し）

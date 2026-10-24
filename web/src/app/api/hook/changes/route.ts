@@ -4,10 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import type {
-  HookChangeAccepted,
-  HookChangesResponse,
-} from "@/lib/api-types";
+import type { HookChangeAccepted, HookChangesResponse } from "@/lib/api-types";
 import { diffToFiles } from "@/lib/hook/diff";
 import {
   checkHookToken,
@@ -34,6 +31,7 @@ const MAX_ERROR_OUTPUT_CHARS = 2_000;
 const MAX_ERROR_INPUT_CHARS = 500;
 const MAX_PROMPT_CHARS = 10_000;
 const MAX_SHORT_CHARS = 500; // repo・sessionId・ファイル名・tool など
+const MAX_AI_REPORT_CHARS = 3_000;
 
 const clip = (max: number) => (s: string) => s.slice(0, max);
 
@@ -53,6 +51,7 @@ const payloadSchema = z.object({
   observedErrors: z
     .array(
       z.object({
+        kind: z.enum(["failed", "in_output"]).optional(),
         tool: z.string().transform(clip(MAX_SHORT_CHARS)),
         input: z.string().transform(clip(MAX_ERROR_INPUT_CHARS)),
         output: z.string().transform(clip(MAX_ERROR_OUTPUT_CHARS)),
@@ -61,6 +60,7 @@ const payloadSchema = z.object({
     .transform((a) => a.slice(0, MAX_OBSERVED_ERRORS))
     .default([]),
   headMoved: z.boolean().default(false),
+  aiReport: z.string().transform(clip(MAX_AI_REPORT_CHARS)).optional(),
   createdAt: z
     .string()
     .transform(clip(MAX_SHORT_CHARS))

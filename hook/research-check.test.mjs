@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  maskSecrets, parseRepo, isGeneratedFile, parseObservedErrors, parseDotenv,
+  maskSecrets, parseRepo, isGeneratedFile, parseObservedErrors, parseTranscript, pickErrorLines, parseDotenv,
   loadConfig, enqueueOutbox, MASK, MAX_OUTBOX,
 } from "./research-check.mjs";
 
@@ -76,59 +76,125 @@ function transcriptLine(type, timestamp, content) {
   return JSON.stringify({ type, timestamp, message: { content } });
 }
 
-test("parseObservedErrors: 失敗したツール呼び出しだけを取り出す", () => {
+test("parseTranscript: 本当に失敗したコマンドだけを失敗として取り、Claude Code 自身のメッセージは捨てる", () => {
   const lines = [
     // promptAt より前のエラーは対象外
     transcriptLine("assistant", "2026-10-24T09:00:00.000Z", [
       { type: "tool_use", id: "t0", name: "Bash", input: { command: "old" } },
     ]),
     transcriptLine("user", "2026-10-24T09:00:01.000Z", [
-      { type: "tool_result", tool_use_id: "t0", is_error: true, content: "old error" },
+      { type: "tool_result", tool_use_id: "t0", is_error: true, content: "Exit code 1\nold error" },
     ]),
     transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
       { type: "tool_use", id: "t1", name: "Bash", input: { command: "python train.py" } },
       { type: "tool_use", id: "t2", name: "Edit", input: { file_path: "a.py", old_string: "x" } },
       { type: "tool_use", id: "t3", name: "Bash", input: { command: "ls" } },
       { type: "tool_use", id: "t4", name: "Bash", input: { command: "rm -rf x" } },
+      { type: "tool_use", id: "t5", name: "Bash", input: { command: "sed -i s/a/b/ f" } },
     ]),
     "これは壊れた行",
     transcriptLine("user", "2026-10-24T10:00:02.000Z", [
-      { type: "tool_result", tool_use_id: "t1", is_error: true, content: "Traceback: boom" },
+      { type: "tool_result", tool_use_id: "t1", is_error: true, content: "Exit code 1\nTraceback: boom" },
       { type: "tool_result", tool_use_id: "t2", is_error: "True", content: [{ type: "text", text: "no match" }] },
       { type: "tool_result", tool_use_id: "t3", is_error: false, content: "fine" },
       {
         type: "tool_result", tool_use_id: "t4", is_error: true,
         content: "The user doesn't want to proceed with this tool use.",
       },
+      {
+        type: "tool_result", tool_use_id: "t5", is_error: true,
+        content: "This Bash command contains multiple operations. The following part requires approval: sed",
+      },
     ]),
   ];
-  const errors = parseObservedErrors(lines.join("\n"), "2026-10-24T10:00:00.000Z");
+  const { errors } = parseTranscript(lines.join("\n"), "2026-10-24T10:00:00.000Z");
   assert.deepEqual(errors, [
-    { tool: "Bash", input: "python train.py", output: "Traceback: boom" },
-    { tool: "Edit", input: JSON.stringify({ file_path: "a.py", old_string: "x" }), output: "no match" },
+    { kind: "failed", tool: "Bash", input: "python train.py", output: "Exit code 1\nTraceback: boom" },
   ]);
 });
 
-test("parseObservedErrors: 長さの上限と件数の上限、読めないときは []", () => {
+test("parseTranscript: 成功したコマンドの出力に出たエラーの行を、まわりと一緒に取る", () => {
+  const out = [
+    "loading data", "rows: 600", "fold 1", "fold 2",
+    "/x/sklearn/model_selection/_validation.py:528: FitFailedWarning:",
+    "All the 5 fits failed.", "detail line", "ValueError: Input X contains NaN.",
+    "a", "b", "c", "d", "e", "f", "summary: done",
+  ].join("\n");
+  const lines = [
+    transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
+      { type: "tool_use", id: "t1", name: "Bash", input: { command: ".venv/bin/python compare_raw.py" } },
+      { type: "tool_use", id: "t2", name: "Bash", input: { command: "cat README.md" } },
+      { type: "tool_use", id: "t3", name: "Read", input: { file_path: "x.py" } },
+    ]),
+    transcriptLine("user", "2026-10-24T10:00:02.000Z", [
+      { type: "tool_result", tool_use_id: "t1", is_error: false, content: out },
+      { type: "tool_result", tool_use_id: "t2", is_error: false, content: "no problems here, 0 errors" },
+      { type: "tool_result", tool_use_id: "t3", is_error: false, content: "raise ValueError('x')" },
+    ]),
+  ];
+  const { errors } = parseTranscript(lines.join("\n"), "2026-10-24T10:00:00.000Z");
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].kind, "in_output");
+  assert.equal(errors[0].input, ".venv/bin/python compare_raw.py");
+  assert.ok(errors[0].output.includes("All the 5 fits failed."));
+  assert.ok(errors[0].output.includes("ValueError: Input X contains NaN."));
+  assert.ok(!errors[0].output.includes("loading data")); // まわり以外は取らない
+  assert.ok(!errors[0].output.includes("summary: done"));
+});
+
+test("pickErrorLines: エラーらしい行が無ければ空", () => {
+  assert.equal(pickErrorLines("all good\nmacro F1 0.73"), "");
+  assert.ok(pickErrorLines("x\nConvergenceWarning: lbfgs failed to converge").includes("ConvergenceWarning"));
+});
+
+test("parseTranscript: AI の最終報告（最後のツールの動きより後の文章）を取る", () => {
+  const lines = [
+    transcriptLine("assistant", "2026-10-24T09:59:00.000Z", [{ type: "text", text: "前の依頼の報告" }]),
+    transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
+      { type: "text", text: "まずデータを見ます" },
+      { type: "tool_use", id: "t1", name: "Bash", input: { command: "python a.py" } },
+    ]),
+    transcriptLine("user", "2026-10-24T10:00:02.000Z", [
+      { type: "tool_result", tool_use_id: "t1", is_error: false, content: "ok" },
+    ]),
+    transcriptLine("assistant", "2026-10-24T10:00:03.000Z", [{ type: "text", text: "train.py を作りました。" }]),
+    transcriptLine("assistant", "2026-10-24T10:00:04.000Z", [{ type: "text", text: "hba1c に欠損があったので中央値で補完しました。" }]),
+  ];
+  const { aiReport } = parseTranscript(lines.join("\n"), "2026-10-24T10:00:00.000Z");
+  assert.equal(aiReport, "train.py を作りました。\nhba1c に欠損があったので中央値で補完しました。");
+});
+
+test("parseTranscript: 最後がツールで終わっていれば直前の文章を報告にする。長さの上限、件数の上限、読めないときは空", () => {
+  const ending = [
+    transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
+      { type: "text", text: "途中の報告" + "あ".repeat(4000) },
+      { type: "tool_use", id: "t1", name: "Bash", input: { command: "x" } },
+    ]),
+  ].join("\n");
+  const r = parseTranscript(ending, "2026-10-24T10:00:00.000Z");
+  assert.ok(r.aiReport.startsWith("途中の報告"));
+  assert.ok(r.aiReport.length <= 3000);
+
   const uses = [];
   const results = [];
   for (let i = 0; i < 15; i++) {
     uses.push({ type: "tool_use", id: `u${i}`, name: "Bash", input: { command: "c".repeat(900) } });
-    results.push({ type: "tool_result", tool_use_id: `u${i}`, is_error: true, content: `E${i}:` + "x".repeat(5000) });
+    results.push({ type: "tool_result", tool_use_id: `u${i}`, is_error: true, content: `Exit code 1\nE${i}:` + "x".repeat(5000) });
   }
   const text = [
     transcriptLine("assistant", "2026-10-24T10:00:01.000Z", uses),
     transcriptLine("user", "2026-10-24T10:00:02.000Z", results),
   ].join("\n");
-  const errors = parseObservedErrors(text, "2026-10-24T10:00:00.000Z");
+  const { errors } = parseTranscript(text, "2026-10-24T10:00:00.000Z");
   assert.equal(errors.length, 10);
-  assert.ok(errors[0].output.startsWith("E5:")); // 最新の10件
-  assert.ok(errors[9].output.startsWith("E14:"));
+  assert.ok(errors[0].output.includes("E5:")); // 最新の10件
+  assert.ok(errors[9].output.includes("E14:"));
   for (const e of errors) {
     assert.ok(e.input.length <= 500);
     assert.ok(e.output.length <= 2000);
   }
-  assert.deepEqual(parseObservedErrors("{{{{", ""), []);
+  assert.deepEqual(parseTranscript("{{{{", ""), { errors: [], aiReport: "" });
+  assert.deepEqual(parseTranscript(null, ""), { errors: [], aiReport: "" });
   assert.deepEqual(parseObservedErrors(null, ""), []);
 });
 
@@ -307,7 +373,10 @@ test("流れ全体：依頼→変更→Stop で、AI が変えた差分だけが
           { type: "tool_use", id: "t1", name: "Bash", input: { command: "python train.py" } },
         ]),
         transcriptLine("user", new Date(Date.now() + 2000).toISOString(), [
-          { type: "tool_result", tool_use_id: "t1", is_error: true, content: "Traceback: boom" },
+          { type: "tool_result", tool_use_id: "t1", is_error: true, content: "Exit code 1\nTraceback: boom" },
+        ]),
+        transcriptLine("assistant", new Date(Date.now() + 3000).toISOString(), [
+          { type: "text", text: "train.py を直しました。token = abcd1234efgh5678 を使っています。" },
         ]),
       ].join("\n"),
     );
@@ -326,7 +395,7 @@ test("流れ全体：依頼→変更→Stop で、AI が変えた差分だけが
     const p = req.body;
     assert.deepEqual(
       Object.keys(p).sort(),
-      ["createdAt", "diff", "earlierPrompts", "generatedFiles", "headMoved", "observedErrors", "prompt", "repo", "sessionId"],
+      ["aiReport", "createdAt", "diff", "earlierPrompts", "generatedFiles", "headMoved", "observedErrors", "prompt", "repo", "sessionId"],
     );
     assert.equal(p.repo, "owner/study");
     assert.equal(p.sessionId, "sess-1");
@@ -334,7 +403,11 @@ test("流れ全体：依頼→変更→Stop で、AI が変えた差分だけが
     assert.deepEqual(p.earlierPrompts, []);
     assert.equal(p.headMoved, false);
     assert.ok(!Number.isNaN(Date.parse(p.createdAt)));
-    assert.deepEqual(p.observedErrors, [{ tool: "Bash", input: "python train.py", output: "Traceback: boom" }]);
+    assert.deepEqual(p.observedErrors, [
+      { kind: "failed", tool: "Bash", input: "python train.py", output: "Exit code 1\nTraceback: boom" },
+    ]);
+    assert.ok(p.aiReport.startsWith("train.py を直しました。"));
+    assert.ok(!p.aiReport.includes("abcd1234efgh5678")); // 最終報告も伏せ字にする
     assert.deepEqual([...p.generatedFiles].sort(), ["model.PT", "results/out.csv"]);
 
     assert.match(p.diff, /\+lr = 0\.01/);

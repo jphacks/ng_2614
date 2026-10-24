@@ -17,6 +17,7 @@ export type HookExtras = {
   observedErrors: ObservedError[];
   generatedFiles: string[];
   headMoved: boolean;
+  aiReport?: string; // AI の最終報告
 };
 
 // 判定の依頼。差分は DiffResponse の形に直して渡す（sha / message / url は ""）
@@ -39,5 +40,6 @@ export function buildHookReviewRequest(
     observedErrors: extras.observedErrors,
     generatedFiles: extras.generatedFiles,
     headMoved: extras.headMoved,
+    ...(extras.aiReport ? { aiReport: extras.aiReport } : {}),
   };
 }
