@@ -31,7 +31,7 @@ function projectPages(themeId: string) {
   const base = `/themes/${encodeURIComponent(themeId)}`;
   return [
     { href: base, label: "詳細・問題ログ" },
-    { href: `${base}/reviews/new`, label: "変更を取り込む" },
+    { href: `${base}/reviews/new`, label: "コミットから取り込む" },
     { href: `${base}/teacher`, label: "先生モード" },
     { href: `${base}/map`, label: "作業フローマップ" },
   ];
