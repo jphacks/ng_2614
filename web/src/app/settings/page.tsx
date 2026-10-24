@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Segmented } from "@/components/settings/Segmented";
 import type { LlmEffort, LlmModel } from "@/lib/api-types";
 import { useDemoMode } from "@/lib/demo/mode";
 import {
+  DEFAULT_LLM_SETTINGS,
   LLM_FEATURES,
   resetLlmSettings,
   setLlmSetting,
@@ -19,19 +21,38 @@ import {
   useUsageStore,
   type UsageTotals,
 } from "@/lib/llm-usage";
-import { LLM_EFFORTS, LLM_MODELS, modelLabel } from "@/lib/llm/models";
+import {
+  DEFAULT_MODEL,
+  LLM_EFFORTS,
+  LLM_MODELS,
+  modelLabel,
+} from "@/lib/llm/models";
 
 // S-8 AI の設定と使用量（F-17）
 
-const EFFORT_LABELS: Record<LlmEffort | "default", string> = {
-  default: "標準（機能ごとの既定）",
-  low: "low（速くて安い）",
-  medium: "medium",
-  high: "high（よく考える。遅く高い）",
-};
+const base = LLM_MODELS.find((m) => m.id === DEFAULT_MODEL)!.price.input;
 
-const selectClass =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const MODEL_OPTIONS = LLM_MODELS.map((m) => ({
+  value: m.id,
+  label: m.label.replace("Claude ", ""),
+  sub:
+    m.id === DEFAULT_MODEL
+      ? "標準・安い"
+      : `料金 約${Math.round(m.price.input / base)}倍`,
+}));
+
+const EFFORT_OPTIONS: {
+  value: LlmEffort | "default";
+  label: string;
+  sub: string;
+}[] = [
+  { value: "default", label: "標準", sub: "機能の既定" },
+  ...LLM_EFFORTS.map((e) => ({
+    value: e,
+    label: e,
+    sub: { low: "速い", medium: "ふつう", high: "よく考える" }[e],
+  })),
+];
 
 export default function SettingsPage() {
   const settings = useLlmSettings();
@@ -42,156 +63,193 @@ export default function SettingsPage() {
   const change = (feature: LlmFeature, patch: Partial<FeatureSetting>) =>
     setLlmSetting(feature, { ...settings[feature], ...patch });
 
-  const { rows, total } = summarizeUsage(
-    store,
-    range === "today" ? dayKey(new Date()) : undefined,
-  );
-  const featureLabel = (id: LlmFeature) =>
-    LLM_FEATURES.find((f) => f.id === id)?.label ?? id;
+  const today = summarizeUsage(store, dayKey(new Date()));
+  const all = summarizeUsage(store);
+  const shown = range === "today" ? today : all;
+  const isDefault = (f: LlmFeature) =>
+    settings[f].model === DEFAULT_LLM_SETTINGS[f].model &&
+    settings[f].effort === DEFAULT_LLM_SETTINGS[f].effort;
+  const anyChanged = LLM_FEATURES.some((f) => !isDefault(f.id));
+
+  // その機能・モデルでのこれまでの 1 回あたりの料金
+  const averageCost = (feature: LlmFeature, model: LlmModel) => {
+    const row = all.rows.find(
+      (r) => r.feature === feature && r.model === model,
+    );
+    return row && row.calls > 0 ? row.costUsd / row.calls : undefined;
+  };
 
   return (
     <div className="space-y-10">
-      <h1 className="text-xl font-bold">AI の設定と使用量</h1>
-
-      <section>
-        <h2 className="text-lg font-bold">使う AI</h2>
+      <div>
+        <h1 className="text-xl font-bold">AI の設定と使用量</h1>
         <p className="mt-1 text-sm text-gray-600">
-          機能ごとに Claude
-          のモデルとエフォートを選べます。モデルやエフォートを上げると質が上がる見込みですが、料金と待ち時間も増えます。設定はこのブラウザに保存されます。
+          機能ごとに、使う Claude
+          のモデルとエフォートを切り替えられます。上げるほど質が上がる見込みですが、料金と待ち時間も増えます。設定はこのブラウザに保存され、すぐに反映されます。
         </p>
         {demoMode && (
-          <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            デモモード中は AI を呼ばないので、この設定は使われません。
+          <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            デモモード中は AI
+            を呼ばないので、この設定は使われず、使用量も増えません。
           </p>
         )}
-        <div className="mt-4 space-y-4">
-          {LLM_FEATURES.map((f) => (
-            <div key={f.id} className="rounded-lg border border-gray-200 p-4">
-              <p className="font-medium text-gray-900">{f.label}</p>
-              <p className="text-xs text-gray-500">{f.description}</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm">
-                  <span className="text-gray-700">モデル</span>
-                  <select
-                    className={selectClass}
-                    value={settings[f.id].model}
-                    onChange={(e) =>
-                      change(f.id, { model: e.target.value as LlmModel })
-                    }
-                  >
-                    {LLM_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}：{m.note}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-sm">
-                  <span className="text-gray-700">エフォート</span>
-                  <select
-                    className={selectClass}
-                    value={settings[f.id].effort}
-                    onChange={(e) =>
-                      change(f.id, {
-                        effort: e.target.value as FeatureSetting["effort"],
-                      })
-                    }
-                  >
-                    {(["default", ...LLM_EFFORTS] as const).map((e) => (
-                      <option key={e} value={e}>
-                        {EFFORT_LABELS[e]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-          ))}
+      </div>
+
+      <section>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">使う AI</h2>
+          {anyChanged && (
+            <button
+              type="button"
+              onClick={resetLlmSettings}
+              className="text-sm text-blue-700 hover:underline"
+            >
+              すべて標準に戻す
+            </button>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={resetLlmSettings}
-          className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          標準に戻す（すべて Haiku 5.5・標準のエフォート）
-        </button>
+        <div className="mt-3 space-y-3">
+          {LLM_FEATURES.map((f) => {
+            const s = settings[f.id];
+            const avg = averageCost(f.id, s.model);
+            return (
+              <div key={f.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {f.label}
+                      {!isDefault(f.id) && (
+                        <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-normal text-blue-700">
+                          変更中
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">{f.description}</p>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {avg !== undefined
+                      ? `これまでの 1 回あたり ${formatUsd(avg)}`
+                      : "このモデルではまだ使っていません"}
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-[3fr_4fr]">
+                  <Segmented
+                    label="モデル"
+                    value={s.model}
+                    options={MODEL_OPTIONS}
+                    onChange={(model) => change(f.id, { model })}
+                  />
+                  <Segmented
+                    label="エフォート"
+                    value={s.effort}
+                    options={EFFORT_OPTIONS}
+                    onChange={(effort) => change(f.id, { effort })}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">使用量</h2>
-          <div className="flex rounded-md border border-gray-300 text-sm">
-            {(
-              [
-                ["today", "今日"],
-                ["all", `合計（直近 ${KEEP_DAYS} 日）`],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setRange(value)}
-                className={`px-3 py-1.5 ${range === value ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
-              >
-                {label}
-              </button>
-            ))}
+        <h2 className="text-lg font-bold">使用量</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <Stat
+            label="今日の料金の目安"
+            value={formatUsd(today.total.costUsd)}
+          />
+          <Stat
+            label="今日 AI を呼んだ回数"
+            value={`${fmt(today.total.calls)} 回`}
+          />
+          <Stat
+            label={`直近 ${KEEP_DAYS} 日の料金の目安`}
+            value={formatUsd(all.total.costUsd)}
+          />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-gray-800">
+            機能・モデルごとの内訳
+          </h3>
+          <div className="w-56">
+            <Segmented
+              label="期間"
+              hideLabel
+              value={range}
+              options={[
+                { value: "today", label: "今日" },
+                { value: "all", label: `直近 ${KEEP_DAYS} 日` },
+              ]}
+              onChange={setRange}
+            />
           </div>
         </div>
-        <p className="mt-1 text-sm text-gray-600">
-          このブラウザでアプリが AI
-          を呼んだ分です。料金は単価表から計算した目安です。正確な請求額は
-          Anthropic の Console で確かめてください。
-        </p>
 
-        {rows.length === 0 ? (
-          <p className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+        {shown.rows.length === 0 ? (
+          <p className="mt-3 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
             {range === "today"
               ? "今日はまだ AI を呼んでいません。"
               : "まだ記録がありません。"}
           </p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200">
             <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
-                  <th className="py-2 pr-3 font-medium">機能</th>
-                  <th className="py-2 pr-3 font-medium">モデル</th>
-                  <th className="py-2 pr-3 text-right font-medium">回数</th>
-                  <th className="py-2 pr-3 text-right font-medium">入力</th>
-                  <th className="py-2 pr-3 text-right font-medium">出力</th>
-                  <th className="py-2 pr-3 text-right font-medium">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-xs text-gray-500">
+                  <th className="px-3 py-2 font-medium">機能</th>
+                  <th className="px-3 py-2 font-medium">モデル</th>
+                  <th className="px-3 py-2 text-right font-medium">回数</th>
+                  <th className="px-3 py-2 text-right font-medium">入力</th>
+                  <th className="px-3 py-2 text-right font-medium">出力</th>
+                  <th className="px-3 py-2 text-right font-medium">
                     キャッシュ
                   </th>
-                  <th className="py-2 text-right font-medium">料金の目安</th>
+                  <th className="px-3 py-2 text-right font-medium">
+                    料金の目安
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {shown.rows.map((r) => (
                   <UsageLine
                     key={`${r.feature}|${r.model}`}
-                    feature={featureLabel(r.feature)}
+                    feature={
+                      LLM_FEATURES.find((f) => f.id === r.feature)?.label ??
+                      r.feature
+                    }
                     model={modelLabel(r.model)}
                     t={r}
                   />
                 ))}
-                <UsageLine feature="合計" model="" t={total} strong />
+                <UsageLine feature="合計" model="" t={shown.total} strong />
               </tbody>
             </table>
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              window.confirm("記録した使用量をすべて消します。よろしいですか？")
-            )
-              resetUsage();
-          }}
-          className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          使用量の記録を消す
-        </button>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+          <p>
+            このブラウザでアプリが AI
+            を呼んだ分です。料金は単価表から計算した目安で、正確な請求額は
+            Anthropic の Console で確かめてください。
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "記録した使用量をすべて消します。よろしいですか？",
+                )
+              )
+                resetUsage();
+            }}
+            className="shrink-0 text-red-600 hover:underline"
+          >
+            使用量の記録を消す
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -202,6 +260,17 @@ const fmt = (n: number) => n.toLocaleString("ja-JP");
 function formatUsd(n: number): string {
   if (n === 0) return "$0";
   return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 p-4">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function UsageLine({
@@ -216,23 +285,25 @@ function UsageLine({
   strong?: boolean;
 }) {
   const cls = strong
-    ? "border-t-2 border-gray-300 font-medium"
-    : "border-b border-gray-100";
+    ? "border-t border-gray-300 bg-gray-50 font-medium"
+    : "border-t border-gray-100";
   return (
     <tr className={cls}>
-      <td className="py-2 pr-3">{feature}</td>
-      <td className="py-2 pr-3 text-gray-600">{model}</td>
-      <td className="py-2 pr-3 text-right tabular-nums">{fmt(t.calls)}</td>
-      <td className="py-2 pr-3 text-right tabular-nums">
+      <td className="px-3 py-2">{feature}</td>
+      <td className="px-3 py-2 text-gray-600">{model}</td>
+      <td className="px-3 py-2 text-right tabular-nums">{fmt(t.calls)}</td>
+      <td className="px-3 py-2 text-right tabular-nums">
         {fmt(t.inputTokens)}
       </td>
-      <td className="py-2 pr-3 text-right tabular-nums">
+      <td className="px-3 py-2 text-right tabular-nums">
         {fmt(t.outputTokens)}
       </td>
-      <td className="py-2 pr-3 text-right tabular-nums">
+      <td className="px-3 py-2 text-right tabular-nums">
         {fmt(t.cacheReadTokens + t.cacheWriteTokens)}
       </td>
-      <td className="py-2 text-right tabular-nums">{formatUsd(t.costUsd)}</td>
+      <td className="px-3 py-2 text-right tabular-nums">
+        {formatUsd(t.costUsd)}
+      </td>
     </tr>
   );
 }
