@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkflowMap } from "@/lib/types";
+import { currentFocus } from "@/lib/map/summary";
 import { sortedPhases } from "@/lib/map/view";
 import type { AddTaskValues } from "./AddTaskForm";
 import { milestoneStyle, type MilestoneFilter } from "./labels";
@@ -31,6 +32,7 @@ export function MapBoard({
 }) {
   const phases = sortedPhases(map);
   const changedIds = new Set(map.lastUpdate?.changedTaskIds ?? []);
+  const currentPhaseId = currentFocus(map).current?.phaseId;
 
   const options: { value: MilestoneFilter; label: string }[] = [
     { value: "all", label: "すべて" },
@@ -97,6 +99,7 @@ export function MapBoard({
               selectedId={selectedId}
               changedIds={changedIds}
               expandedIds={expandedIds}
+              isCurrentPhase={phase.id === currentPhaseId}
               onToggle={onToggle}
               onSelect={onSelect}
               onAddTask={onAddTask}

@@ -11,23 +11,21 @@ import {
   changedParentIds,
   currentFocus,
   phaseSummaries,
-  type CurrentFocusReason,
 } from "@/lib/map/summary";
 import { effectiveStatus, statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
 import type { MapPhase, MapStatus, MapTask, WorkflowMap } from "@/lib/types";
-import { STATUS_BADGE, STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
+import {
+  FOCUS_REASON_TEXT,
+  STATUS_BADGE,
+  STATUS_ICON,
+  STATUS_ORDER,
+} from "@/components/map/labels";
+import { PhaseSteps } from "@/components/map/PhaseSteps";
 import { SideLane } from "./SideLane";
 import { SIDE_WIDTH } from "./sizes";
 
 const BUTTON =
   "rounded border border-gray-300 px-1.5 py-0.5 text-[11px] leading-4 text-gray-700 hover:bg-gray-50";
-
-// 今ここをどう選んだか（lib/map/summary.ts の currentFocus）
-const REASON_TEXT: Record<CurrentFocusReason, string> = {
-  update: "直近の更新で変わったタスク",
-  record: "いちばん新しい記録のタスク",
-  order: "進行中・待ちのうち、工程の順で最初のタスク",
-};
 
 const SMALL_BUTTON =
   "w-full rounded border border-gray-300 py-1 text-[10px] leading-tight text-gray-700 hover:bg-gray-50";
@@ -109,13 +107,19 @@ export function StripSide({
             </Link>
           </div>
 
-          {/* 今ここは1件だけ、いちばん上に囲みで出す。ほかの進行中・待ちはその下に区切って並べる */}
+          {/* 今の段階と今ここ（1件）を、いちばん上に囲みで出す。ほかの進行中・待ちはその下に区切って並べる */}
           {current && (
             <section
-              aria-label="今ここ"
+              aria-label="今の段階と今ここ"
               className="mt-2 rounded-md border border-indigo-200 bg-indigo-50 p-1.5"
             >
-              <h2 className="text-xs font-semibold text-indigo-800">今ここ</h2>
+              <p className="text-sm font-bold leading-snug text-indigo-900">
+                今は「{phaseById.get(current.phaseId)?.name}」の段階
+              </p>
+              <div className="mt-1">
+                <PhaseSteps map={map} currentPhaseId={current.phaseId} size="sm" />
+              </div>
+              <h2 className="mt-1.5 text-xs font-semibold text-indigo-800">今ここ</h2>
               <FocusLink
                 href={`${mapHref}?task=${encodeURIComponent(current.id)}`}
                 task={current}
@@ -125,7 +129,7 @@ export function StripSide({
               />
               {reason && (
                 <p className="mt-0.5 text-[10px] leading-snug text-indigo-700">
-                  {REASON_TEXT[reason]}
+                  {FOCUS_REASON_TEXT[reason]}
                 </p>
               )}
             </section>
@@ -179,6 +183,7 @@ export function StripSide({
                 summary={s}
                 changedIds={changedIds}
                 focusIds={focusIds}
+                isCurrentPhase={s.phase.id === current?.phaseId}
                 openSubs={openSubs}
                 onToggleSub={toggleSub}
               />
@@ -205,7 +210,7 @@ export function StripSide({
                 .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
                 .join("、");
               const hasFocus = s.phase.id === current?.phaseId;
-              const text = `${spoken || "タスクなし"}${hasFocus ? "（今ここあり）" : ""}`;
+              const text = `${spoken || "タスクなし"}${hasFocus ? "（今の段階）" : ""}`;
               return (
                 <li
                   key={s.phase.id}
@@ -217,16 +222,19 @@ export function StripSide({
                       : "bg-gray-100 text-gray-700"
                   }`}
                 >
+                  {hasFocus && (
+                    <span
+                      aria-hidden="true"
+                      className="rounded bg-indigo-600 px-1 text-[9px] font-semibold leading-3 text-white"
+                    >
+                      今
+                    </span>
+                  )}
                   <span
                     aria-hidden="true"
-                    className="flex items-center gap-px text-[11px] font-semibold leading-tight"
+                    className="text-[11px] font-semibold leading-tight"
                   >
                     {s.phase.name.slice(0, 1)}
-                    {hasFocus && (
-                      <span className="text-[8px] leading-none text-indigo-600">
-                        ●
-                      </span>
-                    )}
                   </span>
                   {parts.map((st: MapStatus) => (
                     <span
