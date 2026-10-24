@@ -1,8 +1,10 @@
 // ブラウザの localStorage への保存。docs/design.md の「6. システム構成」で【仮】として決めた保存先。
 // 画面（クライアントコンポーネント）からだけ呼ぶ。サーバー側では window が無いので空を返す。
 
+import type { DiffResponse } from "./api-types";
 import type {
   Finding,
+  ObservedError,
   ResearchTheme,
   Review,
   TeacherSession,
@@ -12,7 +14,16 @@ const KEYS = {
   themes: "rc.themes",
   reviews: "rc.reviews",
   teacherSessions: "rc.teacherSessions",
+  hookDiffs: "rc.hookDiffs",
 } as const;
+
+// 判定の一覧が変わったことを、開いている画面に知らせるイベント
+export const REVIEWS_CHANGED_EVENT = "rc:reviews-changed";
+
+export function notifyReviewsChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(REVIEWS_CHANGED_EVENT));
+}
 
 function read<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
@@ -45,6 +56,14 @@ export function listThemes(): ResearchTheme[] {
   );
 }
 
+// リポジトリ（owner/name）から研究テーマを探す。大文字小文字と前後の空白は無視し、
+// 複数あれば最後に更新したもの
+export function findThemeByRepo(repo: string): ResearchTheme | undefined {
+  const key = repo.trim().toLowerCase();
+  if (!key) return undefined;
+  return listThemes().find((t) => t.repo.trim().toLowerCase() === key);
+}
+
 export function getTheme(id: string): ResearchTheme | undefined {
   return read<ResearchTheme>(KEYS.themes).find((t) => t.id === id);
 }
@@ -75,6 +94,56 @@ export function saveReview(review: Review): Review {
   const reviews = read<Review>(KEYS.reviews).filter((r) => r.id !== review.id);
   write(KEYS.reviews, [...reviews, review]);
   return review;
+}
+
+// フックの判定（F-13）
+
+export const OBSERVED_ERROR_SAVE_LIMIT = 500; // 保存するエラー出力の最大文字数
+export const HOOK_DIFF_KEEP = 5; // 差分を残す判定の数
+
+// 保存するときは、エラーの出力を500文字までに切る（localStorage の容量のため）
+export function cutObservedErrors(errors: ObservedError[]): ObservedError[] {
+  return errors.map((e) => ({
+    ...e,
+    output: e.output.slice(0, OBSERVED_ERROR_SAVE_LIMIT),
+  }));
+}
+
+// フックで届いた判定を保存する。エラー出力は切り、差分は直近5件ぶんだけ残す
+export function saveHookReview(review: Review, commit: DiffResponse): Review {
+  const saved = saveReview({
+    ...review,
+    observedErrors: cutObservedErrors(review.observedErrors ?? []),
+  });
+  saveHookDiff(saved.id, commit);
+  notifyReviewsChanged();
+  return saved;
+}
+
+export type HookDiffEntry = { reviewId: string; commit: DiffResponse };
+
+// 再判定のために差分を取っておく。古い順に並べ、直近5件だけ残す
+export function saveHookDiff(reviewId: string, commit: DiffResponse): void {
+  const entries = read<HookDiffEntry>(KEYS.hookDiffs).filter(
+    (e) => e.reviewId !== reviewId,
+  );
+  const kept = [...entries, { reviewId, commit }].slice(-HOOK_DIFF_KEEP);
+  try {
+    write(KEYS.hookDiffs, kept);
+  } catch {
+    // 容量があふれたときは、新しい1件だけ残してみる。だめなら諦める（判定の保存は止めない）
+    try {
+      write(KEYS.hookDiffs, kept.slice(-1));
+    } catch {
+      // 何もしない
+    }
+  }
+}
+
+export function getHookDiff(reviewId: string): DiffResponse | undefined {
+  return read<HookDiffEntry>(KEYS.hookDiffs).find(
+    (e) => e.reviewId === reviewId,
+  )?.commit;
 }
 
 export function updateFinding(

@@ -5,6 +5,8 @@ import type {
   ApiError,
   CommitsResponse,
   DiffResponse,
+  HookChangeResponse,
+  HookChangesResponse,
   ReviewRequest,
   ReviewResponse,
   TeacherFeedbackRequest,
@@ -12,6 +14,17 @@ import type {
   TeacherQuestionsRequest,
   TeacherQuestionsResponse,
 } from "./api-types";
+
+// HTTP ステータスを持つエラー（404 だけ別に扱いたいときのため）
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
   const res = await fetch(input, init);
@@ -21,7 +34,7 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
       body && typeof body === "object" && "error" in body
         ? body.error
         : `リクエストに失敗しました（${res.status}）`;
-    throw new Error(message);
+    throw new ApiRequestError(message, res.status);
   }
   return body as T;
 }
@@ -58,4 +71,17 @@ export function postTeacherFeedback(
   payload: TeacherFeedbackRequest,
 ): Promise<TeacherFeedbackResponse> {
   return postJson<TeacherFeedbackResponse>("/api/teacher/feedback", payload);
+}
+
+// フック（F-13）の受け取り箱
+export function fetchHookChanges(): Promise<HookChangesResponse> {
+  return request<HookChangesResponse>("/api/hook/changes");
+}
+
+// 取り出すと受け取り箱から消える。ほかのタブが先に取っていたら 404（ApiRequestError）
+export function takeHookChange(id: string): Promise<HookChangeResponse> {
+  return request<HookChangeResponse>(
+    `/api/hook/changes/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
 }

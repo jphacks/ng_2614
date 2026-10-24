@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HookInbox } from "@/components/hook/HookInbox";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
             </Link>
           </div>
         </header>
+        <HookInbox />
         <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
       </body>
     </html>
