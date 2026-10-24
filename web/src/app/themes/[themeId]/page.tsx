@@ -7,6 +7,7 @@ import {
   getTheme,
   listReviews,
   listSavedProblems,
+  REVIEWS_CHANGED_EVENT,
   saveTheme,
   type SavedProblem,
 } from "@/lib/storage";
@@ -45,6 +46,13 @@ export default function ThemeDetailPage() {
 
   useEffect(() => {
     setState(load(themeId));
+  }, [themeId]);
+
+  // フックで判定が届いたら、一覧を読み直す
+  useEffect(() => {
+    const reload = () => setState(load(themeId));
+    window.addEventListener(REVIEWS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(REVIEWS_CHANGED_EVENT, reload);
   }, [themeId]);
 
   if (state.status === "loading") {

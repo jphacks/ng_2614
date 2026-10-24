@@ -1,0 +1,9 @@
+{
+  "name": "research-check-hook",
+  "private": true,
+  "type": "module",
+  "description": "Claude Code のフックのスクリプト（依存パッケージなし）。テストは npm test",
+  "scripts": {
+    "test": "node --test"
+  }
+}

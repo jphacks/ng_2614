@@ -1,3 +1,4 @@
+import type { DiffResponse } from "@/lib/api-types";
 import type { Finding, FindingType } from "@/lib/types";
 import { FindingCard } from "./FindingCard";
 import { FINDING_TYPE_LABEL } from "./labels";
@@ -6,6 +7,7 @@ type Props = {
   type: FindingType;
   findings: Finding[];
   description: string;
+  diff?: DiffResponse | null; // 判定の差分（F-14）。無ければ差分は出さない
   onChangeType: (findingId: string, type: FindingType) => void;
   onToggleSaved: (findingId: string, saved: boolean) => void;
 };
@@ -20,6 +22,7 @@ export function FindingSection({
   type,
   findings,
   description,
+  diff,
   onChangeType,
   onToggleSaved,
 }: Props) {
@@ -39,6 +42,9 @@ export function FindingSection({
             <FindingCard
               key={f.id}
               finding={f}
+              diffFiles={(diff?.files ?? []).filter((d) =>
+                f.files.includes(d.filename),
+              )}
               onChangeType={(t) => onChangeType(f.id, t)}
               onToggleSaved={(s) => onToggleSaved(f.id, s)}
             />
