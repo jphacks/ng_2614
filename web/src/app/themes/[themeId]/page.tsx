@@ -101,6 +101,12 @@ export default function ThemeDetailPage() {
           >
             先生モード
           </Link>
+          <Link
+            href={`/themes/${theme.id}/map`}
+            className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+          >
+            作業フローマップ
+          </Link>
         </div>
       </div>
 
