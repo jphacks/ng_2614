@@ -356,12 +356,248 @@ function isCommandFailure(text) {
 const ERROR_LINE =
   /Traceback \(most recent call last\)|\b[A-Z]\w*(?:Error|Exception|Warning)\b|\bfailed\b|\bFAILED\b/;
 
-// エラーらしい行のまわり（前2行・後ろ3行）だけを取り出す。無ければ ""
-export function pickErrorLines(text) {
+// 数値の異常。「Error」とは表示されないが、研究では学習の発散（nan や inf）として現れる。
+// np.nan・math.inf・float('inf')・isnan のような、コードに書かれた名前は除く（直前が . や引用符・単語の文字、直後が単語の文字や引用符・.英数字）。
+// diverg は KL divergence のような普通の指標名があるので見ない
+const NUMERIC_ANOMALY =
+  /(?<![\w.'"`])-?(?:nan|inf)(?![\w'"`]|\.\w)|overflow encountered|invalid value encountered|divide by zero encountered/i;
+
+function isNumericAnomalyLine(line) {
+  return NUMERIC_ANOMALY.test(line);
+}
+
+// 探索・ファイルの後始末のコマンド。これだけでできたコマンドは、失敗も出力も無視する
+// （ソースコードや差分を表示しただけで、エラーらしい行が出るため）
+export const EXPLORATION_COMMANDS = new Set([
+  "cat", "head", "tail", "less", "more", "sed", "awk", "grep", "egrep", "fgrep", "rg", "ag", "ack",
+  "git", "ls", "find", "fd", "tree", "wc", "file", "stat", "du", "df", "pwd", "echo", "printf",
+  "which", "type", "whereis", "test", "[", "[[", "diff", "cmp", "comm", "sort", "uniq", "cut", "tr",
+  "jq", "column", "nl", "xxd", "od", "basename", "dirname", "realpath", "readlink", "date",
+  "printenv", "true", "false", "sleep", "mkdir", "touch", "cp", "mv", "rm", "ln", "chmod", "cd",
+  "export", "set", "unset", "source", ".",
+]);
+
+// 終了コード 1 が「見つからなかった・偽・違いがある」を表すだけで、エラーではないコマンド
+const EXIT_ONE_IS_NORMAL = new Set([
+  "grep", "egrep", "fgrep", "rg", "ag", "ack", "diff", "cmp", "test", "[", "[[", "which", "type", "pgrep",
+]);
+
+// コマンドの頭に付く、実行するコマンドそのものではない言葉（シェルの構文）
+const SHELL_KEYWORDS = new Set(["if", "then", "else", "elif", "do", "while", "until", "!", "{", "(", "(("]);
+// 構文の区切りだけの行。コマンドとして数えない
+const SHELL_NEUTRAL = new Set(["for", "select", "case", "done", "fi", "esac", "}", ")", "function", "in", ";;"]);
+
+// コマンドを、改行・; ・&&・||・|・& で区切った文字列にする（引用符・$( )・ヒアドキュメントの本文・コメントは区切らない近似）。
+// 返す mergesStderr は、標準エラーを標準出力に混ぜているか（2>&1 など）
+export function analyzeCommand(command) {
+  const s = String(command ?? "");
+  const segments = [];
+  let cur = "";
+  let visible = ""; // ヒアドキュメントの本文を除いたコマンド
+  let quote = "";
+  let depth = 0; // $( ) の深さ
+  let backtick = false;
+  const pending = []; // 終端を待っているヒアドキュメント
+  const push = () => {
+    if (cur.trim()) segments.push(cur.trim());
+    cur = "";
+  };
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quote) {
+      cur += c;
+      visible += c;
+      if (quote === '"' && c === "\\" && i + 1 < s.length) {
+        cur += s[i + 1];
+        visible += s[i + 1];
+        i++;
+      } else if (c === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (c === "\\" && i + 1 < s.length) {
+      cur += c + s[i + 1];
+      visible += c + s[i + 1];
+      i++;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      quote = c;
+    } else if (c === "`") {
+      backtick = !backtick;
+    } else if (c === "$" && s[i + 1] === "(") {
+      depth++;
+      cur += "$(";
+      visible += "$(";
+      i++;
+      continue;
+    } else if (depth > 0 && c === "(") {
+      depth++;
+    } else if (depth > 0 && c === ")") {
+      depth--;
+    } else if (c === "#" && !depth && !backtick && (cur === "" || /\s$/.test(cur))) {
+      while (i + 1 < s.length && s[i + 1] !== "\n") i++; // コメントは読み飛ばす
+      continue;
+    } else if (c === "<" && s[i + 1] === "<" && !depth && !backtick) {
+      if (s[i + 2] === "<") {
+        cur += "<<<";
+        visible += "<<<";
+        i += 2;
+        continue;
+      }
+      const m = /^<<(-?)\s*(?:'([^']*)'|"([^"]*)"|\\?([A-Za-z_]\w*))/.exec(s.slice(i));
+      if (m) {
+        pending.push({ tag: m[2] ?? m[3] ?? m[4], dash: m[1] === "-" });
+        cur += m[0];
+        visible += m[0];
+        i += m[0].length - 1;
+        continue;
+      }
+    } else if (!depth && !backtick) {
+      if (c === "\n") {
+        if (pending.length > 0) {
+          // 終端の行まで、ヒアドキュメントの本文として読み飛ばす
+          let j = i + 1;
+          for (const { tag, dash } of pending) {
+            while (j < s.length) {
+              let end = s.indexOf("\n", j);
+              if (end < 0) end = s.length;
+              let text = s.slice(j, end).replace(/\r$/, "");
+              if (dash) text = text.replace(/^\t+/, "");
+              j = end + 1;
+              if (text === tag) break;
+            }
+          }
+          pending.length = 0;
+          i = Math.min(j, s.length) - 1;
+        }
+        push();
+        visible += "\n";
+        continue;
+      }
+      if (c === ";") {
+        push();
+        visible += c;
+        if (s[i + 1] === ";") i++;
+        continue;
+      }
+      if (c === "|") {
+        push();
+        visible += c;
+        if (s[i + 1] === "|" || s[i + 1] === "&") {
+          visible += s[i + 1];
+          i++;
+        }
+        continue;
+      }
+      if (c === "&") {
+        const prev = s[i - 1];
+        if (s[i + 1] === "&") {
+          push();
+          visible += "&&";
+          i++;
+          continue;
+        }
+        if (prev !== ">" && prev !== "<" && s[i + 1] !== ">") {
+          push();
+          visible += c;
+          continue;
+        }
+      }
+    }
+    cur += c;
+    visible += c;
+  }
+  push();
+  const names = segments.map(segmentCommandName).filter((n) => n !== null);
+  return {
+    // 全部が探索のコマンドか（コマンドが見つからないときは、念のため探索とは見なさない）
+    exploration: names.length > 0 && names.every((n) => EXPLORATION_COMMANDS.has(n)),
+    lastName: names.length > 0 ? names[names.length - 1] : "",
+    mergesStderr: /2>&1|&>|\|&/.test(visible),
+  };
+}
+
+// 空白で区切って、引用符を外す
+function tokenize(segment) {
+  const tokens = [];
+  let cur = "";
+  let has = false;
+  let quote = "";
+  for (let i = 0; i < segment.length; i++) {
+    const c = segment[i];
+    if (quote) {
+      if (c === quote) quote = "";
+      else if (quote === '"' && c === "\\" && i + 1 < segment.length) cur += segment[++i];
+      else cur += c;
+    } else if (c === "'" || c === '"') {
+      quote = c;
+      has = true;
+    } else if (c === "\\" && i + 1 < segment.length) {
+      cur += segment[++i];
+      has = true;
+    } else if (/\s/.test(c)) {
+      if (has) tokens.push(cur);
+      cur = "";
+      has = false;
+    } else {
+      cur += c;
+      has = true;
+    }
+  }
+  if (has) tokens.push(cur);
+  return tokens;
+}
+
+// 区切った1つ分から、実行するコマンドの名前（パスは外す）を求める。
+// 変数の代入や time・timeout・nohup・nice・env・command・exec・sudo は飛ばす。
+// 構文の区切りだけ・空なら null
+function segmentCommandName(segment) {
+  const tokens = tokenize(segment).map((t) => t.replace(/^\(+(?=.)/, ""));
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (SHELL_NEUTRAL.has(t)) return null;
+    if (/^[A-Za-z_]\w*=/.test(t) || SHELL_KEYWORDS.has(t)) {
+      i++;
+    } else if (t === "time" || t === "nohup" || t === "exec" || t === "command") {
+      i++;
+      if (t === "command" && (tokens[i] === "-v" || tokens[i] === "-V")) return "type";
+      while (tokens[i]?.startsWith("-")) i++;
+    } else if (t === "nice") {
+      i++;
+      if (tokens[i] === "-n") i += 2;
+      else if (/^-\d+$/.test(tokens[i] ?? "")) i++;
+    } else if (t === "timeout") {
+      i++;
+      while (tokens[i]?.startsWith("-")) i += tokens[i] === "-s" || tokens[i] === "-k" ? 2 : 1;
+      i++; // 時間
+    } else if (t === "sudo") {
+      i++;
+      while (tokens[i]?.startsWith("-")) i += /^-[ughpCDrtU]$/.test(tokens[i]) ? 2 : 1;
+    } else if (t === "env") {
+      i++;
+      while (tokens[i]?.startsWith("-")) i += /^-[uCS]$/.test(tokens[i]) ? 2 : 1;
+    } else {
+      return t.split("/").pop().replace(/[)}]+$/, "");
+    }
+  }
+  return null;
+}
+
+// 終了コード 1 だけで、見つからなかった・偽・違いがあるだけのコマンド（最後が grep など）か
+function isExitOneNormal(output, lastName) {
+  const firstLine = String(output).split("\n", 1)[0];
+  return /^\s*Exit code 1\s*$/.test(firstLine) && EXIT_ONE_IS_NORMAL.has(lastName);
+}
+
+// 条件に合う行のまわり（前2行・後ろ3行）だけを取り出す。無ければ ""
+function pickMatchingLines(text, isHit) {
   const lines = String(text).split("\n");
   const keep = new Set();
   lines.forEach((line, i) => {
-    if (!ERROR_LINE.test(line)) return;
+    if (!isHit(line)) return;
     for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 3); j++) keep.add(j);
   });
   if (keep.size === 0) return "";
@@ -373,6 +609,39 @@ export function pickErrorLines(text) {
     prev = i;
   }
   return out.join("\n");
+}
+
+// エラーらしい行のまわりだけを取り出す。無ければ ""
+export function pickErrorLines(text) {
+  return pickMatchingLines(text, (line) => ERROR_LINE.test(line));
+}
+
+// 数値の異常（nan・inf・overflow など）の行のまわりだけを取り出す。無ければ ""
+export function pickNumericAnomalyLines(text) {
+  return pickMatchingLines(text, isNumericAnomalyLine);
+}
+
+// 成功したコマンドの出力から取る。
+// stdout と stderr が分かれていれば、エラーらしい行は stderr だけから探す（stdout には表示したコードなどが混ざるため）。
+// 数値の異常は両方から探す。分かれていなければ（古い形式）、出力の全体から探す
+function pickSuccessOutput(detail, text, mergesStderr) {
+  const isHit = (line) => ERROR_LINE.test(line) || isNumericAnomalyLine(line);
+  if (!detail) return pickMatchingLines(text, isHit);
+  return [
+    pickMatchingLines(detail.stdout, mergesStderr ? isHit : isNumericAnomalyLine),
+    pickMatchingLines(detail.stderr, isHit),
+  ]
+    .filter(Boolean)
+    .join("\n…\n");
+}
+
+// 成功した Bash の結果の、stdout と stderr（entry の toolUseResult）。無ければ null
+function splitBashOutput(toolUseResult) {
+  if (!toolUseResult || typeof toolUseResult !== "object" || typeof toolUseResult.stderr !== "string") return null;
+  return {
+    stdout: typeof toolUseResult.stdout === "string" ? toolUseResult.stdout : "",
+    stderr: toolUseResult.stderr,
+  };
 }
 
 function toolInput(use) {
@@ -422,16 +691,27 @@ export function parseTranscript(transcriptText, promptAt) {
           }
         }
       } else if (entry.type === "user" && inRange) {
-        for (const b of blocks) {
-          if (b?.type !== "tool_result") continue;
+        const results = blocks.filter((b) => b?.type === "tool_result");
+        // stdout / stderr が分かれた形は、tool_result が1つだけのときだけ信用する
+        const detail = results.length === 1 ? splitBashOutput(entry.toolUseResult) : null;
+        for (const b of results) {
           const use = toolUses.get(b.tool_use_id);
           if (use?.name !== "Bash") continue; // プログラムのエラーは Bash の結果にだけ出る
+          const command = typeof use.input?.command === "string" ? use.input.command : "";
+          const info = analyzeCommand(command);
+          if (info.exploration) continue; // 探索のコマンドは、失敗も出力も無視する
           const output = contentToText(b.content);
           if (isErrorFlag(b.is_error)) {
             if (isPermissionDenial(output) || !isCommandFailure(output)) continue;
+            if (isExitOneNormal(output, info.lastName)) {
+              // grep の0件などはエラーではない。ただし数値の異常は拾う
+              const anomaly = pickNumericAnomalyLines(output);
+              if (anomaly) errors.push({ kind: "in_output", tool: "Bash", input: toolInput(use), output: anomaly });
+              continue;
+            }
             errors.push({ kind: "failed", tool: "Bash", input: toolInput(use), output });
           } else {
-            const picked = pickErrorLines(output);
+            const picked = pickSuccessOutput(detail, output, info.mergesStderr);
             if (picked) errors.push({ kind: "in_output", tool: "Bash", input: toolInput(use), output: picked });
           }
         }
