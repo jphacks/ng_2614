@@ -3,7 +3,8 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
-export const MODEL = "claude-opus-5-5";
+// 費用を抑えるため Haiku を使う（docs/design.md の技術スタック）。判定の質が足りなければ Sonnet などに上げる
+export const MODEL = "claude-haiku-5-5";
 
 let client: Anthropic | undefined;
 

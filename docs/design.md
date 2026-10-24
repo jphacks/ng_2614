@@ -136,7 +136,7 @@ flowchart LR
 | --- | --- | --- |
 | フロントエンド | Next.js（App Router）、TypeScript、Tailwind CSS | 画面とサーバー処理を1つのプロジェクトで扱える。AIに書かせやすい |
 | バックエンド | Next.js の Route Handlers | 別のサーバーを立てずに済む。APIキーをサーバー側に置ける |
-| AI / LLM | Claude API | 差分の判定と先生モードに使う |
+| AI / LLM | Claude API（モデルは Claude Haiku 5.5） | 差分の判定と先生モードに使う。判定の回数が増えても費用を抑えられるよう、Opus 5.5 の約40分の1の Haiku を使う。判定の質が足りなければ Sonnet 5.5 などに上げる |
 | 外部連携 | GitHub REST API | コミットと差分の取得 |
 | データの保存 | ブラウザの localStorage | 自分で見返せればよいので、まずはデータベースなしで始める。足りなくなったら Supabase に移す |
 | デプロイ先 | Vercel | Next.js をそのまま公開できる |
@@ -319,3 +319,4 @@ LLM の出力は JSON で受け取り、型に合うか検証してから画面�
 | 2026-10-24 | 初版を作成。壁打ちの決定事項に未決部分を【仮】で埋め、全章を記載 |
 | 2026-10-24 | 実装開始に合わせ、画面の URL、`Review.commitMessage`、`TeacherSession.items[].findingId` を追加。アプリは `web/` に置く |
 | 2026-10-24 | 「11. 開発計画」の担当を、①実際の Git の差分 ②先生 Agent の聞き方 ③手法上の問いの立て方 の3つに分けた |
+| 2026-10-24 | 技術スタックの LLM のモデルを Claude Haiku 5.5 に決めた（費用を抑えるため） |
