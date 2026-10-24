@@ -116,10 +116,13 @@ ${earlierPrompts
 `
       : "";
 
+  // フックで届いた変更は sha が空。コミットなのにメッセージが空のときと区別する
   const commitMessage =
-    commit.message.trim() === ""
+    commit.sha === ""
       ? "（コミットメッセージはありません。コミットされていない Claude Code の作業セッションの変更です）"
-      : neutralize(commit.message);
+      : commit.message.trim() === ""
+        ? "（コミットメッセージは空です）"
+        : neutralize(commit.message);
 
   const errorsSection =
     observedErrors.length > 0
