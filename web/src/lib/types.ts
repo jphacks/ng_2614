@@ -156,6 +156,10 @@ export type MapSource = {
 // タスクとサブタスク。parentId があればサブタスク
 export type MapTask = {
   id: string;
+  // ワークスペースから作ったタスクの、作り直しても変わらない目印。
+  // ドキュメントならワークスペースのパス、コミットなら "commit:<sha>"、AI がまとめた親なら "group:..."。
+  // 人が足したタスクとデモのタスクには無い
+  key?: string;
   phaseId: string;
   parentId?: string;
   milestoneId?: string; // 付かないタスクもある
@@ -227,6 +231,7 @@ export type MapOp =
   | {
       op: "add_task";
       tempId: string; // 同じ一覧の中のほかの op から parentId などで参照できる仮の id
+      key?: string; // ワークスペースから作ったタスクの目印（MapTask.key）
       phaseId: string;
       parentId?: string; // 既存のタスクの id、または同じ一覧の add_task の tempId
       milestoneId?: string;

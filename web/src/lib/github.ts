@@ -161,7 +161,8 @@ export function mapGithubError(res: Response): GithubApiError {
   );
 }
 
-async function githubGet(path: string): Promise<unknown> {
+// GitHub API に GET する。ワークスペースの読み取り（lib/workspace/github.ts）からも使う
+export async function githubGet(path: string): Promise<unknown> {
   let res: Response;
   try {
     res = await fetch(`${GITHUB_API_BASE}${path}`, {
