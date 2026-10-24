@@ -8,6 +8,7 @@ import type {
   ResearchTheme,
   Review,
   TeacherSession,
+  WorkflowMap,
 } from "./types";
 
 const KEYS = {
@@ -15,6 +16,7 @@ const KEYS = {
   reviews: "rc.reviews",
   teacherSessions: "rc.teacherSessions",
   hookDiffs: "rc.hookDiffs",
+  maps: "rc.maps",
 } as const;
 
 // 判定の一覧が変わったことを、開いている画面に知らせるイベント
@@ -168,4 +170,35 @@ export function saveTeacherSession(session: TeacherSession): TeacherSession {
   );
   write(KEYS.teacherSessions, [...sessions, session]);
   return session;
+}
+
+// 作業フローマップ（F-15）。研究テーマ1つにつき1件
+
+// マップが変わったことを、開いている画面（上部の帯など）に知らせるイベント
+export const MAPS_CHANGED_EVENT = "rc:maps-changed";
+
+function notifyMapsChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(MAPS_CHANGED_EVENT));
+}
+
+export function getWorkflowMap(themeId: string): WorkflowMap | undefined {
+  return read<WorkflowMap>(KEYS.maps).find((m) => m.themeId === themeId);
+}
+
+export function saveWorkflowMap(map: WorkflowMap): WorkflowMap {
+  const maps = read<WorkflowMap>(KEYS.maps).filter(
+    (m) => m.themeId !== map.themeId,
+  );
+  write(KEYS.maps, [...maps, map]);
+  notifyMapsChanged();
+  return map;
+}
+
+export function deleteWorkflowMap(themeId: string): void {
+  write(
+    KEYS.maps,
+    read<WorkflowMap>(KEYS.maps).filter((m) => m.themeId !== themeId),
+  );
+  notifyMapsChanged();
 }

@@ -12,6 +12,7 @@ import { FileDiffList } from "@/components/review/DiffView";
 import { FindingSection } from "@/components/review/FindingSection";
 import { firstLine, headline, shortSha } from "@/components/review/labels";
 import { HookReviewInfo } from "@/components/hook/HookReviewInfo";
+import { MapUpdateNotice } from "@/components/review/MapUpdateNotice";
 import { RejudgePanel } from "@/components/hook/RejudgePanel";
 
 export default function ReviewPage() {
@@ -131,6 +132,8 @@ export default function ReviewPage() {
           AIの判定は間違えることがあります。各項目の「判定を修正」で分類を直せます。
         </p>
       </header>
+
+      <MapUpdateNotice key={current.id} review={current} />
 
       {isHook && <HookReviewInfo review={current} />}
 

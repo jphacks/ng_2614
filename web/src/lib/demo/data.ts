@@ -30,8 +30,8 @@ export const demoTheme: Omit<ResearchTheme, "updatedAt"> = {
 
 // ---- コミットと差分 ----
 
-const MAIN_SHA = "b7e2c9d4a1f3e8c6b5d0a9f2e7c4b1d8a3e6f950";
-const README_SHA = "4c8a1e6f3b9d2c7e5a0f8b3d6e1c9a4f7b2d5e83";
+export const MAIN_SHA = "b7e2c9d4a1f3e8c6b5d0a9f2e7c4b1d8a3e6f950";
+export const README_SHA = "4c8a1e6f3b9d2c7e5a0f8b3d6e1c9a4f7b2d5e83";
 const INIT_SHA = "e6c5e08d2a7f4b1c9e3d8a5f0b6c2e9d4a1f7b36";
 
 const DEMO_REPO_URL = "https://github.com/demo-lab/ddpm-noise-schedule";
@@ -224,9 +224,9 @@ export function demoDiff(sha: string): DiffResponse | undefined {
 
 type FindingTemplate = Omit<Finding, "id" | "saved">;
 
-const NORMALIZE_SUMMARY =
+export const NORMALIZE_SUMMARY =
   "学習が発散する問題に対処するため、データを平均0・分散1に正規化し、評価も正規化したまま行っている";
-const CLIP_SUMMARY =
+export const CLIP_SUMMARY =
   "サンプルが飛び散る問題に対処するため、cosine スケジュールの β の上限を 0.02 に抑えている";
 
 const demoFindings: Record<string, FindingTemplate[]> = {
