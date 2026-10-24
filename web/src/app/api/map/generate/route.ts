@@ -22,6 +22,7 @@ import {
   type WorkspaceDoc,
 } from "@/lib/workspace/parse";
 import { buildSkeleton } from "@/lib/workspace/skeleton";
+import { withLlm } from "@/lib/llm/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -49,7 +50,7 @@ function isValidProject(project: string): boolean {
   );
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -143,3 +144,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
+// モデル・エフォートをヘッダーで受け取り、使用量をヘッダーで返す（F-17）
+export const POST = withLlm(handlePost);

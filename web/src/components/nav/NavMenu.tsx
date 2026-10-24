@@ -146,6 +146,9 @@ export function NavMenu() {
               <MenuLink href="/projects/new" pathname={pathname}>
                 ＋ 新しいプロジェクト
               </MenuLink>
+              <MenuLink href="/settings" pathname={pathname}>
+                AI の設定と使用量
+              </MenuLink>
             </MenuSection>
 
             {data.current && (

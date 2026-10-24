@@ -7,6 +7,7 @@ import type { ReviewResponse } from "@/lib/api-types";
 import { jsonError } from "@/lib/http";
 import { reviewCommit } from "@/lib/llm/review";
 import { LlmError } from "@/lib/llm/structured";
+import { withLlm } from "@/lib/llm/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -58,7 +59,7 @@ const requestSchema = z.object({
   aiReport: clipped(3000).optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -100,3 +101,6 @@ export async function POST(request: Request) {
     return jsonError("判定中にエラーが起きました。もう一度試してください", 500);
   }
 }
+
+// モデル・エフォートをヘッダーで受け取り、使用量をヘッダーで返す（F-17）
+export const POST = withLlm(handlePost);

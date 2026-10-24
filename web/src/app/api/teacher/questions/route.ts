@@ -9,11 +9,12 @@ import {
   teacherErrorResponse,
   validationMessage,
 } from "@/lib/llm/teacher";
+import { withLlm } from "@/lib/llm/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const json = await request.json().catch(() => null);
   const parsed = questionsRequestSchema.safeParse(json);
   if (!parsed.success) {
@@ -29,3 +30,6 @@ export async function POST(request: Request) {
     return teacherErrorResponse(e);
   }
 }
+
+// モデル・エフォートをヘッダーで受け取り、使用量をヘッダーで返す（F-17）
+export const POST = withLlm(handlePost);
