@@ -116,55 +116,59 @@ export default function ThemeDetailPage() {
         </div>
       </div>
 
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">研究の目的</h2>
-          {!editing && (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="text-sm text-blue-700 hover:underline"
-            >
-              編集する
-            </button>
-          )}
-        </div>
-        <div className="mt-3 rounded-md border border-gray-200 p-4">
-          {editing ? (
-            <ThemeForm
-              initial={{
-                name: theme.name,
-                repo: theme.repo,
-                question: theme.question,
-                method: theme.method,
-                evaluation: theme.evaluation,
-              }}
-              submitLabel="保存する"
-              onSubmit={handleSave}
-              onCancel={() => setEditing(false)}
-            />
-          ) : (
-            <PurposeView theme={theme} />
-          )}
-        </div>
-      </section>
+      {/* 広い画面（1280px 以上）では2列。左に研究の目的と問題ログ、右に取り込んだ変更 */}
+      <div className="space-y-10 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start xl:gap-10 xl:space-y-0">
+        <div className="space-y-10">
+          <section>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">研究の目的</h2>
+              {!editing && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="text-sm text-blue-700 hover:underline"
+                >
+                  編集する
+                </button>
+              )}
+            </div>
+            <div className="mt-3 rounded-md border border-gray-200 p-4">
+              {editing ? (
+                <ThemeForm
+                  initial={{
+                    name: theme.name,
+                    repo: theme.repo,
+                    question: theme.question,
+                    method: theme.method,
+                    evaluation: theme.evaluation,
+                  }}
+                  submitLabel="保存する"
+                  onSubmit={handleSave}
+                  onCancel={() => setEditing(false)}
+                />
+              ) : (
+                <PurposeView theme={theme} />
+              )}
+            </div>
+          </section>
 
-      <section>
-        <h2 className="text-lg font-bold">問題ログ</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          AI が黙って対処していた問題の記録です（新しい順）。先生との打ち合わせの前に見返せます。
-        </p>
-        <div className="mt-3">
-          <ProblemLog problems={problems} />
+          <section>
+            <h2 className="text-lg font-bold">問題ログ</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              AI が黙って対処していた問題の記録です（新しい順）。先生との打ち合わせの前に見返せます。
+            </p>
+            <div className="mt-3">
+              <ProblemLog problems={problems} />
+            </div>
+          </section>
         </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-bold">取り込んだ変更</h2>
-        <div className="mt-3">
-          <ReviewList reviews={reviews} />
-        </div>
-      </section>
+        <section>
+          <h2 className="text-lg font-bold">取り込んだ変更</h2>
+          <div className="mt-3">
+            <ReviewList reviews={reviews} />
+          </div>
+        </section>
+      </div>
 
       <DeleteProject
         theme={theme}

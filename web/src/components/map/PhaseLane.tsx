@@ -40,7 +40,7 @@ export function PhaseLane({
   return (
     <section
       aria-label={`レーン：${phase.name}`}
-      className={`w-60 min-w-60 shrink-0 rounded-md p-2 ${
+      className={`min-w-40 max-w-md flex-1 basis-0 rounded-md p-2 ${
         isCurrentPhase ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50"
       }`}
     >
