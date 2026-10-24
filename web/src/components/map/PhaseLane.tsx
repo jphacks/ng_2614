@@ -18,6 +18,7 @@ export function PhaseLane({
   selectedId,
   changedIds,
   expandedIds,
+  isCurrentPhase = false,
   onToggle,
   onSelect,
   onAddTask,
@@ -28,6 +29,7 @@ export function PhaseLane({
   selectedId: string | undefined;
   changedIds: Set<string>;
   expandedIds: Set<string>;
+  isCurrentPhase?: boolean; // 今ここのタスクがある工程（今の段階）
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onAddTask: (phaseId: string, values: AddTaskValues) => boolean;
@@ -38,10 +40,19 @@ export function PhaseLane({
   return (
     <section
       aria-label={`レーン：${phase.name}`}
-      className="w-60 min-w-60 shrink-0 rounded-md bg-gray-50 p-2"
+      className={`w-60 min-w-60 shrink-0 rounded-md p-2 ${
+        isCurrentPhase ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50"
+      }`}
     >
       <header className="mb-2 px-1">
-        <h3 className="text-sm font-bold text-gray-800">{phase.name}</h3>
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+          {phase.name}
+          {isCurrentPhase && (
+            <span className="rounded bg-indigo-600 px-1.5 text-xs font-semibold leading-5 text-white">
+              今の段階
+            </span>
+          )}
+        </h3>
         {phase.kinds.length > 0 && (
           <p className="text-xs text-gray-500">
             {phase.kinds.map((k) => SOURCE_KIND_LABEL[k]).join("・")}

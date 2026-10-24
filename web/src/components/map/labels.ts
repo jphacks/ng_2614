@@ -1,5 +1,6 @@
 // 作業フローマップ（F-15）の表示用の定数と小さな関数
 
+import type { CurrentFocusReason } from "@/lib/map/summary";
 import type {
   MapStatus,
   MapStatusSource,
@@ -32,6 +33,13 @@ export const STATUS_ICON: Record<MapStatus, { mark: string; className: string }>
     done: { mark: "✓", className: "text-green-600" },
     rejected: { mark: "✕", className: "text-red-500" },
   };
+
+// 今ここをどう選んだか（lib/map/summary.ts の currentFocus）
+export const FOCUS_REASON_TEXT: Record<CurrentFocusReason, string> = {
+  update: "直近の更新で変わったタスク",
+  record: "いちばん新しい記録のタスク",
+  order: "進行中・待ちのうち、工程の順で最初のタスク",
+};
 
 export const STATUS_SOURCE_LABEL: Record<MapStatusSource, string> = {
   manual: "手動",

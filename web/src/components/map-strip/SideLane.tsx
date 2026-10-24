@@ -156,6 +156,7 @@ export function SideLane({
   summary,
   changedIds,
   focusIds,
+  isCurrentPhase = false,
   openSubs,
   onToggleSub,
 }: {
@@ -164,6 +165,7 @@ export function SideLane({
   summary: PhaseSummary;
   changedIds: Set<string>;
   focusIds: Set<string>;
+  isCurrentPhase?: boolean; // 今ここのタスクがある工程（今の段階）
   openSubs: Set<string>;
   onToggleSub: (taskId: string) => void;
 }) {
@@ -171,10 +173,19 @@ export function SideLane({
   return (
     <section
       aria-label={`レーン：${summary.phase.name}`}
-      className="min-w-0 rounded-md bg-gray-50 p-1"
+      className={`min-w-0 rounded-md p-1 ${
+        isCurrentPhase ? "bg-indigo-50 ring-1 ring-indigo-300" : "bg-gray-50"
+      }`}
     >
       <h3 className="mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[11px] font-semibold leading-tight text-gray-800">
-        <span className="min-w-0 break-words">{summary.phase.name}</span>
+        <span className="min-w-0 break-words">
+          {summary.phase.name}
+          {isCurrentPhase && (
+            <span className="ml-1 rounded bg-indigo-600 px-1 text-[10px] font-semibold text-white">
+              今の段階
+            </span>
+          )}
+        </span>
         <span className="shrink-0 font-normal text-gray-500">
           {summary.counts.done}/{summary.total}
         </span>

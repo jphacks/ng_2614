@@ -30,6 +30,7 @@ import type { ResearchTheme, WorkflowMap } from "@/lib/types";
 import type { AddTaskValues } from "@/components/map/AddTaskForm";
 import { DetailPanel } from "@/components/map/DetailPanel";
 import { errorMessage, type MilestoneFilter } from "@/components/map/labels";
+import { CurrentPhase } from "@/components/map/CurrentPhase";
 import { MapBoard } from "@/components/map/MapBoard";
 import { PhaseControls } from "@/components/map/PhaseControls";
 import { RejectedList } from "@/components/map/RejectedList";
@@ -379,6 +380,7 @@ export default function WorkflowMapPage() {
               {actionError}
             </p>
           )}
+          <CurrentPhase map={map} onSelect={select} />
           <UpdateNotice map={map} onUndo={handleUndo} />
 
           <div className="space-y-1">

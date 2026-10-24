@@ -67,6 +67,7 @@ export function StripBody({
 
   // 「今ここ」は1件だけ出す（ほかに進行中・待ちのものはツールチップに）
   const focusTitle = current?.title ?? "";
+  const currentPhaseName = map.phases.find((p) => p.id === current?.phaseId)?.name;
   const othersTitle =
     others.length > 0 ? `ほかに進行中・待ち：${others.map((t) => t.title).join(" / ")}` : undefined;
 
@@ -92,13 +93,27 @@ export function StripBody({
               const spoken = parts
                 .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
                 .join("、");
+              const isCurrent = s.phase.id === current?.phaseId;
+              const label = `${spoken || "タスクなし"}${isCurrent ? "（今の段階）" : ""}`;
               return (
                 <li
                   key={s.phase.id}
-                  aria-label={`${s.phase.name}：${spoken || "タスクなし"}`}
-                  title={spoken || "タスクなし"}
-                  className="shrink-0 rounded-full bg-gray-100 px-1.5 text-[11px] leading-5 text-gray-700"
+                  aria-label={`${s.phase.name}：${label}`}
+                  title={label}
+                  className={`shrink-0 rounded-full px-1.5 text-[11px] leading-5 ${
+                    isCurrent
+                      ? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-400"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
                 >
+                  {isCurrent && (
+                    <span
+                      aria-hidden="true"
+                      className="mr-1 rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white"
+                    >
+                      今
+                    </span>
+                  )}
                   <span className="font-medium">{s.phase.name}</span>
                   {parts.map((st: MapStatus) => (
                     <span key={st} className="ml-1" aria-hidden="true">
@@ -115,11 +130,17 @@ export function StripBody({
         ) : (
           <span className="flex-1" />
         )}
-        {!open && focusTitle && (
+        {focusTitle && (
           <span
-            className="hidden min-w-0 max-w-[18rem] shrink items-baseline text-[11px] text-gray-600 md:flex"
+            className="hidden min-w-0 max-w-[20rem] shrink items-center text-[11px] text-gray-600 md:flex"
             title={othersTitle ? `${focusTitle}\n${othersTitle}` : focusTitle}
           >
+            {/* 工程の札がはみ出しても今の段階が分かるよう、ここにも工程名を出す */}
+            {currentPhaseName && (
+              <span className="mr-1 shrink-0 rounded-full bg-indigo-600 px-1.5 font-semibold leading-5 text-white">
+                今は{currentPhaseName}
+              </span>
+            )}
             <span className="shrink-0 font-medium text-indigo-700">今ここ：</span>
             <span className="min-w-0 truncate">{focusTitle}</span>
             {/* 件数はタイトルが省略されても見えるよう、外に出す */}
@@ -194,6 +215,7 @@ export function StripBody({
                   summary={s}
                   changedIds={changedIds}
                   focusIds={focusIds}
+                  isCurrentPhase={s.phase.id === current?.phaseId}
                   openSubs={openSubs}
                   onToggleSub={toggleSub}
                 />
