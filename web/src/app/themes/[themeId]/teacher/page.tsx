@@ -200,11 +200,8 @@ export default function TeacherPage() {
         ← {theme.name} に戻る
       </Link>
       <h1 className="mt-2 text-2xl font-bold">先生モード</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        先生は答えを教えません。あなたの答えに問い返していきます。研究への影響まで自分の言葉で説明できたら合格です。
-      </p>
-      <p className="mt-2 rounded border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
-        ご注意：研究の目的、保存した問題、あなたの回答は AI（Claude API）に送信されます。
+      <p className="mt-2 text-xs text-gray-600">
+        研究の目的・保存した問題・あなたの回答は AI（Claude）に送られます。
       </p>
 
       {error && (
@@ -288,7 +285,6 @@ export default function TeacherPage() {
                 >
                   分かりません
                 </button>
-                <span className="text-xs text-gray-500">Ctrl + Enter でも送れます</span>
               </div>
             </div>
           ) : (

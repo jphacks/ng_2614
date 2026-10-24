@@ -24,10 +24,6 @@ export function HookReviewInfo({ review }: { review: Review }) {
       {errors.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-bold">作業中に起きたエラー</h2>
-          <p className="text-sm text-gray-600">
-            Claude Code が作業中に実際に出したエラーです（{errors.length}{" "}
-            件）。コマンドが失敗したものと、コマンドは成功したが出力にエラーが出たもの（例外を捕まえて表示した、警告が出たなど）があります。
-          </p>
           <ul className="space-y-2">
             {errors.map((e, i) => (
               <li
@@ -61,11 +57,10 @@ export function HookReviewInfo({ review }: { review: Review }) {
 
       {review.aiReport && (
         <section className="space-y-2">
-          <h2 className="text-lg font-bold">AI の報告</h2>
-          <p className="text-sm text-gray-600">
-            作業を終えたときの Claude Code 自身の報告です。AI
-            の自己申告なので、差分と合わせて確かめてください。
-          </p>
+          <h2 className="text-lg font-bold">
+            AI の報告
+            <span className="ml-2 text-sm font-normal text-gray-500">自己申告</span>
+          </h2>
           <details className="rounded-lg border border-gray-200 p-3">
             <summary className="cursor-pointer text-sm text-blue-700">
               報告を読む
@@ -80,9 +75,7 @@ export function HookReviewInfo({ review }: { review: Review }) {
       {files.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-bold">実行でできたファイル</h2>
-          <p className="text-sm text-gray-600">
-            実験の出力などです。中身は判定に送っていません。
-          </p>
+          <p className="text-sm text-gray-600">中身は判定に送っていません。</p>
           <ul className="space-y-0.5 text-sm">
             {files.map((f) => (
               <li key={f} className="break-all font-mono text-xs text-gray-800">

@@ -18,9 +18,8 @@ import type {
 type Spec = {
   name: ConnectionName;
   label: string;
-  envName: string;
   placeholder: string;
-  usedFor: string;
+  usedFor?: string; // 状態の下に出す補足（要るものだけ）
   issueUrl: string;
   issueLabel: string;
   howTo: string;
@@ -30,9 +29,7 @@ const SPECS: Spec[] = [
   {
     name: "anthropic",
     label: "Claude API キー",
-    envName: "ANTHROPIC_API_KEY",
     placeholder: "sk-ant-...",
-    usedFor: "判定・先生モード・作業フローマップで AI を呼ぶのに使います。",
     issueUrl: "https://console.anthropic.com/settings/keys",
     issueLabel: "Anthropic Console で発行する",
     howTo:
@@ -41,10 +38,8 @@ const SPECS: Spec[] = [
   {
     name: "github",
     label: "GitHub トークン",
-    envName: "GITHUB_TOKEN",
     placeholder: "github_pat_... / ghp_...",
-    usedFor:
-      "リポジトリの一覧・コミット・差分を読むのに使います。無くても public のリポジトリは読めますが、回数の制限が厳しくなります。",
+    usedFor: "無くても public のリポジトリは読めますが、回数の制限が厳しくなります。",
     issueUrl: "https://github.com/settings/personal-access-tokens/new",
     issueLabel: "GitHub でトークンを発行する",
     howTo:
@@ -192,13 +187,7 @@ function ConnectionCard({
           </div>
         )}
       </div>
-      <p className="mt-1 text-xs text-gray-500">{spec.usedFor}</p>
-      {status?.source === "env" && (
-        <p className="mt-1 text-xs text-gray-500">
-          今は <code>web/.env.local</code> の {spec.envName}{" "}
-          を使っています。画面で入れると、そちらが優先されます。
-        </p>
-      )}
+      {spec.usedFor && <p className="mt-1 text-xs text-gray-500">{spec.usedFor}</p>}
 
       {showForm && (
         <form

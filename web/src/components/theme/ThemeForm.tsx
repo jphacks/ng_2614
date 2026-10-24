@@ -101,7 +101,7 @@ export function ThemeForm({
       ) : (
         <Field
           label="GitHub リポジトリ"
-          hint="owner/name の形式。この研究のコードが入っているリポジトリ"
+          hint="owner/name"
           error={errors.repo}
           input={
             <input

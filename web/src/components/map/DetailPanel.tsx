@@ -106,7 +106,8 @@ export function DetailPanel({
             記録のない実装です。どのドキュメントにも出てこないので、目的を確かめてください。
           </p>
         )}
-        {task.statusRaw && (
+        {/* 元の文言は、状態の言葉と違って情報が増えるときだけ出す */}
+        {task.statusRaw && task.statusRaw !== statusLabel(phase, status) && (
           <p className="mt-1 font-mono text-xs text-gray-400">
             元の文言：{task.statusRaw}
           </p>
@@ -223,7 +224,6 @@ export function DetailPanel({
       <StatusSection
         key={`status:${task.id}:${task.status}:${task.statusSource}`}
         task={task}
-        hasSubtasks={subtasks.length > 0}
         phaseLabel={(s) => statusLabel(phase, s)}
         onSet={(s, reason) =>
           onEdit((m, now) => setTaskStatus(m, task.id, s, reason, now))
@@ -284,13 +284,11 @@ function Section({
 
 function StatusSection({
   task,
-  hasSubtasks,
   phaseLabel,
   onSet,
   onClear,
 }: {
   task: MapTask;
-  hasSubtasks: boolean;
   phaseLabel: (s: MapStatus) => string;
   onSet: (status: MapStatus, reason: string | undefined) => boolean;
   onClear: () => boolean;
@@ -362,11 +360,6 @@ function StatusSection({
             </button>
           </div>
         </div>
-      )}
-      {hasSubtasks && task.statusSource !== "manual" && (
-        <p className="mt-1.5 text-xs text-gray-500">
-          サブタスクの状態から自動で決まっています。手で選ぶと、その状態に固定されます。
-        </p>
       )}
       {task.statusSource === "manual" && (
         <div className="mt-2">

@@ -98,9 +98,6 @@ export default function Home() {
 
       {demoMode && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
-          <p className="text-amber-900">
-            デモ用のプロジェクトで、取り込み → 判定 → 先生モードを試せます。
-          </p>
           <button
             type="button"
             onClick={handleCreateDemo}
@@ -117,10 +114,6 @@ export default function Home() {
         <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
           <p className="font-medium text-gray-900">
             最初のプロジェクトを作りましょう
-          </p>
-          <p className="mt-1 text-sm text-gray-600">
-            研究のリポジトリを選び、研究の目的（問い・手法・評価）を書くと、AI
-            の変更をその目的と照らし合わせられます。
           </p>
           <Link
             href="/projects/new"

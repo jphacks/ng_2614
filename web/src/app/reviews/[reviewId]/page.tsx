@@ -128,9 +128,6 @@ export default function ReviewPage() {
             />
           )}
         </div>
-        <p className="text-xs text-gray-500">
-          AIの判定は間違えることがあります。各項目の「判定を修正」で分類を直せます。
-        </p>
       </header>
 
       <MapUpdateNotice key={current.id} review={current} />
@@ -140,7 +137,6 @@ export default function ReviewPage() {
       <FindingSection
         type="hidden_problem"
         findings={byType("hidden_problem")}
-        description="目的と違う実装の裏にある、AIが黙って対処した問題です。問題ログに保存すると、あとで見返せます。"
         diff={diff}
         onChangeType={handleChangeType}
         onToggleSaved={handleToggleSaved}
@@ -148,7 +144,6 @@ export default function ReviewPage() {
       <FindingSection
         type="extra_addition"
         findings={byType("extra_addition")}
-        description="頼んでいない追加です。知らせるだけで、保存はされません。"
         diff={diff}
         onChangeType={handleChangeType}
         onToggleSaved={handleToggleSaved}
@@ -156,22 +151,16 @@ export default function ReviewPage() {
       <FindingSection
         type="on_purpose"
         findings={byType("on_purpose")}
-        description="作業の目的に沿った変更です。"
         diff={diff}
         onChangeType={handleChangeType}
         onToggleSaved={handleToggleSaved}
       />
 
       <section className="space-y-3">
-        <div>
-          <h2 className="text-base font-bold text-gray-800">
-            変更の全体
-            {diff && `（${diff.files.length} ファイル）`}
-          </h2>
-          <p className="text-xs text-gray-500">
-            AIが変えたコードの差分です。緑の行が追加、赤の行が削除です。
-          </p>
-        </div>
+        <h2 className="text-base font-bold text-gray-800">
+          変更の全体
+          {diff && `（${diff.files.length} ファイル）`}
+        </h2>
         {diff === undefined && (
           <p className="text-sm text-gray-500" role="status">
             差分を読み込み中…

@@ -5,7 +5,7 @@
 import { currentFocus } from "@/lib/map/summary";
 import { effectiveStatus, statusLabel } from "@/lib/map/view";
 import type { WorkflowMap } from "@/lib/types";
-import { FOCUS_REASON_TEXT, STATUS_BADGE } from "./labels";
+import { STATUS_BADGE } from "./labels";
 import { PhaseSteps } from "./PhaseSteps";
 
 export function CurrentPhase({
@@ -15,7 +15,7 @@ export function CurrentPhase({
   map: WorkflowMap;
   onSelect: (taskId: string) => void;
 }) {
-  const { current, reason, others } = currentFocus(map);
+  const { current } = currentFocus(map);
   if (!current) return null;
   const phase = map.phases.find((p) => p.id === current.phaseId);
   if (!phase) return null;
@@ -42,10 +42,6 @@ export function CurrentPhase({
         >
           {current.title}
         </button>
-      </p>
-      <p className="mt-0.5 text-xs text-indigo-700">
-        {reason && FOCUS_REASON_TEXT[reason]}
-        {others.length > 0 && `。ほかに進行中・待ちが ${others.length} 件あります`}
       </p>
     </section>
   );

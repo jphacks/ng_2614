@@ -21,7 +21,6 @@ import {
 import { effectiveStatus, statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
 import type { MapPhase, MapStatus, MapTask, WorkflowMap } from "@/lib/types";
 import {
-  FOCUS_REASON_TEXT,
   STATUS_BADGE,
   STATUS_ICON,
   STATUS_ORDER,
@@ -48,7 +47,7 @@ export function StripSide({
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
-  const { current, reason, others } = useMemo(() => currentFocus(map), [map]);
+  const { current, others } = useMemo(() => currentFocus(map), [map]);
   const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
   const phaseById = useMemo(() => new Map(map.phases.map((p) => [p.id, p])), [map]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
@@ -136,11 +135,6 @@ export function StripSide({
                 status={effectiveStatus(map, current)}
                 strong
               />
-              {reason && (
-                <p className="mt-0.5 text-[10px] leading-snug text-indigo-700">
-                  {FOCUS_REASON_TEXT[reason]}
-                </p>
-              )}
             </section>
           )}
 
@@ -169,7 +163,7 @@ export function StripSide({
 
           {unconfirmed > 0 && (
             <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
-              未確認 {unconfirmed} 件（AI が作ったままで、まだ確認していません）
+              未確認 {unconfirmed} 件
             </p>
           )}
 

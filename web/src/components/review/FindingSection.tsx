@@ -6,7 +6,6 @@ import { FINDING_TYPE_LABEL } from "./labels";
 type Props = {
   type: FindingType;
   findings: Finding[];
-  description: string;
   diff?: DiffResponse | null; // 判定の差分（F-14）。無ければ差分は出さない
   onChangeType: (findingId: string, type: FindingType) => void;
   onToggleSaved: (findingId: string, saved: boolean) => void;
@@ -21,19 +20,15 @@ const TITLE_STYLE: Record<FindingType, string> = {
 export function FindingSection({
   type,
   findings,
-  description,
   diff,
   onChangeType,
   onToggleSaved,
 }: Props) {
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className={`font-bold ${TITLE_STYLE[type]}`}>
-          {FINDING_TYPE_LABEL[type]}（{findings.length}）
-        </h2>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
+      <h2 className={`font-bold ${TITLE_STYLE[type]}`}>
+        {FINDING_TYPE_LABEL[type]}（{findings.length}）
+      </h2>
       {findings.length === 0 ? (
         <p className="text-sm text-gray-500">該当するものはありません。</p>
       ) : (

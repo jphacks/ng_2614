@@ -65,10 +65,6 @@ function NewProject() {
       {repo === null ? (
         <section>
           <h2 className="text-lg font-bold">GitHub のリポジトリを選ぶ</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            この研究のコードが入っているリポジトリです。Claude Code
-            のフックで届いた変更は、このリポジトリのプロジェクトに結びつきます。
-          </p>
           <div className="mt-4">
             <RepoPicker registered={registered} onSelect={setRepo} />
           </div>
