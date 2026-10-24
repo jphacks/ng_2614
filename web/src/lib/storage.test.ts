@@ -2,13 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiffResponse } from "./api-types";
 import {
   cutObservedErrors,
+  deleteTheme,
   findThemeByRepo,
   getLegacyHookDiff,
   getReview,
+  getTheme,
+  getWorkflowMap,
+  listReviews,
+  listTeacherSessions,
   saveHookReview,
+  saveTeacherSession,
   saveTheme,
+  saveWorkflowMap,
 } from "./storage";
-import type { ResearchTheme, Review } from "./types";
+import type {
+  ResearchTheme,
+  Review,
+  TeacherSession,
+  WorkflowMap,
+} from "./types";
 
 // Node には localStorage が無いので、メモリ上の代わりを window に置く
 function stubWindow(limit = Infinity) {
@@ -102,5 +114,67 @@ describe("エラー出力の切り詰め", () => {
     };
     saveHookReview(review);
     expect(getReview("rv")?.observedErrors?.[0].output).toHaveLength(500);
+  });
+});
+
+describe("deleteTheme（プロジェクトの削除）", () => {
+  function review(id: string, themeId: string): Review {
+    return {
+      id,
+      themeId,
+      purpose: "p",
+      commitSha: "",
+      commitMessage: "",
+      createdAt: "",
+      findings: [],
+    } as unknown as Review;
+  }
+
+  it("プロジェクトと、その判定・先生モードの記録・マップ・古い差分を消し、ほかのプロジェクトは残す", () => {
+    saveTheme(theme("a", "owner/a"));
+    saveTheme(theme("b", "owner/b"));
+    saveHookReview(review("ra", "a"));
+    saveHookReview(review("rb", "b"));
+    saveTeacherSession({
+      id: "sa",
+      themeId: "a",
+      createdAt: "",
+      items: [],
+    } as TeacherSession);
+    saveTeacherSession({
+      id: "sb",
+      themeId: "b",
+      createdAt: "",
+      items: [],
+    } as TeacherSession);
+    saveWorkflowMap({ themeId: "a" } as WorkflowMap);
+    saveWorkflowMap({ themeId: "b" } as WorkflowMap);
+    window.localStorage.setItem(
+      "rc.hookDiffs",
+      JSON.stringify([
+        { reviewId: "ra", commit: diff("s1") },
+        { reviewId: "rb", commit: diff("s2") },
+      ]),
+    );
+
+    expect(deleteTheme("a")).toEqual(["ra"]);
+
+    expect(getTheme("a")).toBeUndefined();
+    expect(listReviews("a")).toEqual([]);
+    expect(listTeacherSessions("a")).toEqual([]);
+    expect(getWorkflowMap("a")).toBeUndefined();
+    expect(getLegacyHookDiff("ra")).toBeUndefined();
+
+    expect(getTheme("b")?.id).toBe("b");
+    expect(listReviews("b").map((r) => r.id)).toEqual(["rb"]);
+    expect(listTeacherSessions("b").map((s) => s.id)).toEqual(["sb"]);
+    expect(getWorkflowMap("b")?.themeId).toBe("b");
+    expect(getLegacyHookDiff("rb")?.sha).toBe("s2");
+  });
+
+  it("無いプロジェクトを消しても、何も壊れない", () => {
+    saveTheme(theme("a", "owner/a"));
+    expect(deleteTheme("none")).toEqual([]);
+    expect(getTheme("a")?.id).toBe("a");
   });
 });

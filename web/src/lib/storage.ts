@@ -80,6 +80,33 @@ export function saveTheme(theme: ResearchTheme): ResearchTheme {
   return saved;
 }
 
+// プロジェクトを消す（F-1）。取り込んだ変更（判定）・先生モードの記録・作業フローマップもまとめて消す。
+// 消した判定の id を返す（差分は IndexedDB にあるので、呼ぶ側で diff-store の deleteDiff で消す）
+export function deleteTheme(id: string): string[] {
+  write(
+    KEYS.themes,
+    read<ResearchTheme>(KEYS.themes).filter((t) => t.id !== id),
+  );
+  const reviews = read<Review>(KEYS.reviews);
+  const removed = reviews.filter((r) => r.themeId === id).map((r) => r.id);
+  write(KEYS.reviews, reviews.filter((r) => r.themeId !== id));
+  write(
+    KEYS.teacherSessions,
+    read<TeacherSession>(KEYS.teacherSessions).filter((s) => s.themeId !== id),
+  );
+  // F-14 より前に localStorage に残していたフックの差分も、あれば消す
+  const legacy = read<LegacyHookDiffEntry>(KEYS.hookDiffs);
+  if (legacy.some((e) => removed.includes(e.reviewId))) {
+    write(
+      KEYS.hookDiffs,
+      legacy.filter((e) => !removed.includes(e.reviewId)),
+    );
+  }
+  deleteWorkflowMap(id);
+  notifyReviewsChanged();
+  return removed;
+}
+
 // 判定（Review）
 
 export function listReviews(themeId: string): Review[] {
