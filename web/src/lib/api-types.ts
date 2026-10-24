@@ -7,6 +7,7 @@ import type {
   QuestionLayer,
   ResearchPurpose,
   TeacherTurn,
+  Viewpoint,
 } from "./types";
 
 // すべての API は失敗時にこの形で返す（HTTP ステータスは 4xx / 5xx）
@@ -60,6 +61,7 @@ export type TeacherQuestion = {
   layer: QuestionLayer;
   question: string;
   findingId?: string;
+  viewpoints: Viewpoint[]; // 想定解答の観点。画面には講評まで出さない
 };
 export type TeacherQuestionsRequest = {
   theme: ResearchPurpose;
@@ -70,7 +72,7 @@ export type TeacherQuestionsResponse = { questions: TeacherQuestion[] };
 // POST /api/teacher/feedback
 export type TeacherFeedbackRequest = {
   theme: ResearchPurpose;
-  question: TeacherQuestion;
+  question: Pick<TeacherQuestion, "layer" | "question" | "findingId">;
   answer: string;
   problem?: Finding; // question.findingId に対応する問題
 };
@@ -85,11 +87,13 @@ export type TeacherTurnRequest = {
   question: TeacherQuestion;
   problem?: Finding; // question.findingId に対応する問題
   turns: TeacherTurn[]; // 最初の質問からのやりとり。最後は学生の発言
+  covered: string[]; // ここまでに言えた観点の id
 };
 export type TeacherTurnResponse = {
   done: boolean; // true ならこの質問のやりとりを終える
   understood: boolean; // done が true のときだけ意味がある
   message: string; // done が false なら次の問い返し、true なら講評
+  covered: string[]; // 今回までに言えた観点の id（積み上げ）
 };
 
 // ---- Claude Code のフック（F-13） ----
