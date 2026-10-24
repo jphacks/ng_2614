@@ -7,7 +7,7 @@
 ```bash
 cd web
 npm install
-cp .env.example .env.local   # 値を入れる。.env.local はコミットしない
+cp .env.example .env.local   # 値を入れる（キーは画面の「設定 → 接続」でも入れられる）。.env.local はコミットしない
 npm run dev                  # http://localhost:3000
 ```
 
@@ -45,7 +45,7 @@ Claude Code のフックから届いた変更を、サーバーのメモリに�
 | `GET /api/hook/changes` | 届いている変更の一覧（`enabled` と、古い順の `changes`）。このアプリの画面から |
 | `DELETE /api/hook/changes/[id]` | 1 件を取り出して削除する。無ければ 404 |
 
-使うには `web/.env.local` に `RESEARCH_CHECK_TOKEN`（合言葉）を設定してアプリを再起動する。ランダムな文字列でよい（例：`openssl rand -hex 32` の出力）。設定が無いと `POST` は 503 を返し、`GET` は `enabled: false` を返す。フックのスクリプトも同じファイルからこの値を読む。
+合言葉（`RESEARCH_CHECK_TOKEN`）は、`web/.env.local` にあればそれを使い、無ければ `GET` のときにアプリが作って `~/.tazuna/config.json` に保存する（F-18）。フックのスクリプトも同じ順で読む。合言葉が無いと `POST` は 503 を返し、`GET` は `enabled: false` を返す（設定ファイルに保存できなかったとき）。
 
 守り：
 

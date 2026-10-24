@@ -23,6 +23,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -122,6 +123,18 @@ export function parseDotenv(text) {
 }
 
 // 環境変数を優先し、無ければこのリポジトリの web/.env.local から読む
+// アプリが作った合言葉（~/.tazuna/config.json の researchCheckToken。F-18）。場所は TAZUNA_CONFIG で変えられる
+function readAppToken(env) {
+  const file = env.TAZUNA_CONFIG?.trim() || path.join(homedir(), ".tazuna", "config.json");
+  try {
+    const value = JSON.parse(readFileSync(file, "utf8"))?.researchCheckToken;
+    return typeof value === "string" ? value.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+// 合言葉は、環境変数 → web/.env.local → アプリの設定ファイルの順に探す
 export function loadConfig(env, scriptDir) {
   let fileValues = {};
   try {
@@ -133,7 +146,7 @@ export function loadConfig(env, scriptDir) {
   }
   const pick = (name) => (env[name] ? env[name] : fileValues[name] || "");
   return {
-    token: pick("RESEARCH_CHECK_TOKEN"),
+    token: pick("RESEARCH_CHECK_TOKEN") || readAppToken(env),
     url: (pick("RESEARCH_CHECK_URL") || DEFAULT_URL).replace(/\/+$/, ""),
   };
 }

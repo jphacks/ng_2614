@@ -200,3 +200,29 @@ export type LlmUsage = {
   cacheWriteTokens: number;
   costUsd: number; // 単価表から計算した目安（米ドル）
 };
+
+// ---- 接続の設定（F-18） ----
+// キーの値そのものは返さない。どこの値を使っているかと末尾4文字だけ
+
+export type ConnectionName = "anthropic" | "github";
+export type ConnectionSource = "app" | "env" | null; // 画面で入れた値 / web/.env.local / 未設定
+
+export type ConnectionStatus = {
+  source: ConnectionSource;
+  last4: string; // source が "app" のときだけ。短すぎる値は ""
+};
+
+export type ConnectionsResponse = {
+  anthropic: ConnectionStatus;
+  github: ConnectionStatus;
+  configPath: string; // 保存先（ホームは ~ で表す）
+};
+
+// 文字列で保存、null で削除。省略した項目は変えない
+export type ConnectionsUpdateRequest = Partial<Record<ConnectionName, string | null>>;
+
+export type ConnectionTestRequest = { target: ConnectionName };
+export type ConnectionTestResponse = {
+  ok: boolean;
+  message: string; // 例：「YukiOgata として接続できました」
+};

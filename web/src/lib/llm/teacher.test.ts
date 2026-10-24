@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { MISSING_ANTHROPIC_KEY } from "@/lib/secrets";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Finding } from "@/lib/types";
 
@@ -213,7 +214,7 @@ describe("ルート", () => {
     const res = await postQuestions(jsonRequest({ theme, problems: [] }));
     expect(res.status).toBe(500);
     expect((await res.json()).error).toBe(
-      "サーバーに ANTHROPIC_API_KEY が設定されていません",
+      MISSING_ANTHROPIC_KEY,
     );
   });
 

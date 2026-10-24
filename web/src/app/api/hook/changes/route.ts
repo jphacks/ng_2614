@@ -15,6 +15,7 @@ import {
 } from "@/lib/hook/guard";
 import { addHookChange, listHookChanges } from "@/lib/hook/inbox";
 import { jsonError } from "@/lib/http";
+import { ensureResearchCheckToken } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,13 +85,13 @@ export async function POST(request: Request) {
   const token = checkHookToken(request);
   if (token === "disabled") {
     return jsonError(
-      "受け取り箱は無効です。web/.env.local に RESEARCH_CHECK_TOKEN を設定して、アプリを再起動してください",
+      "受け取り箱は無効です。アプリの画面を一度開くと合言葉（RESEARCH_CHECK_TOKEN）が作られます。web/.env.local に書いても構いません",
       503,
     );
   }
   if (token === "invalid") {
     return jsonError(
-      "合言葉が違います。Authorization ヘッダーに、web/.env.local の RESEARCH_CHECK_TOKEN を Bearer で付けてください",
+      "合言葉が違います。Authorization ヘッダーに、RESEARCH_CHECK_TOKEN（web/.env.local か ~/.tazuna/config.json）を Bearer で付けてください",
       401,
     );
   }
@@ -154,6 +155,8 @@ export async function GET(request: Request) {
     return jsonError("このアプリの画面からだけ使えます", 403);
   }
 
+  // 合言葉が無ければ、ここで作って設定ファイルに保存する（F-18）
+  ensureResearchCheckToken();
   const enabled = isHookEnabled();
   return NextResponse.json<HookChangesResponse>({
     enabled,

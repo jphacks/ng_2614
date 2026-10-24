@@ -2,6 +2,7 @@
 // 合言葉の値は、ログにもエラーメッセージにも出さない。
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { researchCheckToken } from "@/lib/secrets";
 
 const LOCAL_HOSTNAMES: ReadonlySet<string> = new Set([
   "localhost",
@@ -27,8 +28,9 @@ export function isLocalHost(request: Request): boolean {
   return LOCAL_HOSTNAMES.has(hostnameOf(host));
 }
 
+// 環境変数 RESEARCH_CHECK_TOKEN か、設定ファイル（F-18）の合言葉
 function configuredToken(): string {
-  return process.env.RESEARCH_CHECK_TOKEN?.trim() ?? "";
+  return researchCheckToken();
 }
 
 // サーバーに合言葉が設定されているか（false なら受け取り箱は使えない）

@@ -1,5 +1,5 @@
 // POST /api/map/generate：research-workspace と実装リポジトリを読んで、作業フローマップを作る（F-15）。
-// 骨格は AI を使わずに作り、ANTHROPIC_API_KEY があれば目的などを AI で補う。
+// 骨格は AI を使わずに作り、Claude API キー（F-18）があれば目的などを AI で補う。
 
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/workspace/parse";
 import { buildSkeleton } from "@/lib/workspace/skeleton";
 import { withLlm } from "@/lib/llm/route";
+import { hasAnthropicKey } from "@/lib/secrets";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -120,7 +121,7 @@ async function handlePost(request: Request) {
     });
 
     // キーが無いときは AI を飛ばして骨格だけ返す（目的は空のまま）
-    const map = process.env.ANTHROPIC_API_KEY
+    const map = hasAnthropicKey()
       ? await enrichMap({ theme: req.theme, map: skeleton, docs })
       : skeleton;
     return NextResponse.json<MapGenerateResponse>({ map });

@@ -147,7 +147,7 @@ export function NavMenu() {
                 ＋ 新しいプロジェクト
               </MenuLink>
               <MenuLink href="/settings" pathname={pathname}>
-                AI の設定と使用量
+                設定
               </MenuLink>
             </MenuSection>
 

@@ -7,6 +7,7 @@ import {
   ProjectList,
   type ProjectCard,
 } from "@/components/project/ProjectList";
+import { fetchConnections } from "@/lib/api-client";
 import { demoTheme } from "@/lib/demo/data";
 import { useDemoMode } from "@/lib/demo/mode";
 import {
@@ -21,6 +22,24 @@ export default function Home() {
   const [projects, setProjects] = useState<ProjectCard[] | null>(null);
   const router = useRouter();
   const demoMode = useDemoMode();
+  const [missingKey, setMissingKey] = useState(false);
+
+  // Claude API キーが無ければ、設定画面へ案内する（F-18）。デモモードでは AI を呼ばないので出さない
+  useEffect(() => {
+    if (demoMode) {
+      setMissingKey(false);
+      return;
+    }
+    let cancelled = false;
+    fetchConnections()
+      .then((c) => {
+        if (!cancelled) setMissingKey(c.anthropic.source === null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [demoMode]);
 
   useEffect(() => {
     setProjects(
@@ -52,6 +71,21 @@ export default function Home() {
           ＋ 新しいプロジェクト
         </Link>
       </div>
+
+      {missingKey && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
+          <p className="text-amber-900">
+            Claude API
+            キーがまだ設定されていません。判定や先生モードを使うには、設定画面の「接続」で入れてください。
+          </p>
+          <Link
+            href="/settings"
+            className="rounded-md bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700"
+          >
+            接続を設定する
+          </Link>
+        </div>
+      )}
 
       {demoMode && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">

@@ -95,10 +95,11 @@ export function RepoPicker({ registered, onSelect }: Props) {
 
       {state.kind === "loaded" && !state.tokenSet && (
         <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          GitHub のトークン（<code>GITHUB_TOKEN</code>
-          ）が設定されていないため、一覧を出せません。
-          <code>web/.env.local</code>{" "}
-          に設定するとリポジトリを選べるようになります。今は下の欄に owner/name
+          GitHub のトークンが設定されていないため、一覧を出せません。
+          <Link href="/settings" className="font-medium underline">
+            設定画面の「接続」
+          </Link>
+          で入れるとリポジトリを選べるようになります。今は下の欄に owner/name
           を入力してください。
         </p>
       )}
