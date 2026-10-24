@@ -18,129 +18,139 @@ export const DEMO_THEME_ID = "demo-theme";
 
 export const demoTheme: Omit<ResearchTheme, "updatedAt"> = {
   id: DEMO_THEME_ID,
-  name: "【デモ】健診データの疾患分類：勾配ブースティングは従来手法を上回るか",
-  repo: "demo-lab/health-checkup-classification",
+  name: "【デモ】DDPM のノイズスケジュール：cosine は linear より生成の質が上がるか",
+  repo: "demo-lab/ddpm-noise-schedule",
   question:
-    "健診データ（血液検査・問診の表形式データ）から生活習慣病の有無を分類するとき、勾配ブースティング（LightGBM）はロジスティック回帰より精度が上がるかを明らかにする。",
+    "拡散モデル（DDPM）で、ノイズスケジュールを linear から cosine に変えると、2次元トイデータ（swiss roll）の生成の質が上がるかを明らかにする。",
   method:
-    "提案側は LightGBM、ベースラインはロジスティック回帰。前処理と特徴量は両者で揃え、同じデータ分割で比較する。",
+    "提案側は cosine スケジュール（Nichol & Dhariwal, 2021）、ベースラインは linear スケジュール（β を 1e-4 から 0.02 まで線形）。データ・モデル・拡散のステップ数 T・学習の設定・サンプリングは両者でそろえ、変えるのはスケジュールだけ。",
   evaluation:
-    "評価指標はマクロ F1。陽性が少ない不均衡データなので正解率は使わない。5分割の層化交差検証の平均と標準偏差で比較する。",
+    "生成した 2,000 点と本物 2,000 点の sliced Wasserstein 距離（小さいほど良い）。データは元のスケールのまま測る。seed を 3 つ変えて平均と標準偏差で比べる。",
 };
 
 // ---- コミットと差分 ----
 
-const MAIN_SHA = "a3f9c2e7b1d84f0c9e6a5b2d7c1f8e3a4b6d9c20";
-const README_SHA = "5d1e8b3c9a7f2e4d6b0c8a1f3e5d7b9c2a4e6f81";
-const INIT_SHA = "9c7b5a3e1f2d4c6b8a0e9d7c5b3a1f2e4d6c8b07";
+const MAIN_SHA = "b7e2c9d4a1f3e8c6b5d0a9f2e7c4b1d8a3e6f950";
+const README_SHA = "4c8a1e6f3b9d2c7e5a0f8b3d6e1c9a4f7b2d5e83";
+const INIT_SHA = "e6c5e08d2a7f4b1c9e3d8a5f0b6c2e9d4a1f7b36";
 
-const DEMO_REPO_URL = "https://github.com/demo-lab/health-checkup-classification";
+const DEMO_REPO_URL = "https://github.com/demo-lab/ddpm-noise-schedule";
 
 export const demoCommits: CommitSummary[] = [
   {
     sha: MAIN_SHA,
     message:
-      "学習・評価スクリプトを追加\n\nLightGBM とロジスティック回帰を 5分割交差検証で比較する train.py を追加。\n学習時のエラーを修正。",
+      "cosine スケジュールを追加して linear と比較\n\nlinear と cosine を seed 3 つで比べる compare.py を追加。\n学習が発散する問題と、サンプルが飛び散る問題を修正。",
     author: "claude-code",
     date: "2026-10-24T13:42:00+09:00",
     url: `${DEMO_REPO_URL}/commit/${MAIN_SHA}`,
   },
   {
     sha: README_SHA,
-    message: "README にデータセットの説明を追加",
+    message: "README に評価方法を追加",
     author: "researcher",
     date: "2026-10-24T11:05:00+09:00",
     url: `${DEMO_REPO_URL}/commit/${README_SHA}`,
   },
   {
     sha: INIT_SHA,
-    message: "Initial commit",
+    message: "DDPM のベースライン（linear スケジュール）を追加",
     author: "researcher",
     date: "2026-10-24T10:30:00+09:00",
     url: `${DEMO_REPO_URL}/commit/${INIT_SHA}`,
   },
 ];
 
-const TRAIN_PATCH = `@@ -0,0 +1,62 @@
+const DDPM_PATCH = `@@ -1,12 +1,25 @@
+ """2 次元データ用の小さな DDPM。"""
+ 
++import math
++
+ import torch
+ import torch.nn as nn
+ 
+ T = 200  # 拡散のステップ数
+ 
+ 
++def cosine_betas(T: int, s: float = 0.008) -> torch.Tensor:
++    steps = torch.arange(T + 1, dtype=torch.float64)
++    f = torch.cos((steps / T + s) / (1 + s) * math.pi / 2) ** 2
++    alphas_bar = f / f[0]
++    betas = 1 - alphas_bar[1:] / alphas_bar[:-1]
++    # 最後のほうで β が大きくなりすぎ、サンプルが飛び散るため 0.02 で抑える
++    return betas.clamp(max=0.02).float()
++
++
+ def get_betas(name: str, T: int = T) -> torch.Tensor:
+     if name == "linear":
+         return torch.linspace(1e-4, 0.02, T)
++    if name == "cosine":
++        return cosine_betas(T)
+     raise ValueError(f"unknown schedule: {name}")
+`;
+
+const COMPARE_PATCH = `@@ -0,0 +1,44 @@
++import argparse
++
++import matplotlib.pyplot as plt
 +import numpy as np
-+import optuna
-+import pandas as pd
-+from lightgbm import LGBMClassifier
-+from sklearn.linear_model import LogisticRegression
-+from sklearn.metrics import f1_score
-+from sklearn.model_selection import StratifiedKFold
-+from sklearn.preprocessing import StandardScaler
 +
-+SEED = 42
++from data import make_swiss_roll
++from ddpm import get_betas, sample, train
++from metrics import sliced_wasserstein
++
++SEEDS = [0, 1, 2]
 +
 +
-+def load_data(path="data/checkup.csv"):
-+    df = pd.read_csv(path)
-+    # 学習時に "Input contains NaN" で落ちるため、欠損のある行を除外する
-+    df = df.dropna()
-+    X = df.drop(columns=["label"])
-+    y = df["label"]
-+    return X, y
++def normalize(x, mean, std):
++    return (x - mean) / std
 +
 +
-+def make_baseline():
-+    # 陽性が少なく、すべて陰性と予測してしまうため重みを付ける
-+    return LogisticRegression(max_iter=1000, class_weight="balanced")
++def main(steps: int):
++    data = make_swiss_roll(2000, seed=0)
++    ref = make_swiss_roll(2000, seed=100)
++    # 元のスケールのままだと学習中に損失が nan になるため、平均0・分散1に正規化する
++    mean, std = data.mean(axis=0), data.std(axis=0)
++    data_n = normalize(data, mean, std)
++    ref_n = normalize(ref, mean, std)
 +
-+
-+def tune_lgbm(X, y):
-+    def objective(trial):
-+        params = {
-+            "num_leaves": trial.suggest_int("num_leaves", 8, 128),
-+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
-+            "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
-+        }
-+        return cross_validate(LGBMClassifier(**params, random_state=SEED), X, y).mean()
-+
-+    study = optuna.create_study(direction="maximize")
-+    study.optimize(objective, n_trials=50)
-+    return LGBMClassifier(**study.best_params, random_state=SEED)
-+
-+
-+def cross_validate(model, X, y):
-+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
-+    scores = []
-+    for train_idx, test_idx in skf.split(X, y):
-+        scaler = StandardScaler().fit(X.iloc[train_idx])
-+        X_train = scaler.transform(X.iloc[train_idx])
-+        X_test = scaler.transform(X.iloc[test_idx])
-+        model.fit(X_train, y.iloc[train_idx])
-+        pred = model.predict(X_test)
-+        scores.append(f1_score(y.iloc[test_idx], pred, average="macro"))
-+    return np.array(scores)
++    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
++    for ax, name in zip(axes, ["linear", "cosine"]):
++        betas = get_betas(name)
++        scores = []
++        for seed in SEEDS:
++            model = train(betas, data_n, steps=steps, seed=seed)
++            samples = sample(model, betas, n=2000, seed=seed)
++            scores.append(sliced_wasserstein(samples, ref_n))
++        print(f"{name}: SW = {np.mean(scores):.3f} ± {np.std(scores):.3f}")
++        ax.scatter(samples[:, 0], samples[:, 1], s=2)
++        ax.set_title(name)
++    fig.savefig("samples.png", dpi=150)
 +
 +
 +if __name__ == "__main__":
-+    X, y = load_data()
-+    print(f"samples: {len(X)}")
-+    for name, model in [("logreg", make_baseline()), ("lgbm", tune_lgbm(X, y))]:
-+        scores = cross_validate(model, X, y)
-+        print(f"{name}: macro F1 = {scores.mean():.3f} ± {scores.std():.3f}")
++    parser = argparse.ArgumentParser()
++    # 試しに速く回すときは --quick（学習ステップを 1000 に減らす）
++    parser.add_argument("--quick", action="store_true")
++    args = parser.parse_args()
++    main(steps=1000 if args.quick else 3000)
 `;
 
-const REQUIREMENTS_PATCH = `@@ -1,3 +1,5 @@
- pandas
- scikit-learn
- lightgbm
-+numpy
-+optuna
+const REQUIREMENTS_PATCH = `@@ -1,2 +1,3 @@
+ numpy
+ torch
++matplotlib
 `;
 
-const README_PATCH = `@@ -1,3 +1,9 @@
- # health-checkup-classification
-
- 健診データから生活習慣病の有無を分類する研究のコード。
+const README_PATCH = `@@ -3,2 +3,8 @@
+ 拡散モデル（DDPM）で、ノイズスケジュールを linear から cosine に変えると、
+ 生成の質が上がるかを、2次元のトイデータ（swiss roll）で調べる。
 +
-+## データセット
++## 評価
 +
-+- data/checkup.csv：匿名化済みの健診データ（約 3,000 件、陽性は約 12%）
-+- 列：年齢、BMI、血圧、HbA1c、LDL コレステロールなど 18 項目と、ラベル（label）
-+- 一部の検査項目には欠損がある（未受診の項目）
++- 生成した 2,000 点と、本物の 2,000 点の sliced Wasserstein 距離（metrics.py、小さいほど良い）
++- データは元のスケールのまま測る
++- seed を 3 つ変えて、平均と標準偏差で比べる
 `;
 
 const demoDiffs: Record<string, DiffResponse> = {
@@ -151,16 +161,23 @@ const demoDiffs: Record<string, DiffResponse> = {
     truncated: false,
     files: [
       {
-        filename: "train.py",
-        status: "added",
-        additions: 62,
+        filename: "ddpm.py",
+        status: "modified",
+        additions: 13,
         deletions: 0,
-        patch: TRAIN_PATCH,
+        patch: DDPM_PATCH,
+      },
+      {
+        filename: "compare.py",
+        status: "added",
+        additions: 44,
+        deletions: 0,
+        patch: COMPARE_PATCH,
       },
       {
         filename: "requirements.txt",
         status: "modified",
-        additions: 2,
+        additions: 1,
         deletions: 0,
         patch: REQUIREMENTS_PATCH,
       },
@@ -190,10 +207,10 @@ const demoDiffs: Record<string, DiffResponse> = {
       {
         filename: "README.md",
         status: "added",
-        additions: 3,
+        additions: 4,
         deletions: 0,
         patch:
-          "@@ -0,0 +1,3 @@\n+# health-checkup-classification\n+\n+健診データから生活習慣病の有無を分類する研究のコード。\n",
+          "@@ -0,0 +1,4 @@\n+# DDPM のノイズスケジュールの比較（2次元トイデータ）\n+\n+拡散モデル（DDPM）で、ノイズスケジュールを linear から cosine に変えると、\n+生成の質が上がるかを、2次元のトイデータ（swiss roll）で調べる。\n",
       },
     ],
   },
@@ -207,58 +224,59 @@ export function demoDiff(sha: string): DiffResponse | undefined {
 
 type FindingTemplate = Omit<Finding, "id" | "saved">;
 
-const DROPNA_SUMMARY =
-  "学習時の欠損値エラーに対処するため、欠損のある行をすべて除外している";
-const CLASS_WEIGHT_SUMMARY =
-  "ベースラインがすべて陰性と予測してしまう問題に対処するため、ロジスティック回帰にだけクラスの重み付けを入れている";
+const NORMALIZE_SUMMARY =
+  "学習が発散する問題に対処するため、データを平均0・分散1に正規化し、評価も正規化したまま行っている";
+const CLIP_SUMMARY =
+  "サンプルが飛び散る問題に対処するため、cosine スケジュールの β の上限を 0.02 に抑えている";
 
 const demoFindings: Record<string, FindingTemplate[]> = {
   [MAIN_SHA]: [
     {
       type: "on_purpose",
       summary:
-        "データを読み込み、LightGBM とロジスティック回帰を層化5分割交差検証のマクロ F1 で比較する処理。研究の目的・作業の目的どおり",
-      files: ["train.py"],
+        "cosine スケジュールを get_betas に追加し、linear と cosine を同じデータ・モデル・seed 3 つで学習・サンプリングして、sliced Wasserstein 距離の平均と標準偏差を出す compare.py を追加。研究の目的・作業の目的どおり",
+      files: ["ddpm.py", "compare.py"],
     },
     {
       type: "hidden_problem",
-      summary: DROPNA_SUMMARY,
-      files: ["train.py"],
+      summary: NORMALIZE_SUMMARY,
+      files: ["compare.py"],
       error:
-        "ValueError: Input X contains NaN.（ロジスティック回帰と StandardScaler は欠損値を扱えないため、学習時に落ちた）",
-      errorIsInferred: true,
-      fix: "読み込み直後に df.dropna() で、欠損が1つでもある行を除外した",
+        "元のスケール（座標がおよそ −10〜15）のデータのまま学習すると、損失が nan になり学習が発散した",
+      errorIsInferred: false,
+      fix: "学習データと本物のデータを、学習データの平均と標準偏差で正規化してから学習し、生成した点も正規化した空間のまま sliced Wasserstein 距離を測るようにした",
       researchImpact: {
         exists: true,
         description:
-          "データ件数が減り、比較に使うデータセットそのものが変わる。欠損は未受診の項目に多いため、除外された行に偏りがあると陽性率や結果も変わりうる。論文には除外の基準と件数を書く必要がある。LightGBM は欠損値をそのまま扱えるので、除外しない比較も検討の余地がある",
+          "研究の評価は「データは元のスケールのまま測る」と決めているが、距離が正規化した空間で測られている。値の大きさの意味が変わるので、前の結果や README の基準とそのまま比べられない。linear と cosine は同じ処理なので、2 つの比較の公平さは保たれている。生成した点を元のスケールに戻して測り直す必要がある",
       },
     },
     {
       type: "hidden_problem",
-      summary: CLASS_WEIGHT_SUMMARY,
-      files: ["train.py"],
+      summary: CLIP_SUMMARY,
+      files: ["ddpm.py"],
       error:
-        "陽性が約12%しかないため、ロジスティック回帰がすべて陰性と予測し、陽性クラスの F1 が 0 になっていた",
+        "cosine スケジュールの最後のほうで β が 0.999 近くまで大きくなり、サンプリングで点が大きく飛び散った（外れ値が出た）",
       errorIsInferred: true,
-      fix: 'LogisticRegression に class_weight="balanced" を指定した',
+      fix: "cosine_betas の中で betas.clamp(max=0.02) を入れ、β の上限を 0.02 にした（論文の cosine は上限 0.999）",
       researchImpact: {
         exists: true,
         description:
-          "ベースラインにだけ不均衡への対処が入り、LightGBM には入っていない。比較条件が揃っていないので、「手法の差」と「不均衡への対処の差」が区別できない",
+          "上限を 0.02 にすると、最後のほうのノイズの入り方が linear に近づき、比べているのが論文の cosine スケジュールではなくなる。「cosine は linear より良い（悪い）」という結論を、本来の cosine について言えない。上限を変えたことと、その理由を明記するか、論文どおりの上限で起きる問題を別の方法で解く必要がある",
       },
     },
     {
       type: "extra_addition",
       summary:
-        "頼んでいない Optuna によるハイパーパラメータ探索（50試行）が LightGBM にだけ追加されている。依存ライブラリにも optuna が増えた",
-      files: ["train.py", "requirements.txt"],
+        "頼んでいない生成結果の散布図（samples.png）の保存と、学習ステップを 1000 に減らして速く回す --quick オプションの追加。依存ライブラリにも matplotlib が増えた",
+      files: ["compare.py", "requirements.txt"],
     },
   ],
   [README_SHA]: [
     {
       type: "on_purpose",
-      summary: "README にデータセットの件数・列・欠損についての説明を追加している",
+      summary:
+        "README に評価の方法（sliced Wasserstein 距離、元のスケール、seed 3 つ）を追加している",
       files: ["README.md"],
     },
   ],
@@ -279,7 +297,11 @@ export function demoReviewFindings(sha: string): Finding[] {
       files: demoDiffs[sha]?.files.map((f) => f.filename) ?? [],
     },
   ];
-  return templates.map((t) => ({ ...t, id: crypto.randomUUID(), saved: false }));
+  return templates.map((t) => ({
+    ...t,
+    id: crypto.randomUUID(),
+    saved: false,
+  }));
 }
 
 // ---- 先生モード（問い返し型と観点による採点。docs/design.md の「先生の聞き方」「観点による採点」） ----
@@ -300,66 +322,80 @@ type DemoQuestion = {
   aiDidIt: string; // 「AIがやったので分かりません」への問い返し
 };
 
-const DROPNA_QUESTION: DemoQuestion = {
+const NORMALIZE_QUESTION: DemoQuestion = {
   layer: "implementation",
   question:
-    "train.py で欠損のある行を除外していますね。なぜこの対処をしたのですか？",
+    "compare.py でデータを正規化していますね。なぜこの対処をしたのですか？",
   viewpoints: [
     {
-      text: "ロジスティック回帰や StandardScaler が欠損値（NaN）を扱えず、学習時にエラーになった",
+      text: "元のスケール（座標がおよそ −10〜15）のまま学習すると、損失が nan になり学習が発散した",
       required: false,
-      keywords: ["NaN", "扱えな", "受け付けな", "StandardScaler", "ロジスティック"],
-      probe: "そのエラーは、データのどこが原因で、どの処理で起きていたのですか？",
+      keywords: ["nan", "発散", "不安定", "損失"],
+      probe: "正規化する前、学習では何が起きていたのですか？",
     },
     {
-      text: "欠損のある行を除くと件数が減り、残ったデータに偏りが出うる",
+      text: "距離を正規化した空間のまま測っていて、README の「元のスケールのまま測る」と違う",
       required: true,
-      keywords: ["件数", "減", "偏り", "バイアス", "分布", "性質"],
+      keywords: [
+        "正規化したまま",
+        "正規化した空間",
+        "元のスケール",
+        "元に戻",
+        "README",
+      ],
       probe:
-        "欠損している行を消すと、残ったデータはもとのデータと同じ性質だと言えますか？",
+        "正規化したデータで測った sliced Wasserstein 距離は、README の評価方法どおりですか？",
     },
     {
-      text: "その結果、ベースラインとの比較の条件や結論が変わりうる",
+      text: "距離の値の意味が変わり、前の結果や README の基準とそのまま比べられない",
       required: true,
-      keywords: ["比較", "公平", "条件", "ベースライン", "結論"],
-      probe: "それは、ベースラインとの比較実験にとって問題になりますか？",
+      keywords: ["意味", "比べられ", "比較でき", "単位", "前の結果"],
+      probe:
+        "では、その距離の値を、前の結果や README の基準とそのまま比べられますか？",
     },
   ],
   homework:
-    "除外で何件減ったか、除外された行に偏りがないかを確かめ、除外と補完のどちらが研究の問いに合うか説明できるようにしてください。",
+    "生成した点を元のスケールに戻して距離を測り直し、正規化したままの値と比べておいてください。",
   aiDidIt:
-    "AIがやったかどうかは関係ありません。train.py の df.dropna() の行を見て、何をしているか説明してください。",
+    "AIがやったかどうかは関係ありません。compare.py の normalize の行と、sliced_wasserstein に渡している値を見て、何をしているか説明してください。",
 };
 
-const CLASS_WEIGHT_QUESTION: DemoQuestion = {
+const CLIP_QUESTION: DemoQuestion = {
   layer: "research",
   question:
-    'ロジスティック回帰にだけ class_weight="balanced" が入っています。なぜこの重みが必要だったのですか？',
+    "cosine スケジュールの β を 0.02 で抑えています。なぜこの制限が必要だったのですか？",
   viewpoints: [
     {
-      text: "陽性が少ないため、重みなしではすべて陰性と予測してしまう",
+      text: "cosine の最後のほうで β が 1 近くまで大きくなり、サンプリングで点が飛び散った",
       required: false,
-      keywords: ["陰性", "不均衡", "少な", "偏っ"],
+      keywords: ["飛び散", "外れ値", "0.999", "大きくな"],
+      probe: "上限を付ける前、サンプリングでは何が起きていたのですか？",
+    },
+    {
+      text: "上限を 0.02 にすると最後のほうのノイズの入り方が変わり、論文の cosine スケジュールとは別物になる",
+      required: true,
+      keywords: [
+        "論文",
+        "本来",
+        "別物",
+        "違うもの",
+        "linear に近",
+        "linearに近",
+      ],
       probe:
-        "陽性が少ないと、重みなしのロジスティック回帰は何を予測するようになりますか？",
+        "β の上限を 0.02 にしたスケジュールは、論文の cosine スケジュールと同じものですか？",
     },
     {
-      text: "不均衡への対処がロジスティック回帰にしか入っておらず、LightGBM と条件が揃っていない",
+      text: "その状態では「cosine は linear より良い（悪い）」と結論できない",
       required: true,
-      keywords: ["LightGBMには", "LightGBM には", "片方", "両方", "揃っ", "揃え"],
-      probe: "その対処は、LightGBM 側にも入っていますか？",
-    },
-    {
-      text: "そのままでは、差が手法の違いなのか対処の違いなのか区別できない",
-      required: true,
-      keywords: ["区別", "手法の差", "手法の違い", "公平", "言えな"],
-      probe: "その状態で「LightGBM のほうが良い」と言えますか？",
+      keywords: ["言えな", "結論", "比較", "公平"],
+      probe: "その状態で「cosine は linear より良い（悪い）」と言えますか？",
     },
   ],
   homework:
-    "両方の手法で不均衡への対処を揃えたときに、比較の結論が変わるかを確かめてください。",
+    "上限 0.999（論文の値）と 0.02 の両方で ᾱ_t のグラフを描き、どこが違うか説明できるようにしてください。",
   aiDidIt:
-    "AIがやったかどうかは関係ありません。make_baseline() の中を見て、何を指定しているか説明してください。",
+    "AIがやったかどうかは関係ありません。ddpm.py の cosine_betas の clamp の行を見て、何をしているか説明してください。",
 };
 
 function evaluationQuestion(evaluation: string): DemoQuestion {
@@ -367,26 +403,26 @@ function evaluationQuestion(evaluation: string): DemoQuestion {
     evaluation.length > 40 ? `${evaluation.slice(0, 40)}…` : evaluation;
   return {
     layer: "research",
-    question: `評価を「${short}」としています。なぜこの評価指標を選んだのですか？`,
+    question: `評価を「${short}」としています。なぜこの評価の仕方を選んだのですか？`,
     viewpoints: [
       {
-        text: "陽性が少ない不均衡データでは、すべて陰性と予測するだけで正解率が高くなる",
+        text: "生成した点と本物の点には 1 対 1 の対応が無いので、点の集まり（分布）どうしの近さを測る必要がある",
         required: true,
-        keywords: ["不均衡", "正解率", "陰性", "少な"],
+        keywords: ["分布", "近さ", "点群", "集まり"],
         probe:
-          "このデータで、すべて陰性と予測するモデルの正解率はどのくらいになりますか？",
+          "生成した点が本物にどれくらい近いかを、1 つの数で表すには何を比べる必要がありますか？",
       },
       {
-        text: "マクロ F1 は各クラスの F1 を平均するので、少数の陽性クラスの性能も評価に反映される",
+        text: "結果は seed でばらつくので、差が偶然でないかを平均と標準偏差で確かめる",
         required: true,
-        keywords: ["各クラス", "平均", "少数", "陽性クラス", "適合率", "再現率"],
-        probe: "この指標は、その問題をどう避けていますか？",
+        keywords: ["ばらつ", "標準偏差", "偶然", "再現", "seed"],
+        probe: "seed を 3 つ変えて、平均と標準偏差を見るのはなぜですか？",
       },
     ],
     homework:
-      "すべて陰性と予測するモデルの正解率とマクロ F1 を実際に計算して、比べておいてください。",
+      "linear と cosine の差が、seed による標準偏差より大きいかを確かめておいてください。",
     aiDidIt:
-      "評価指標を決めるのはあなたです。研究の問いに照らして、何を測りたいのか説明してください。",
+      "評価の仕方を決めるのはあなたです。研究の問いに照らして、何を測りたいのか説明してください。",
   };
 }
 
@@ -417,8 +453,8 @@ function genericProblemQuestion(problem: Finding): DemoQuestion {
 const asked = new Map<string, DemoQuestion>();
 
 function questionFor(problem: Finding): DemoQuestion {
-  if (problem.summary === DROPNA_SUMMARY) return DROPNA_QUESTION;
-  if (problem.summary === CLASS_WEIGHT_SUMMARY) return CLASS_WEIGHT_QUESTION;
+  if (problem.summary === NORMALIZE_SUMMARY) return NORMALIZE_QUESTION;
+  if (problem.summary === CLIP_SUMMARY) return CLIP_QUESTION;
   return genericProblemQuestion(problem);
 }
 
@@ -483,7 +519,9 @@ export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
     };
   }
   if (done) {
-    const missing = viewpoints.filter((v) => v.required && !covered.includes(v.id));
+    const missing = viewpoints.filter(
+      (v) => v.required && !covered.includes(v.id),
+    );
     return {
       done,
       understood,
@@ -518,6 +556,8 @@ export function demoTeacherFeedback(
     required.every((v) => mentions(answer, v.keywords));
   return {
     understood,
-    feedback: understood ? "要点は押さえられています。" : "核心まで届いていません。",
+    feedback: understood
+      ? "要点は押さえられています。"
+      : "核心まで届いていません。",
   };
 }
