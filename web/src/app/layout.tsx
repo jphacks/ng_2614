@@ -4,6 +4,7 @@ import {
   DemoModeBanner,
   DemoModeToggle,
 } from "@/components/demo/DemoModeToggle";
+import { HookInbox } from "@/components/hook/HookInbox";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
             <DemoModeToggle />
           </div>
         </header>
+        <HookInbox />
         <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
       </body>
     </html>

@@ -38,13 +38,29 @@ export type Finding = {
   saved?: boolean; // 問題ログに保存したか
 };
 
+// 取り込み元。"claude_code_hook" は Claude Code のフック（F-13）で届いたもの
+export type ReviewSource = "commit" | "claude_code_hook";
+
+// 会話記録から取り出した、失敗したコマンドとその出力（F-13）
+export type ObservedError = {
+  tool: string; // "Bash" など
+  input: string; // 実行したコマンドなど
+  output: string; // エラーの出力（送るときは2,000文字、保存するときは500文字まで）
+};
+
 // 取り込んだ変更と判定（実装の層）
 export type Review = {
   id: string;
   themeId: string;
-  purpose: string; // 作業の目的
-  commitSha: string;
-  commitMessage: string;
+  source?: ReviewSource; // 無いときは "commit"（フック導入前のデータ）
+  purpose: string; // 作業の目的（フックのときは今回の依頼文）
+  commitSha: string; // フックのときは ""
+  commitMessage: string; // フックのときは ""
+  // 以下はフックのときだけ
+  earlierPrompts?: string[]; // 同じ会話でそれまでにした依頼文（古い順、直近5件まで）
+  observedErrors?: ObservedError[]; // 作業中に実際に起きたエラー
+  generatedFiles?: string[]; // 実行でできたファイル（実験の出力。中身は送らない）
+  headMoved?: boolean; // 作業中に pull やブランチの切り替えがあった
   createdAt: string; // ISO 8601
   findings: Finding[];
 };
