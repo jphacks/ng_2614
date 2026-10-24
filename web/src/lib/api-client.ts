@@ -149,10 +149,7 @@ export function takeHookChange(id: string): Promise<HookChangeResponse> {
   );
 }
 
-// 作業フローマップ（F-15）。今はデモモードでだけ動く（本物の Route Handlers は未実装）
-const MAP_NOT_READY =
-  "作業フローマップは、今はデモモードでだけ使えます。ヘッダーの「デモモード」を入れてください";
-
+// 作業フローマップ（F-15）。デモモードではデモデータを返す
 export function postMapGenerate(
   payload: MapGenerateRequest,
 ): Promise<MapGenerateResponse> {
@@ -161,12 +158,12 @@ export function postMapGenerate(
       map: demoWorkflowMap(payload, new Date().toISOString()),
     }));
   }
-  return Promise.reject(new Error(MAP_NOT_READY));
+  return postJson<MapGenerateResponse>("/api/map/generate", payload);
 }
 
 export function postMapUpdate(
   payload: MapUpdateRequest,
 ): Promise<MapUpdateResponse> {
   if (isDemoMode()) return demo(1500, () => demoMapUpdate(payload));
-  return Promise.reject(new Error(MAP_NOT_READY));
+  return postJson<MapUpdateResponse>("/api/map/update", payload);
 }

@@ -154,24 +154,29 @@ export type HookChangesResponse = {
 export type HookChangeResponse = { change: HookChange };
 
 // ---- 作業フローマップ（F-15） ----
-// 今はデモモード（F-12）でだけ動く。画面は api-client.ts の関数を通して呼び、
-// デモモードでないときはまだ使えない旨のエラーになる（Route Handlers は未実装）
+// デモモード（F-12）では api-client.ts がデモデータを返す。それ以外は Route Handlers が
+// research-workspace（GitHub）と実装リポジトリを読み、Claude（Haiku 5.5）で目的などを補って返す
 
-// POST /api/map/generate：research-workspace と実装リポジトリを読んでマップを作る（場面1）
+// POST /api/map/generate：research-workspace と実装リポジトリを読んでマップを作る（場面1）。
+// 返すのは、そのときのワークスペースから作った新しいマップ。すでにマップがあるとき（作り直し）は、
+// 画面が lib/map/merge.ts の diffToOps で差分を変更の一覧にし、applyMapOps で当てはめる
 export type MapGenerateRequest = {
   themeId: string;
   theme: ResearchPurpose;
   repo: string; // 実装リポジトリ "owner/name"
-  workspaceRepo?: string;
-  workspaceProject?: string;
+  workspaceRepo?: string; // research-workspace "owner/name"（デモモードでは無くてよい）
+  workspaceProject?: string; // .research/lab/projects/<project> の <project>
 };
 export type MapGenerateResponse = { map: WorkflowMap };
 
-// POST /api/map/update：取り込んだ変更と判定から、マップへの変更の一覧を返す（場面3）
+// POST /api/map/update：前回から変わったワークスペースのファイルと、取り込んだ判定から、
+// マップへの変更の一覧を返す（場面3、と「ワークスペースから更新」ボタン）。
+// review が無いときは、ワークスペースの変化だけを見る（ボタン）
 export type MapUpdateRequest = {
   theme: ResearchPurpose;
-  map: WorkflowMap;
-  review: Review;
+  repo: string; // 実装リポジトリ "owner/name"
+  map: WorkflowMap; // workspaceRepo・workspaceProject・workspaceSha を使う
+  review?: Review;
 };
 export type MapUpdateResponse = {
   ops: MapOp[];

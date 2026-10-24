@@ -17,7 +17,7 @@ import type { MapStatus, WorkflowMap } from "@/lib/types";
 import { STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
 import { StripLane } from "./StripLane";
 
-// マップがある研究テーマの帯。畳むと1段（約32px）、開くと小さなマップを出す（最大 min(30vh, 240px)）
+// マップがあるプロジェクトの帯。畳むと1段（約32px）、開くと小さなマップを出す（最大 min(30vh, 240px)）
 
 // display を含めない部分。hidden と組み合わせるボタンで display がぶつからないようにする
 const BUTTON_BASE =

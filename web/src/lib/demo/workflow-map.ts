@@ -250,6 +250,7 @@ function demoTasks(): MapTask[] {
       title: "データを正規化する",
       purpose: "学習が発散しにくくなるが、評価に使う値のスケールが変わらないかを確かめる。",
       status: "todo",
+      statusSource: "ai", // 記録に無い案。取り込みで AI が「比較中」と推測するので、記録の状態としては扱わない
     }),
     task({
       id: TASK.stableClip,
@@ -260,6 +261,7 @@ function demoTasks(): MapTask[] {
       title: "cosine の β に上限を付ける",
       purpose: "サンプルの飛び散りを抑えられるが、比べているのが論文の cosine のままかを確かめる。",
       status: "todo",
+      statusSource: "ai", // 記録に無い案（上の「正規化する」と同じ）
     }),
     task({
       id: "demo-task-r3-lr",
@@ -483,7 +485,8 @@ export function demoWorkflowMap(req: MapGenerateRequest, now: string): WorkflowM
 // デモの cosine スケジュールと比較スクリプトのコミットなら見せ場の変更を返し、それ以外は空の一覧を返す
 export function demoMapUpdate(req: MapUpdateRequest): MapUpdateResponse {
   const { review } = req;
-  if (review.commitSha !== MAIN_SHA) return { ops: [] };
+  // review が無い（「ワークスペースから更新」）ときは、デモのワークスペースに変化が無いので何も変えない
+  if (!review || review.commitSha !== MAIN_SHA) return { ops: [] };
 
   const shortSha = review.commitSha.slice(0, 7);
   const commit = demoCommits.find((c) => c.sha === review.commitSha);

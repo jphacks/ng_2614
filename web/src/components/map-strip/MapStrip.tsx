@@ -20,7 +20,7 @@ import { SIDE_WIDTH, SIDE_WIDTH_VAR, WIDE_QUERY } from "./sizes";
 import { StripBody } from "./StripBody";
 import { StripSide } from "./StripSide";
 
-// 研究テーマに関する画面に常に出す、作業フローマップの帯（F-15）。
+// プロジェクトに関する画面に常に出す、作業フローマップの帯（F-15）。
 // 横（ヘッダーの下）か縦（右のサイドバー）。縦のときは、本文の右側を空ける幅を CSS 変数で layout に伝える。
 // マップは localStorage から読むので、マウントしてから読む
 
@@ -83,7 +83,7 @@ export function MapStrip() {
         <StripBody themeId={loaded.themeId} map={loaded.map} />
       ) : (
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-3 px-4 py-1 text-xs text-gray-600">
-          <span>この研究テーマの作業フローマップはまだありません</span>
+          <span>このプロジェクトの作業フローマップはまだありません</span>
           <Link
             href={`/themes/${encodeURIComponent(loaded.themeId)}/map`}
             className="font-medium text-blue-700 hover:underline"
