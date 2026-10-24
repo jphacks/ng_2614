@@ -174,6 +174,17 @@ export function NavMenu() {
                 ))}
               </MenuSection>
             )}
+
+            {/* 使い方（F-19）は目立たせず、一番下に小さく置く */}
+            <div className="mt-auto px-4 py-3">
+              <Link
+                href="/guide"
+                aria-current={pathname === "/guide" ? "page" : undefined}
+                className="text-xs text-gray-500 hover:text-gray-800 hover:underline"
+              >
+                使い方
+              </Link>
+            </div>
           </nav>
         </div>
       )}
