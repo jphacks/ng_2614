@@ -13,6 +13,7 @@ import {
 } from "@/lib/storage";
 import type { ResearchTheme, Review } from "@/lib/types";
 import { ProblemLog } from "@/components/problems/ProblemLog";
+import { DeleteProject } from "@/components/theme/DeleteProject";
 import { PurposeView } from "@/components/theme/PurposeView";
 import { ReviewList } from "@/components/theme/ReviewList";
 import { ThemeForm, type ThemeFormValues } from "@/components/theme/ThemeForm";
@@ -159,6 +160,12 @@ export default function ThemeDetailPage() {
           <ReviewList reviews={reviews} />
         </div>
       </section>
+
+      <DeleteProject
+        theme={theme}
+        reviewCount={reviews.length}
+        problemCount={problems.length}
+      />
     </div>
   );
 }
