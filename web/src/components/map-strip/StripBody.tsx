@@ -9,7 +9,7 @@ import {
 } from "@/lib/map/prefs";
 import {
   changedParentIds,
-  focusTasks,
+  currentFocus,
   phaseSummaries,
 } from "@/lib/map/summary";
 import { statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
@@ -35,8 +35,8 @@ export function StripBody({
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
-  const focus = useMemo(() => focusTasks(map), [map]);
-  const focusIds = useMemo(() => new Set(focus.map((t) => t.id)), [focus]);
+  const { current, others } = useMemo(() => currentFocus(map), [map]);
+  const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
   const unconfirmed = unconfirmedCount(map);
   // サブタスクを持つタスク（親を持たないもの）の id
@@ -65,9 +65,10 @@ export function StripBody({
     setOpenSubs(allSubsOpen ? new Set() : new Set(parentsWithSubs));
   }
 
-  // 「今ここ」は1件だけ出す（全件はツールチップに）
-  const focusFirst = focus[0]?.title ?? "";
-  const focusAll = focus.map((t) => t.title).join(" / ");
+  // 「今ここ」は1件だけ出す（ほかに進行中・待ちのものはツールチップに）
+  const focusTitle = current?.title ?? "";
+  const othersTitle =
+    others.length > 0 ? `ほかに進行中・待ち：${others.map((t) => t.title).join(" / ")}` : undefined;
 
   return (
     <div
@@ -114,13 +115,17 @@ export function StripBody({
         ) : (
           <span className="flex-1" />
         )}
-        {!open && focusFirst && (
+        {!open && focusTitle && (
           <span
-            className="hidden min-w-0 max-w-[16rem] shrink truncate text-[11px] text-gray-600 md:block"
-            title={focusAll}
+            className="hidden min-w-0 max-w-[18rem] shrink items-baseline text-[11px] text-gray-600 md:flex"
+            title={othersTitle ? `${focusTitle}\n${othersTitle}` : focusTitle}
           >
-            <span className="font-medium text-indigo-700">今ここ：</span>
-            {focusFirst}
+            <span className="shrink-0 font-medium text-indigo-700">今ここ：</span>
+            <span className="min-w-0 truncate">{focusTitle}</span>
+            {/* 件数はタイトルが省略されても見えるよう、外に出す */}
+            {others.length > 0 && (
+              <span className="ml-1 shrink-0 text-gray-500">ほか {others.length} 件</span>
+            )}
           </span>
         )}
         {unconfirmed > 0 && (

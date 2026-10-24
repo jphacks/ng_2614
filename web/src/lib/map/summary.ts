@@ -45,6 +45,54 @@ export function focusTasks(map: WorkflowMap): MapTask[] {
   );
 }
 
+// 今ここをどう選んだか。update は直近の自動更新、record は出典の記録の日付、order はレーンの順
+export type CurrentFocusReason = "update" | "record" | "order";
+
+export type CurrentFocus = {
+  current?: MapTask; // 今ここ（進行中・待ちのタスクが無ければ undefined）
+  reason?: CurrentFocusReason;
+  others: MapTask[]; // ほかに進行中・待ちのタスク（focusTasks の順）
+};
+
+// 出典のパスのファイル名の先頭の YYYY-MM-DD のうち、いちばん新しいもの
+function latestSourceDate(task: MapTask): string | undefined {
+  let latest: string | undefined;
+  for (const source of task.sources) {
+    const name = source.path.slice(source.path.lastIndexOf("/") + 1);
+    const date = /^(\d{4}-\d{2}-\d{2})/.exec(name)?.[1];
+    if (date && (!latest || date > latest)) latest = date;
+  }
+  return latest;
+}
+
+// 「今ここ」を focusTasks から1件だけ選び、残りを others にする。
+// ① 直近の自動更新で変わったタスク（changedParentIds の順で最初のもの）
+// ② 出典の記録の日付がいちばん新しいもの（同じ日付ならレーンの順）
+// ③ レーンの順で最初のもの
+export function currentFocus(map: WorkflowMap): CurrentFocus {
+  const focus = focusTasks(map);
+  if (focus.length === 0) return { others: [] };
+
+  const pick = (current: MapTask, reason: CurrentFocusReason): CurrentFocus => ({
+    current,
+    reason,
+    others: focus.filter((t) => t.id !== current.id),
+  });
+
+  const focusIds = new Set(focus.map((t) => t.id));
+  const changed = changedParentIds(map).find((id) => focusIds.has(id));
+  if (changed) return pick(focus.find((t) => t.id === changed)!, "update");
+
+  let newest: { task: MapTask; date: string } | undefined;
+  for (const task of focus) {
+    const date = latestSourceDate(task);
+    if (date && (!newest || date > newest.date)) newest = { task, date };
+  }
+  if (newest) return pick(newest.task, "record");
+
+  return pick(focus[0], "order");
+}
+
 // 直近の自動更新で変わったタスクを、親を持たないタスクの id にそろえて返す
 // （サブタスクが変わったときは、その親の id にする。重複は除き、無くなったタスクは除く）
 //

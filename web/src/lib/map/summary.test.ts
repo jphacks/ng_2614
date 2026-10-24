@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MapPhase, MapTask, WorkflowMap } from "@/lib/types";
 import {
   changedParentIds,
+  currentFocus,
   focusTasks,
   isMapPage,
   phaseSummaries,
@@ -123,6 +124,58 @@ describe("focusTasks", () => {
       task("a1", { parentId: "a", status: "doing" }),
     ]);
     expect(focusTasks(map)).toEqual([]);
+  });
+});
+
+describe("currentFocus", () => {
+  const src = (path: string) => ({ kind: "spec" as const, path });
+
+  it("進行中・待ちが無ければ今ここは無い", () => {
+    expect(currentFocus(mapOf([task("a", { status: "done" })]))).toEqual({ others: [] });
+  });
+
+  it("直近の更新で変わったタスクを、changedParentIds の順で優先する", () => {
+    const map = mapOf(
+      [
+        task("r1", { status: "doing", sources: [src("x/2026-10-30-new.md")] }),
+        task("impl", { phaseId: "p2", status: "done" }),
+        task("v1", { phaseId: "p3", status: "waiting" }),
+        task("v1a", { phaseId: "p3", parentId: "v1", status: "waiting" }),
+      ],
+      ["impl", "v1a", "r1"],
+    );
+    const result = currentFocus(map);
+    expect(result.current?.id).toBe("v1");
+    expect(result.reason).toBe("update");
+    expect(result.others.map((t) => t.id)).toEqual(["r1"]);
+  });
+
+  it("変わったタスクに進行中・待ちが無ければ、出典の日付がいちばん新しいものにする", () => {
+    const map = mapOf(
+      [
+        task("r1", { status: "doing", sources: [src("a/2026-10-20-x.md"), src("a/2026-10-25-y.md")] }),
+        task("s1", { phaseId: "p2", status: "doing", sources: [src("b/2026-10-23-z.md")] }),
+        task("v1", { phaseId: "p3", status: "waiting", sources: [src("c/2026-10-25-w.md")] }),
+        task("done", { status: "done" }),
+      ],
+      ["done"],
+    );
+    const result = currentFocus(map);
+    // 同じ日付ならレーンの順で先のもの
+    expect(result.current?.id).toBe("r1");
+    expect(result.reason).toBe("record");
+    expect(result.others.map((t) => t.id)).toEqual(["s1", "v1"]);
+  });
+
+  it("日付も無ければレーンの順で最初のもの", () => {
+    const map = mapOf([
+      task("impl", { phaseId: "p2", status: "doing", sources: [src("0123abc")] }),
+      task("v1", { phaseId: "p3", status: "waiting" }),
+    ]);
+    const result = currentFocus(map);
+    expect(result.current?.id).toBe("impl");
+    expect(result.reason).toBe("order");
+    expect(result.others.map((t) => t.id)).toEqual(["v1"]);
   });
 });
 

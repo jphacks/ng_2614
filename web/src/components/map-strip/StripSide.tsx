@@ -9,17 +9,25 @@ import { useMemo, useState } from "react";
 import { setStripOpen, setStripOrientation, useStripOpen } from "@/lib/map/prefs";
 import {
   changedParentIds,
-  focusTasks,
+  currentFocus,
   phaseSummaries,
+  type CurrentFocusReason,
 } from "@/lib/map/summary";
-import { statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
-import type { MapStatus, WorkflowMap } from "@/lib/types";
-import { STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
+import { effectiveStatus, statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
+import type { MapPhase, MapStatus, MapTask, WorkflowMap } from "@/lib/types";
+import { STATUS_BADGE, STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
 import { SideLane } from "./SideLane";
 import { SIDE_WIDTH } from "./sizes";
 
 const BUTTON =
   "rounded border border-gray-300 px-1.5 py-0.5 text-[11px] leading-4 text-gray-700 hover:bg-gray-50";
+
+// 今ここをどう選んだか（lib/map/summary.ts の currentFocus）
+const REASON_TEXT: Record<CurrentFocusReason, string> = {
+  update: "直近の更新で変わったタスク",
+  record: "いちばん新しい記録のタスク",
+  order: "進行中・待ちのうち、工程の順で最初のタスク",
+};
 
 const SMALL_BUTTON =
   "w-full rounded border border-gray-300 py-1 text-[10px] leading-tight text-gray-700 hover:bg-gray-50";
@@ -35,8 +43,9 @@ export function StripSide({
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
-  const focus = useMemo(() => focusTasks(map), [map]);
-  const focusIds = useMemo(() => new Set(focus.map((t) => t.id)), [focus]);
+  const { current, reason, others } = useMemo(() => currentFocus(map), [map]);
+  const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
+  const phaseById = useMemo(() => new Map(map.phases.map((p) => [p.id, p])), [map]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
   const unconfirmed = unconfirmedCount(map);
   const parentsWithSubs = useMemo(
@@ -100,30 +109,55 @@ export function StripSide({
             </Link>
           </div>
 
-          {unconfirmed > 0 && (
-            <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
-              未確認 {unconfirmed} 件（AI が作ったままで、まだ確認していません）
-            </p>
+          {/* 今ここは1件だけ、いちばん上に囲みで出す。ほかの進行中・待ちはその下に区切って並べる */}
+          {current && (
+            <section
+              aria-label="今ここ"
+              className="mt-2 rounded-md border border-indigo-200 bg-indigo-50 p-1.5"
+            >
+              <h2 className="text-xs font-semibold text-indigo-800">今ここ</h2>
+              <FocusLink
+                href={`${mapHref}?task=${encodeURIComponent(current.id)}`}
+                task={current}
+                phase={phaseById.get(current.phaseId)}
+                status={effectiveStatus(map, current)}
+                strong
+              />
+              {reason && (
+                <p className="mt-0.5 text-[10px] leading-snug text-indigo-700">
+                  {REASON_TEXT[reason]}
+                </p>
+              )}
+            </section>
           )}
 
-          {focus.length > 0 && (
-            <section aria-label="今ここ" className="mt-1.5">
-              <h2 className="text-[11px] font-semibold text-indigo-700">
-                今ここ
+          {others.length > 0 && (
+            <section aria-label="ほかに進行中・待ち" className="mt-1.5 px-0.5">
+              <h2 className="flex items-baseline justify-between text-[11px] font-semibold text-gray-700">
+                ほかに進行中・待ち
+                <span className="text-[10px] font-normal text-gray-500">
+                  {others.length} 件
+                </span>
               </h2>
-              <ul className="mt-0.5 space-y-0.5">
-                {focus.map((t) => (
-                  <li key={t.id} className="min-w-0 text-[11px] leading-snug">
-                    <Link
+              <ul className="mt-0.5 divide-y divide-gray-200">
+                {others.map((t) => (
+                  <li key={t.id} className="min-w-0 py-1 last:pb-0">
+                    <FocusLink
                       href={`${mapHref}?task=${encodeURIComponent(t.id)}`}
-                      className="break-words text-gray-900 hover:underline"
-                    >
-                      {t.title}
-                    </Link>
+                      task={t}
+                      phase={phaseById.get(t.phaseId)}
+                      status={effectiveStatus(map, t)}
+                    />
                   </li>
                 ))}
               </ul>
             </section>
+          )}
+
+          {unconfirmed > 0 && (
+            <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
+              未確認 {unconfirmed} 件（AI が作ったままで、まだ確認していません）
+            </p>
           )}
 
           {parentsWithSubs.length > 0 && (
@@ -170,14 +204,18 @@ export function StripSide({
               const spoken = parts
                 .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
                 .join("、");
-              const hasFocus = s.focus.length > 0;
+              const hasFocus = s.phase.id === current?.phaseId;
               const text = `${spoken || "タスクなし"}${hasFocus ? "（今ここあり）" : ""}`;
               return (
                 <li
                   key={s.phase.id}
                   title={`${s.phase.name}：${text}`}
                   aria-label={`${s.phase.name}：${text}`}
-                  className="flex flex-col items-center rounded bg-gray-100 px-0.5 py-1 text-gray-700"
+                  className={`flex flex-col items-center rounded px-0.5 py-1 ${
+                    hasFocus
+                      ? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-300"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
                 >
                   <span
                     aria-hidden="true"
@@ -239,5 +277,40 @@ export function StripSide({
         </div>
       )}
     </aside>
+  );
+}
+
+// 今ここ・ほかに進行中・待ちの1件。レーン名と状態を添え、S-7 のそのタスクへ飛ぶ
+function FocusLink({
+  href,
+  task,
+  phase,
+  status,
+  strong = false,
+}: {
+  href: string;
+  task: MapTask;
+  phase: MapPhase | undefined;
+  status: MapStatus;
+  strong?: boolean;
+}) {
+  return (
+    <Link href={href} className="group mt-0.5 block">
+      <span className="flex flex-wrap items-center gap-1 text-[10px] leading-4 text-gray-600">
+        {phase?.name}
+        {phase && (
+          <span className={`rounded px-1 font-medium ${STATUS_BADGE[status]}`}>
+            {statusLabel(phase, status)}
+          </span>
+        )}
+      </span>
+      <span
+        className={`block break-words leading-snug group-hover:underline ${
+          strong ? "text-xs font-medium text-gray-900" : "text-[11px] text-gray-800"
+        }`}
+      >
+        {task.title}
+      </span>
+    </Link>
   );
 }
