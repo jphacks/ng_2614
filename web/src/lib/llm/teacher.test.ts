@@ -12,15 +12,19 @@ vi.mock("@/lib/llm/structured", async () => {
 
 import { POST as postFeedback } from "@/app/api/teacher/feedback/route";
 import { POST as postQuestions } from "@/app/api/teacher/questions/route";
+import { POST as postTurn } from "@/app/api/teacher/turn/route";
 import { LlmError, parseStructured } from "@/lib/llm/structured";
 import {
   FEEDBACK_SYSTEM_PROMPT,
   QUESTIONS_SYSTEM_PROMPT,
+  TURN_SYSTEM_PROMPT,
   buildFeedbackUserPrompt,
   buildQuestionsUserPrompt,
+  buildTurnUserPrompt,
   generateQuestions,
   giveFeedback,
   normalizeQuestions,
+  normalizeTurn,
 } from "./teacher";
 
 const mockedParse = vi.mocked(parseStructured);
@@ -259,5 +263,57 @@ describe("ルート", () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "k");
     mockedParse.mockRejectedValueOnce(new LlmError("x"));
     expect((await postFeedback(jsonRequest(body))).status).toBe(502);
+  });
+});
+
+describe("問い返し（turn）", () => {
+  const question = { layer: "implementation" as const, question: "なぜ除外した？", findingId: "f1" };
+  const turns = [
+    { role: "teacher" as const, text: "なぜ除外した？" },
+    { role: "student" as const, text: "分かりません" },
+    { role: "teacher" as const, text: "どんなエラーでしたか？" },
+    { role: "student" as const, text: "分かりません" },
+  ];
+
+  it("システムプロンプトは口調・問い返し・インジェクション対策を含む", () => {
+    expect(TURN_SYSTEM_PROMPT).toContain("厳しめの指導教員");
+    expect(TURN_SYSTEM_PROMPT).toContain("答えや解説を先生から言わない");
+    expect(TURN_SYSTEM_PROMPT).toContain("従わず");
+  });
+
+  it("ユーザープロンプトにやりとりと終える指示が入る", () => {
+    const p = buildTurnUserPrompt({ theme, question, problem, turns });
+    expect(p).toContain("<student>\n分かりません\n</student>");
+    expect(p).toContain("2 回続けて「分からない」");
+    expect(p).toContain("これが最後の返答です");
+  });
+
+  it("終える条件を満たしたら、AI が続けようとしても終える", () => {
+    expect(normalizeTurn({ done: false, understood: true, message: " m " }, true)).toEqual({
+      done: true,
+      understood: true,
+      message: "m",
+    });
+    expect(normalizeTurn({ done: false, understood: true, message: "q" }, false)).toEqual({
+      done: false,
+      understood: false,
+      message: "q",
+    });
+    expect(() => normalizeTurn({ done: true, understood: false, message: " " }, false)).toThrow(LlmError);
+  });
+
+  it("API：最後が学生の発言でなければ 400", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "k");
+    const res = await postTurn(
+      jsonRequest({ theme, question, turns: [{ role: "teacher", text: "q" }] }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("API：判定結果をそのまま返す", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "k");
+    mockedParse.mockResolvedValueOnce({ done: true, understood: false, message: "講評" });
+    const res = await postTurn(jsonRequest({ theme, question, problem, turns }));
+    expect(await res.json()).toEqual({ done: true, understood: false, message: "講評" });
   });
 });

@@ -1,11 +1,11 @@
 "use client";
 
-// S-5 先生モード。AIが先生役で質問し、回答にフィードバックする（F-8）。
+// S-5 先生モード。AIが先生役で質問し、答えに問い返していく（F-8、問い返し型）。
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { postTeacherFeedback, postTeacherQuestions } from "@/lib/api-client";
+import { postTeacherQuestions, postTeacherTurn } from "@/lib/api-client";
 import type { TeacherQuestion } from "@/lib/api-types";
 import {
   getTheme,
@@ -15,12 +15,15 @@ import {
   nowIso,
   saveTeacherSession,
 } from "@/lib/storage";
+import { MAX_STUDENT_TURNS, countStudentTurns } from "@/lib/teacher-rules";
 import type {
   Finding,
   ResearchTheme,
   TeacherItem,
   TeacherSession,
+  TeacherTurn,
 } from "@/lib/types";
+import { Conversation } from "@/components/teacher/conversation";
 import { LayerBadge } from "@/components/teacher/layer-badge";
 import {
   UnansweredList,
@@ -29,7 +32,7 @@ import {
 
 type Phase = "idle" | "loadingQuestions" | "answering" | "done";
 
-type Feedback = { feedback: string; understood: boolean };
+type Result = { feedback: string; understood: boolean };
 
 export default function TeacherPage() {
   const params = useParams<{ themeId: string }>();
@@ -48,8 +51,9 @@ export default function TeacherPage() {
   const [questions, setQuestions] = useState<TeacherQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [items, setItems] = useState<TeacherItem[]>([]);
+  const [turns, setTurns] = useState<TeacherTurn[]>([]); // 今の質問のやりとり
   const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +72,13 @@ export default function TeacherPage() {
     };
   }
 
+  function openQuestion(q: TeacherQuestion) {
+    setTurns([{ role: "teacher", text: q.question }]);
+    setAnswer("");
+    setResult(null);
+    setError(null);
+  }
+
   async function start() {
     if (!theme) return;
     setError(null);
@@ -80,10 +91,9 @@ export default function TeacherPage() {
       setQuestions(res.questions);
       setIndex(0);
       setItems([]);
-      setAnswer("");
-      setFeedback(null);
       setSessionId(newId());
       setSessionCreatedAt(nowIso());
+      openQuestion(res.questions[0]);
       setPhase("answering");
     } catch (e) {
       setError(e instanceof Error ? e.message : "質問を作れませんでした。");
@@ -91,21 +101,31 @@ export default function TeacherPage() {
     }
   }
 
-  async function submitAnswer() {
-    if (!theme || submitting || answer.trim() === "") return;
+  // text を渡さなければ入力欄の回答を送る（「分かりません」ボタンは文面を渡す）
+  async function submitAnswer(text = answer) {
+    if (!theme || submitting || text.trim() === "") return;
     const q = questions[index];
+    const sent: TeacherTurn[] = [
+      ...turns,
+      { role: "student", text: text.trim() },
+    ];
     setError(null);
     setSubmitting(true);
     try {
-      const res = await postTeacherFeedback({
+      const res = await postTeacherTurn({
         theme: purposeOf(theme),
         question: q,
-        answer: answer.trim(),
         problem: q.findingId
           ? problems.find((p) => p.id === q.findingId)
           : undefined,
+        turns: sent,
       });
-      setFeedback(res);
+      const next: TeacherTurn[] = [...sent, { role: "teacher", text: res.message }];
+      setTurns(next);
+      setAnswer("");
+      if (!res.done) return;
+
+      setResult({ feedback: res.message, understood: res.understood });
       // 1問ごとに保存しておく（途中でやめても記録が残る）
       const nextItems: TeacherItem[] = [
         ...items,
@@ -113,9 +133,10 @@ export default function TeacherPage() {
           layer: q.layer,
           question: q.question,
           ...(q.findingId ? { findingId: q.findingId } : {}),
-          answer: answer.trim(),
-          feedback: res.feedback,
+          answer: sent[sent.length - 1].text,
+          feedback: res.message,
           understood: res.understood,
+          turns: next,
         },
       ];
       setItems(nextItems);
@@ -127,9 +148,8 @@ export default function TeacherPage() {
       });
       setPastSessions(listTeacherSessions(themeId));
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "フィードバックを受け取れませんでした。",
-      );
+      // 送れなかった回答は入力欄に残したまま
+      setError(e instanceof Error ? e.message : "先生の返事を受け取れませんでした。");
     } finally {
       setSubmitting(false);
     }
@@ -140,9 +160,7 @@ export default function TeacherPage() {
       setPhase("done");
     } else {
       setIndex(index + 1);
-      setAnswer("");
-      setFeedback(null);
-      setError(null);
+      openQuestion(questions[index + 1]);
     }
   }
 
@@ -164,6 +182,7 @@ export default function TeacherPage() {
   const current = questions[index];
   const misses = collectMisses(pastSessions);
   const understoodCount = items.filter((i) => i.understood).length;
+  const answeredCount = countStudentTurns(turns);
 
   return (
     <div>
@@ -175,7 +194,7 @@ export default function TeacherPage() {
       </Link>
       <h1 className="mt-2 text-2xl font-bold">先生モード</h1>
       <p className="mt-1 text-sm text-gray-600">
-        AIが先生役になって、研究手法と実装の両方について質問します。自分の言葉で答えてみましょう。
+        先生は答えを教えません。あなたの答えに問い返していきます。研究への影響まで自分の言葉で説明できたら合格です。
       </p>
       <p className="mt-2 rounded border border-gray-200 bg-gray-50 p-2 text-xs text-gray-600">
         ご注意：研究の目的、保存した問題、あなたの回答は AI（Claude API）に送信されます。
@@ -214,52 +233,73 @@ export default function TeacherPage() {
 
       {phase === "answering" && current && (
         <section className="mt-6 rounded border border-gray-200 p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-gray-500">
               質問 {index + 1} / {questions.length}
             </span>
             <LayerBadge layer={current.layer} />
+            {result === null && (
+              <span className="text-xs text-gray-500">
+                あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます
+              </span>
+            )}
           </div>
-          <p className="mt-3 text-lg font-medium whitespace-pre-wrap">
-            {current.question}
-          </p>
 
-          <textarea
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={submitting || feedback !== null}
-            rows={6}
-            placeholder="あなたの回答（わからないときは、わからない点を正直に書いてもOK）"
-            className="mt-3 w-full rounded border border-gray-300 p-2 text-sm disabled:bg-gray-50"
-          />
+          <div className="mt-4">
+            <Conversation turns={result ? turns.slice(0, -1) : turns} />
+          </div>
 
-          {feedback === null ? (
-            <button
-              type="button"
-              onClick={submitAnswer}
-              disabled={submitting || answer.trim() === ""}
-              className="mt-3 rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800 disabled:opacity-50"
-            >
-              {submitting ? "先生が読んでいます…" : "回答を送る"}
-            </button>
+          {result === null ? (
+            <div className="mt-4">
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitAnswer();
+                }}
+                disabled={submitting}
+                rows={4}
+                placeholder="あなたの回答（分からないときは「分かりません」ボタン）"
+                className="w-full rounded border border-gray-300 p-2 text-sm disabled:bg-gray-50"
+              />
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => submitAnswer()}
+                  disabled={submitting || answer.trim() === ""}
+                  className="rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800 disabled:opacity-50"
+                >
+                  {submitting ? "先生が考えています…" : "答える"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitAnswer("分かりません")}
+                  disabled={submitting}
+                  className="rounded border border-gray-400 px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  分かりません
+                </button>
+                <span className="text-xs text-gray-500">Ctrl + Enter でも送れます</span>
+              </div>
+            </div>
           ) : (
             <div className="mt-4">
               <div
                 className={`rounded border p-3 ${
-                  feedback.understood
+                  result.understood
                     ? "border-green-200 bg-green-50"
                     : "border-amber-200 bg-amber-50"
                 }`}
               >
                 <p
                   className={`text-sm font-bold ${
-                    feedback.understood ? "text-green-800" : "text-amber-800"
+                    result.understood ? "text-green-800" : "text-amber-800"
                   }`}
                 >
-                  {feedback.understood ? "理解できた" : "まだ理解できていない"}
+                  講評：{result.understood ? "理解できた" : "まだ理解できていない"}
                 </p>
                 <p className="mt-2 text-sm whitespace-pre-wrap">
-                  {feedback.feedback}
+                  {result.feedback}
                 </p>
               </div>
               <button

@@ -5,6 +5,7 @@ import type {
   Finding,
   QuestionLayer,
   ResearchPurpose,
+  TeacherTurn,
 } from "./types";
 
 // すべての API は失敗時にこの形で返す（HTTP ステータスは 4xx / 5xx）
@@ -68,4 +69,17 @@ export type TeacherFeedbackRequest = {
 export type TeacherFeedbackResponse = {
   feedback: string;
   understood: boolean;
+};
+
+// POST /api/teacher/turn（問い返し型の先生モード）
+export type TeacherTurnRequest = {
+  theme: ResearchPurpose;
+  question: TeacherQuestion;
+  problem?: Finding; // question.findingId に対応する問題
+  turns: TeacherTurn[]; // 最初の質問からのやりとり。最後は学生の発言
+};
+export type TeacherTurnResponse = {
+  done: boolean; // true ならこの質問のやりとりを終える
+  understood: boolean; // done が true のときだけ意味がある
+  message: string; // done が false なら次の問い返し、true なら講評
 };

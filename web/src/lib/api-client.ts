@@ -8,6 +8,7 @@ import {
   demoReviewFindings,
   demoTeacherFeedback,
   demoTeacherQuestions,
+  demoTeacherTurn,
 } from "./demo/data";
 import { isDemoMode } from "./demo/mode";
 import type {
@@ -20,6 +21,8 @@ import type {
   TeacherFeedbackResponse,
   TeacherQuestionsRequest,
   TeacherQuestionsResponse,
+  TeacherTurnRequest,
+  TeacherTurnResponse,
 } from "./api-types";
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
@@ -90,6 +93,13 @@ export function postTeacherQuestions(
     return demo(1800, () => ({ questions: demoTeacherQuestions(payload) }));
   }
   return postJson<TeacherQuestionsResponse>("/api/teacher/questions", payload);
+}
+
+export function postTeacherTurn(
+  payload: TeacherTurnRequest,
+): Promise<TeacherTurnResponse> {
+  if (isDemoMode()) return demo(1500, () => demoTeacherTurn(payload));
+  return postJson<TeacherTurnResponse>("/api/teacher/turn", payload);
 }
 
 export function postTeacherFeedback(
