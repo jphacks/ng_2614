@@ -200,11 +200,6 @@ export function StripBody({
 
       {open && (
         <div className="px-4 pb-1.5 sm:px-6 lg:px-8">
-          {unconfirmed > 0 && (
-            <p className="mb-1 text-[11px] text-amber-800">
-              AI が作ったままで、まだ確認していないものが {unconfirmed} 件あります。
-            </p>
-          )}
           <div className="overflow-x-auto">
             <div className="grid grid-flow-col auto-cols-[minmax(155px,1fr)] gap-1.5">
               {summaries.map((s) => (

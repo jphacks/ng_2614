@@ -12,26 +12,10 @@ import {
 
 export type LlmFeature = "review" | "teacher" | "map";
 
-export const LLM_FEATURES: readonly {
-  id: LlmFeature;
-  label: string;
-  description: string;
-}[] = [
-  {
-    id: "review",
-    label: "判定",
-    description: "変更を「目的どおり／隠れた問題／余計な追加」に分ける",
-  },
-  {
-    id: "teacher",
-    label: "先生モード",
-    description: "質問を作り、答えに問い返して採点する",
-  },
-  {
-    id: "map",
-    label: "作業フローマップ",
-    description: "マップの目的を補い、研究への影響を選ぶ",
-  },
+export const LLM_FEATURES: readonly { id: LlmFeature; label: string }[] = [
+  { id: "review", label: "判定" },
+  { id: "teacher", label: "先生モード" },
+  { id: "map", label: "作業フローマップ" },
 ];
 
 // "default" は、機能ごとにコードで決めたエフォートを使う（判定と先生は medium など）

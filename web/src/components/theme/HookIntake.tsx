@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useDemoMode } from "@/lib/demo/mode";
 
-export function HookIntake({ themeId, repo }: { themeId: string; repo: string }) {
+export function HookIntake({ themeId }: { themeId: string }) {
   const demo = useDemoMode();
   const importHref = `/themes/${encodeURIComponent(themeId)}/reviews/new`;
 
@@ -18,9 +18,6 @@ export function HookIntake({ themeId, repo }: { themeId: string; repo: string })
       >
         <p className="font-semibold text-amber-900">
           デモモードでは、Claude Code のフックは使いません
-        </p>
-        <p className="mt-1 text-sm text-amber-900">
-          コミットから取り込むで、デモのコミット（cosine スケジュールを追加して linear と比較）を選ぶと、判定まで試せます。
         </p>
         <Link
           href={importHref}
@@ -41,21 +38,10 @@ export function HookIntake({ themeId, repo }: { themeId: string; repo: string })
         Claude Code に頼むと、作業が終わるたびに変更が自動で届きます
       </p>
       <p className="mt-1 text-sm text-blue-900">
-        研究のリポジトリ（<code className="font-mono text-xs">{repo}</code>）に Claude Code
-        のフックを入れておくと、依頼文・変更の差分・作業中のエラー・AI の報告が届きます。届くと画面の右下に知らせが出て、判定が始まります。コミットしなくてかまいません。
-      </p>
-      <p className="mt-2 text-sm">
-        <Link href="/guide#hook" className="text-blue-700 hover:underline">
-          フックの入れ方を見る
+        研究のリポジトリにフックを入れておくと、届いたときに画面の右下に知らせが出ます。
+        <Link href="/guide#hook" className="ml-1 text-blue-700 hover:underline">
+          フックの入れ方
         </Link>
-        <span className="mx-2 text-gray-400">·</span>
-        <span className="text-gray-600">
-          フックを使わないときは
-          <Link href={importHref} className="mx-1 text-blue-700 hover:underline">
-            コミットから取り込む
-          </Link>
-          こともできます
-        </span>
       </p>
     </section>
   );

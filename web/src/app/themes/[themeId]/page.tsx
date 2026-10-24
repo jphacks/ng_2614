@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useDemoMode } from "@/lib/demo/mode";
 import {
   getTheme,
   listReviews,
@@ -45,6 +46,7 @@ export default function ThemeDetailPage() {
   const { themeId } = useParams<{ themeId: string }>();
   const [state, setState] = useState<Loaded>({ status: "loading" });
   const [editing, setEditing] = useState(false);
+  const demo = useDemoMode();
 
   useEffect(() => {
     setState(load(themeId));
@@ -91,7 +93,7 @@ export default function ThemeDetailPage() {
         <h1 className="mt-2 text-xl font-bold">{theme.name}</h1>
         <p className="mt-1 font-mono text-xs text-gray-500">{theme.repo}</p>
         <div className="mt-4">
-          <HookIntake themeId={theme.id} repo={theme.repo} />
+          <HookIntake themeId={theme.id} />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link
@@ -106,13 +108,16 @@ export default function ThemeDetailPage() {
           >
             作業フローマップ
           </Link>
-          {/* 取り込みの主な方法はフックなので、コミットからの取り込みは目立たない副ボタンにする */}
-          <Link
-            href={`/themes/${theme.id}/reviews/new`}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-          >
-            コミットから取り込む
-          </Link>
+          {/* 取り込みの主な方法はフックなので、コミットからの取り込みは目立たない副ボタンにする。
+              デモモードでは上の案内にボタンがあるので出さない */}
+          {!demo && (
+            <Link
+              href={`/themes/${theme.id}/reviews/new`}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+            >
+              コミットから取り込む
+            </Link>
+          )}
         </div>
       </div>
 
@@ -154,9 +159,6 @@ export default function ThemeDetailPage() {
 
           <section>
             <h2 className="text-lg font-bold">問題ログ</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              AI が黙って対処していた問題の記録です（新しい順）。先生との打ち合わせの前に見返せます。
-            </p>
             <div className="mt-3">
               <ProblemLog problems={problems} />
             </div>

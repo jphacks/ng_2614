@@ -4,11 +4,7 @@ import { useState } from "react";
 import type { MapPhase, WorkflowMap } from "@/lib/types";
 import { tasksInPhase } from "@/lib/map/view";
 import { AddTaskForm, type AddTaskValues } from "./AddTaskForm";
-import {
-  matchesFilter,
-  SOURCE_KIND_LABEL,
-  type MilestoneFilter,
-} from "./labels";
+import { matchesFilter, type MilestoneFilter } from "./labels";
 import { TaskCard } from "./TaskCard";
 
 export function PhaseLane({
@@ -53,11 +49,6 @@ export function PhaseLane({
             </span>
           )}
         </h3>
-        {phase.kinds.length > 0 && (
-          <p className="text-xs text-gray-500">
-            {phase.kinds.map((k) => SOURCE_KIND_LABEL[k]).join("・")}
-          </p>
-        )}
       </header>
       {tasks.length === 0 && !adding && (
         <p className="px-1 py-2 text-xs text-gray-400">タスクはありません</p>

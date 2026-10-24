@@ -140,16 +140,13 @@ export default function NewReviewPage() {
           <label htmlFor="purpose" className="block font-bold">
             作業の目的 <span className="text-sm font-normal text-red-600">必須</span>
           </label>
-          <p className="text-sm text-gray-600">
-            AIに何を頼んだかを書いてください。AIに渡したプロンプトをそのまま貼っても構いません。
-          </p>
           <textarea
             id="purpose"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
             rows={5}
             disabled={busy}
-            placeholder="例：データを読み込んでモデルXを学習・評価するスクリプトを作る"
+            placeholder="AI に頼んだこと（プロンプトをそのまま貼ってもよい）"
             className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
           />
         </section>

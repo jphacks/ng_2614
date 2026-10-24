@@ -11,8 +11,6 @@ import {
   milestoneStyle,
   STATUS_ICON,
   STATUS_ORDER,
-  STATUS_SOURCE_HINT,
-  STATUS_SOURCE_LABEL,
 } from "./labels";
 import { StatusBadge } from "./StatusBadge";
 
@@ -156,10 +154,14 @@ export function TaskCard({
             更新
           </span>
         )}
+        {/* 未確認は全部のカードに付きやすいので、文字ではなく小さな点で示す */}
         {task.review === "unconfirmed" && (
-          <span className="rounded border border-amber-400 px-1.5 py-0.5 text-xs text-amber-800">
-            未確認
-          </span>
+          <span
+            role="img"
+            aria-label="未確認"
+            title="未確認（AI が作ったまま）"
+            className="ml-auto h-2 w-2 rounded-full bg-amber-400"
+          />
         )}
       </div>
 
@@ -174,12 +176,6 @@ export function TaskCard({
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         <StatusBadge label={statusLabel(phase, status)} status={status} />
-        <span
-          className="text-xs text-gray-500"
-          title={STATUS_SOURCE_HINT[task.statusSource]}
-        >
-          {STATUS_SOURCE_LABEL[task.statusSource]}
-        </span>
       </div>
 
       {task.purpose && (

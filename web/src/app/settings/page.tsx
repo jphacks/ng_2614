@@ -84,10 +84,6 @@ export default function SettingsPage() {
     <div className="space-y-10">
       <div>
         <h1 className="text-xl font-bold">設定</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Claude API キーと GitHub
-          トークンをつなぎ、機能ごとに使う AI を選びます。使った量と料金の目安もここで見られます。
-        </p>
         {demoMode && (
           <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             デモモード中は AI
@@ -111,9 +107,6 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
-        <p className="mt-1 text-sm text-gray-600">
-          上げるほど質が上がる見込みですが、料金と待ち時間も増えます。このブラウザに保存され、すぐに反映されます。
-        </p>
         <div className="mt-3 space-y-3">
           {LLM_FEATURES.map((f) => {
             const s = settings[f.id];
@@ -130,13 +123,12 @@ export default function SettingsPage() {
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500">{f.description}</p>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {avg !== undefined
-                      ? `これまでの 1 回あたり ${formatUsd(avg)}`
-                      : "このモデルではまだ使っていません"}
-                  </p>
+                  {avg !== undefined && (
+                    <p className="text-xs text-gray-500">
+                      これまでの 1 回あたり {formatUsd(avg)}
+                    </p>
+                  )}
                 </div>
                 <div className="mt-3 grid gap-3 md:grid-cols-[3fr_4fr]">
                   <Segmented

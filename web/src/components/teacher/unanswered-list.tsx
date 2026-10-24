@@ -23,9 +23,6 @@ export function UnansweredList({ misses }: { misses: UnderstoodMiss[] }) {
   return (
     <section className="mt-10">
       <h2 className="text-lg font-bold">答えられなかった点</h2>
-      <p className="mt-1 text-sm text-gray-600">
-        過去の先生モードで、まだ理解できていなかった質問です。ゼミの前に見直しましょう。
-      </p>
       {misses.length === 0 ? (
         <p className="mt-3 text-sm text-gray-500">まだ記録はありません。</p>
       ) : (

@@ -348,15 +348,9 @@ export default function WorkflowMapPage() {
 
       {!map ? (
         <section className="space-y-3 rounded-md border border-gray-200 p-4">
-          <p className="text-sm text-gray-700">
-            まだマップがありません。研究の工程（調査・選定・実装・検証・報告など）を、
-            タスクとそのつながりとして AI が並べます。作ったあとで、人が直せます。
-          </p>
+          <p className="text-sm text-gray-700">まだマップがありません。</p>
           {demo ? (
             <>
-              <p className="text-sm text-gray-600">
-                デモモードです。ワークスペースは読まず、デモ用のデータでマップを作ります。
-              </p>
               <button
                 type="button"
                 disabled={generating}
@@ -369,7 +363,7 @@ export default function WorkflowMapPage() {
           ) : (
             <>
               <p className="text-sm text-gray-600">
-                マップの元にする research-workspace（GitHub のリポジトリと、その中のプロジェクト名）を入力してください。入力した内容はこのマップに保存され、次からは聞きません（あとで設定から変えられます）。
+                マップの元にする research-workspace を入力してください。
               </p>
               <WorkspaceForm
                 submitLabel="マップを作る"
@@ -405,27 +399,22 @@ export default function WorkflowMapPage() {
 
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <button
-                type="button"
-                disabled={refreshing || generating || demo || !hasWorkspace}
-                onClick={() => void handleRefresh()}
-                className="rounded-md border border-blue-600 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {refreshing
-                  ? "ワークスペースを読んでいます…"
-                  : "ワークスペースから更新"}
-              </button>
-              {demo ? (
-                <span className="text-xs text-gray-600">
-                  デモモードでは、ワークスペースを読まないので使えません。
-                </span>
-              ) : !hasWorkspace ? (
+              {/* デモモードではワークスペースを読まないので出さない */}
+              {!demo && (
+                <button
+                  type="button"
+                  disabled={refreshing || generating || !hasWorkspace}
+                  onClick={() => void handleRefresh()}
+                  className="rounded-md border border-blue-600 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {refreshing
+                    ? "ワークスペースを読んでいます…"
+                    : "ワークスペースから更新"}
+                </button>
+              )}
+              {!demo && !hasWorkspace && (
                 <span className="text-xs text-gray-600">
                   ワークスペースが未設定です。下の「ワークスペースの設定」で入力してください。
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500">
-                  前回から変わったファイルだけを読みます。
                 </span>
               )}
             </div>
@@ -527,9 +516,7 @@ export default function WorkflowMapPage() {
                 ワークスペース
               </h2>
               {demo ? (
-                <p className="text-sm text-gray-600">
-                  デモモードです。ワークスペースは読まず、デモ用のデータを使います（設定は不要です）。
-                </p>
+                <p className="text-sm text-gray-600">デモ用のデータを使います。</p>
               ) : hasWorkspace ? (
                 <p className="text-sm text-gray-700">
                   <code className="font-mono">{map.workspaceRepo}</code> の{" "}
@@ -592,9 +579,6 @@ export default function WorkflowMapPage() {
                         : "ワークスペースを読んでいます…"
                       : "マップを作り直す"}
                   </button>
-                  <span className="ml-2 text-xs text-gray-500">
-                    人が直した内容と、消したものの記録は残ります。
-                  </span>
                 </div>
                 {generateError && (
                   <p role="alert" className="text-sm text-red-700">
