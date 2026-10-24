@@ -11,8 +11,8 @@ import type {
   TeacherTurnRequest,
   TeacherTurnResponse,
 } from "@/lib/api-types";
-import { countStudentTurns, isDontKnow, mustFinish } from "@/lib/teacher-rules";
-import type { Finding, ResearchTheme } from "@/lib/types";
+import { decideTurn, firstUncovered, isDontKnow } from "@/lib/teacher-rules";
+import type { Finding, ResearchTheme, Viewpoint } from "@/lib/types";
 
 export const DEMO_THEME_ID = "demo-theme";
 
@@ -304,15 +304,20 @@ export function demoReviewFindings(sha: string): Finding[] {
   }));
 }
 
-// ---- 先生モード（問い返し型。docs/design.md の「先生の聞き方」） ----
+// ---- 先生モード（問い返し型と観点による採点。docs/design.md の「先生の聞き方」「観点による採点」） ----
 
-// 質問ごとに、問い返しの順番（掘る順）と、核心に届いたとみなすキーワードを持つ
+// デモの観点は、キーワードで採点する（本番は AI が意味で採点する）
+type DemoViewpoint = {
+  text: string;
+  required: boolean;
+  keywords: string[]; // どれかが回答に含まれていれば、言えたとみなす
+  probe: string; // この観点がまだ言えていないときの問い返し
+};
+
 type DemoQuestion = {
   layer: TeacherQuestion["layer"];
   question: string;
-  probes: string[]; // 学生の答えが届かなかったときの問い返し。1回目、2回目…の順
-  goal: string[]; // 回答に含まれていれば、核心（研究への影響）に届いたとみなす
-  missing: string; // 届かなかったときの講評：何が抜けていたか
+  viewpoints: DemoViewpoint[]; // 掘る順
   homework: string; // 届かなかったときの講評：ゼミまでに考えておくこと
   aiDidIt: string; // 「AIがやったので分かりません」への問い返し
 };
@@ -321,14 +326,34 @@ const NORMALIZE_QUESTION: DemoQuestion = {
   layer: "implementation",
   question:
     "compare.py でデータを正規化していますね。なぜこの対処をしたのですか？",
-  probes: [
-    "正規化する前、学習では何が起きていたのですか？",
-    "正規化したデータで測った sliced Wasserstein 距離は、元のスケールで測った値と同じ意味ですか？",
-    "では、README の評価方法と比べて、この結果をそのまま論文に書けますか？",
+  viewpoints: [
+    {
+      text: "元のスケール（座標がおよそ −10〜15）のまま学習すると、損失が nan になり学習が発散した",
+      required: false,
+      keywords: ["nan", "発散", "不安定", "損失"],
+      probe: "正規化する前、学習では何が起きていたのですか？",
+    },
+    {
+      text: "距離を正規化した空間のまま測っていて、README の「元のスケールのまま測る」と違う",
+      required: true,
+      keywords: [
+        "正規化したまま",
+        "正規化した空間",
+        "元のスケール",
+        "元に戻",
+        "README",
+      ],
+      probe:
+        "正規化したデータで測った sliced Wasserstein 距離は、README の評価方法どおりですか？",
+    },
+    {
+      text: "距離の値の意味が変わり、前の結果や README の基準とそのまま比べられない",
+      required: true,
+      keywords: ["意味", "比べられ", "比較でき", "単位", "前の結果"],
+      probe:
+        "では、その距離の値を、前の結果や README の基準とそのまま比べられますか？",
+    },
   ],
-  goal: ["スケール", "元の", "単位", "意味", "戻", "README"],
-  missing:
-    "距離が正規化した空間で測られていて、README の「元のスケールのまま測る」と違う点まで届いていません。",
   homework:
     "生成した点を元のスケールに戻して距離を測り直し、正規化したままの値と比べておいてください。",
   aiDidIt:
@@ -339,22 +364,34 @@ const CLIP_QUESTION: DemoQuestion = {
   layer: "research",
   question:
     "cosine スケジュールの β を 0.02 で抑えています。なぜこの制限が必要だったのですか？",
-  probes: [
-    "β の上限を 0.02 にすると、cosine の最後のほうのノイズの入り方はどうなりますか？",
-    "それは、論文の cosine スケジュールと同じものですか？",
-    "その状態で「cosine は linear より良い（悪い）」と言えますか？",
+  viewpoints: [
+    {
+      text: "cosine の最後のほうで β が 1 近くまで大きくなり、サンプリングで点が飛び散った",
+      required: false,
+      keywords: ["飛び散", "外れ値", "0.999", "大きくな"],
+      probe: "上限を付ける前、サンプリングでは何が起きていたのですか？",
+    },
+    {
+      text: "上限を 0.02 にすると最後のほうのノイズの入り方が変わり、論文の cosine スケジュールとは別物になる",
+      required: true,
+      keywords: [
+        "論文",
+        "本来",
+        "別物",
+        "違うもの",
+        "linear に近",
+        "linearに近",
+      ],
+      probe:
+        "β の上限を 0.02 にしたスケジュールは、論文の cosine スケジュールと同じものですか？",
+    },
+    {
+      text: "その状態では「cosine は linear より良い（悪い）」と結論できない",
+      required: true,
+      keywords: ["言えな", "結論", "比較", "公平"],
+      probe: "その状態で「cosine は linear より良い（悪い）」と言えますか？",
+    },
   ],
-  goal: [
-    "論文",
-    "本来",
-    "別物",
-    "違う",
-    "linear に近",
-    "linearに近",
-    "提案手法",
-  ],
-  missing:
-    "上限を付けたことで、比べているのが本来の cosine スケジュールではなくなっている点まで届いていません。",
   homework:
     "上限 0.999（論文の値）と 0.02 の両方で ᾱ_t のグラフを描き、どこが違うか説明できるようにしてください。",
   aiDidIt:
@@ -367,14 +404,21 @@ function evaluationQuestion(evaluation: string): DemoQuestion {
   return {
     layer: "research",
     question: `評価を「${short}」としています。なぜこの評価の仕方を選んだのですか？`,
-    probes: [
-      "生成した点が本物にどれくらい近いかを、1 つの数で表すには何を比べる必要がありますか？",
-      "seed を 3 つ変えて、平均と標準偏差を見るのはなぜですか？",
-      "では、linear と cosine の差が標準偏差より小さいとき、どちらが良いと言えますか？",
+    viewpoints: [
+      {
+        text: "生成した点と本物の点には 1 対 1 の対応が無いので、点の集まり（分布）どうしの近さを測る必要がある",
+        required: true,
+        keywords: ["分布", "近さ", "点群", "集まり"],
+        probe:
+          "生成した点が本物にどれくらい近いかを、1 つの数で表すには何を比べる必要がありますか？",
+      },
+      {
+        text: "結果は seed でばらつくので、差が偶然でないかを平均と標準偏差で確かめる",
+        required: true,
+        keywords: ["ばらつ", "標準偏差", "偶然", "再現", "seed"],
+        probe: "seed を 3 つ変えて、平均と標準偏差を見るのはなぜですか？",
+      },
     ],
-    goal: ["分布", "ばらつき", "標準偏差", "偶然", "再現"],
-    missing:
-      "分布どうしの近さを測る理由と、seed を変えて差の大きさを確かめる理由まで届いていません。",
     homework:
       "linear と cosine の差が、seed による標準偏差より大きいかを確かめておいてください。",
     aiDidIt:
@@ -386,25 +430,40 @@ function genericProblemQuestion(problem: Finding): DemoQuestion {
   return {
     layer: "implementation",
     question: `「${problem.summary}」とあります。なぜこの対処をしたのですか？`,
-    probes: [
-      "そのエラーは、何が原因で起きていたのですか？",
-      "その対処で、データや実験の条件は何か変わりましたか？",
-      "それは、あなたの研究の問いに答えるうえで問題になりますか？",
+    viewpoints: [
+      {
+        text: "どんなエラーが、何が原因で起きていたか",
+        required: false,
+        keywords: ["原因", "エラー"],
+        probe: "そのエラーは、何が原因で起きていたのですか？",
+      },
+      {
+        text: "その対処で、データや実験の条件がどう変わったか",
+        required: true,
+        keywords: ["条件", "影響", "変わ", "結果"],
+        probe: "その対処で、データや実験の条件は何か変わりましたか？",
+      },
     ],
-    goal: ["影響", "条件", "比較", "結果"],
-    missing: "対処が研究の結果にどう影響するかまで届いていません。",
     homework: `記録では、対処は「${problem.fix ?? "不明"}」です。それで実験の条件が変わらないか確かめてください。`,
     aiDidIt: `AIがやったかどうかは関係ありません。${problem.files[0] ?? "変更されたファイル"} の該当箇所を見て、何をしているか説明してください。`,
   };
 }
 
-// 質問の文面から、問い返しの材料を引けるようにしておく
+// 質問の文面から、採点の材料を引けるようにしておく
 const asked = new Map<string, DemoQuestion>();
 
 function questionFor(problem: Finding): DemoQuestion {
   if (problem.summary === NORMALIZE_SUMMARY) return NORMALIZE_QUESTION;
   if (problem.summary === CLIP_SUMMARY) return CLIP_QUESTION;
   return genericProblemQuestion(problem);
+}
+
+function toViewpoints(q: DemoQuestion): Viewpoint[] {
+  return q.viewpoints.map((v, i) => ({
+    id: `v${i + 1}`,
+    text: v.text,
+    required: v.required,
+  }));
 }
 
 export function demoTeacherQuestions(
@@ -421,13 +480,14 @@ export function demoTeacherQuestions(
       layer: q.layer,
       question: q.question,
       ...(findingId ? { findingId } : {}),
+      viewpoints: toViewpoints(q),
     };
   });
 }
 
-function reachedGoal(q: DemoQuestion | undefined, answer: string): boolean {
-  if (!q) return answer.length >= 30;
-  return q.goal.some((k) => answer.toLowerCase().includes(k.toLowerCase()));
+function mentions(answer: string, keywords: string[]): boolean {
+  const a = answer.toLowerCase();
+  return keywords.some((k) => a.includes(k.toLowerCase()));
 }
 
 function isAiDidIt(answer: string): boolean {
@@ -436,41 +496,51 @@ function isAiDidIt(answer: string): boolean {
 
 export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
   const q = asked.get(req.question.question);
+  const viewpoints = req.question.viewpoints;
   const last = req.turns[req.turns.length - 1]?.text.trim() ?? "";
-  const answered = countStudentTurns(req.turns);
 
-  if (!isDontKnow(last) && reachedGoal(q, last)) {
+  // 観点ごとのキーワードで採点し、言えた観点を積み上げる
+  const covered = viewpoints
+    .map((v) => v.id)
+    .filter((id, i) => {
+      if (req.covered.includes(id)) return true;
+      const demo = q?.viewpoints[i];
+      return !!demo && !isDontKnow(last) && mentions(last, demo.keywords);
+    });
+
+  const { done, understood } = decideTurn(viewpoints, covered, req.turns);
+  if (done && understood) {
     return {
-      done: true,
-      understood: true,
+      done,
+      understood,
+      covered,
       message:
         "そこまで自分の言葉で言えれば十分です。ゼミでも同じ順序で説明してください。",
     };
   }
-
-  if (mustFinish(req.turns)) {
+  if (done) {
+    const missing = viewpoints.filter(
+      (v) => v.required && !covered.includes(v.id),
+    );
     return {
-      done: true,
-      understood: false,
-      message: q
-        ? `${q.missing}\nゼミまでに：${q.homework}`
-        : "核心まで届いていません。ゼミまでに、この変更が研究の結果にどう影響するか整理してください。",
+      done,
+      understood,
+      covered,
+      message: `「${missing.map((v) => v.text).join("」「")}」まで届いていません。\nゼミまでに：${q?.homework ?? "この変更が研究の結果にどう影響するか整理してください。"}`,
     };
   }
 
+  const next = firstUncovered(viewpoints, covered);
+  const probe =
+    (next && q?.viewpoints[viewpoints.indexOf(next)]?.probe) ??
+    "それは、あなたの研究の問いにどう関係しますか？";
   let message: string;
-  if (q && isAiDidIt(last)) {
-    message = q.aiDidIt;
-  } else {
-    const probe =
-      q?.probes[Math.min(answered - 1, q.probes.length - 1)] ??
-      "それは、あなたの研究の問いにどう関係しますか？";
-    if (isDontKnow(last)) message = `では、ここから考えてください。${probe}`;
-    else if (last.length < 15)
-      message = `それでは理由になっていません。${probe}`;
-    else message = probe;
-  }
-  return { done: false, understood: false, message };
+  if (q && isAiDidIt(last)) message = q.aiDidIt;
+  else if (isDontKnow(last)) message = `では、ここから考えてください。${probe}`;
+  else if (covered.length === req.covered.length)
+    message = `それでは理由になっていません。${probe}`;
+  else message = probe;
+  return { done, understood, covered, message };
 }
 
 // 一問一答の API（POST /api/teacher/feedback）のデモ。今の先生モードの画面は使っていない
@@ -479,11 +549,15 @@ export function demoTeacherFeedback(
 ): TeacherFeedbackResponse {
   const q = asked.get(req.question.question);
   const answer = req.answer.trim();
-  const understood = !isDontKnow(answer) && reachedGoal(q, answer);
+  const required = q?.viewpoints.filter((v) => v.required) ?? [];
+  const understood =
+    !isDontKnow(answer) &&
+    required.length > 0 &&
+    required.every((v) => mentions(answer, v.keywords));
   return {
     understood,
     feedback: understood
       ? "要点は押さえられています。"
-      : (q?.missing ?? "核心まで届いていません。"),
+      : "核心まで届いていません。",
   };
 }

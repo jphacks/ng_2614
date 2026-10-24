@@ -67,9 +67,9 @@ export default function NewReviewPage() {
   if (theme === null) {
     return (
       <div className="space-y-3">
-        <p>研究テーマが見つかりませんでした。</p>
+        <p>プロジェクトが見つかりませんでした。</p>
         <Link href="/" className="text-blue-700 underline">
-          研究テーマ一覧に戻る
+          プロジェクト一覧に戻る
         </Link>
       </div>
     );

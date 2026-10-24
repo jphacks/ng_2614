@@ -16,13 +16,13 @@ export const EMPTY_THEME_VALUES: ThemeFormValues = {
   evaluation: "",
 };
 
-const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+export const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 type Errors = Partial<Record<keyof ThemeFormValues, string>>;
 
 function validate(values: ThemeFormValues): Errors {
   const errors: Errors = {};
-  if (!values.name.trim()) errors.name = "研究テーマ名を入力してください";
+  if (!values.name.trim()) errors.name = "プロジェクト名を入力してください";
   const repo = values.repo.trim();
   if (!repo) {
     errors.repo = "GitHub リポジトリを入力してください";
@@ -41,6 +41,8 @@ type Props = {
   submitLabel: string;
   onSubmit: (values: ThemeFormValues) => void;
   onCancel?: () => void;
+  cancelLabel?: string;
+  repoLocked?: boolean; // true ならリポジトリは表示だけ（新しいプロジェクト S-6 で選んだもの）
 };
 
 const inputClass =
@@ -51,6 +53,8 @@ export function ThemeForm({
   submitLabel,
   onSubmit,
   onCancel,
+  cancelLabel = "キャンセル",
+  repoLocked = false,
 }: Props) {
   const [values, setValues] = useState<ThemeFormValues>(initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -75,7 +79,7 @@ export function ThemeForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <Field
-        label="研究テーマ名"
+        label="プロジェクト名"
         error={errors.name}
         input={
           <input
@@ -87,22 +91,31 @@ export function ThemeForm({
           />
         }
       />
-      <Field
-        label="GitHub リポジトリ"
-        hint="owner/name の形式。この研究のコードが入っているリポジトリ"
-        error={errors.repo}
-        input={
-          <input
-            type="text"
-            value={values.repo}
-            onChange={(e) => set("repo")(e.target.value)}
-            placeholder="例: tamaki-lab/my-experiment"
-            className={inputClass}
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-        }
-      />
+      {repoLocked ? (
+        <div>
+          <span className="text-sm font-medium text-gray-800">
+            GitHub リポジトリ
+          </span>
+          <p className="mt-1 font-mono text-sm text-gray-900">{values.repo}</p>
+        </div>
+      ) : (
+        <Field
+          label="GitHub リポジトリ"
+          hint="owner/name の形式。この研究のコードが入っているリポジトリ"
+          error={errors.repo}
+          input={
+            <input
+              type="text"
+              value={values.repo}
+              onChange={(e) => set("repo")(e.target.value)}
+              placeholder="例: tamaki-lab/my-experiment"
+              className={inputClass}
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          }
+        />
+      )}
       <Field
         label="問い"
         hint="何を明らかにしたいか"
@@ -158,7 +171,7 @@ export function ThemeForm({
             onClick={onCancel}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
-            キャンセル
+            {cancelLabel}
           </button>
         )}
       </div>

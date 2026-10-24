@@ -49,7 +49,7 @@ export function RejudgePanel({ review, diff, onUpdated }: Props) {
     if (!next || busy) return;
     const theme = getTheme(review.themeId);
     if (!theme) {
-      setError("研究テーマが見つかりません。");
+      setError("プロジェクトが見つかりません。");
       return;
     }
     setBusy(true);

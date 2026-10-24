@@ -61,12 +61,12 @@ export default function ThemeDetailPage() {
   if (state.status === "notFound") {
     return (
       <div>
-        <p className="text-gray-700">研究テーマが見つかりません。</p>
+        <p className="text-gray-700">プロジェクトが見つかりません。</p>
         <Link
           href="/"
           className="mt-2 inline-block text-blue-700 hover:underline"
         >
-          研究テーマ一覧へ戻る
+          プロジェクト一覧へ戻る
         </Link>
       </div>
     );
@@ -84,7 +84,7 @@ export default function ThemeDetailPage() {
     <div className="space-y-10">
       <div>
         <Link href="/" className="text-sm text-blue-700 hover:underline">
-          ← 研究テーマ一覧
+          ← プロジェクト一覧
         </Link>
         <h1 className="mt-2 text-xl font-bold">{theme.name}</h1>
         <p className="mt-1 font-mono text-xs text-gray-500">{theme.repo}</p>
