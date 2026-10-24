@@ -3,9 +3,8 @@ import type { DiffResponse } from "./api-types";
 import {
   cutObservedErrors,
   findThemeByRepo,
-  getHookDiff,
+  getLegacyHookDiff,
   getReview,
-  saveHookDiff,
   saveHookReview,
   saveTheme,
 } from "./storage";
@@ -67,27 +66,14 @@ describe("findThemeByRepo", () => {
   });
 });
 
-describe("フックの差分の保存", () => {
-  it("直近5件だけ残し、古いものは消える", () => {
-    for (let i = 1; i <= 7; i++) saveHookDiff(`r${i}`, diff(`s${i}`));
-    expect(getHookDiff("r1")).toBeUndefined();
-    expect(getHookDiff("r2")).toBeUndefined();
-    for (let i = 3; i <= 7; i++) {
-      expect(getHookDiff(`r${i}`)?.sha).toBe(`s${i}`);
-    }
-  });
-
-  it("同じ判定の差分を保存し直しても件数は増えない", () => {
-    for (let i = 1; i <= 5; i++) saveHookDiff(`r${i}`, diff(`s${i}`));
-    saveHookDiff("r1", diff("again"));
-    expect(getHookDiff("r1")?.sha).toBe("again");
-    expect(getHookDiff("r2")?.sha).toBe("s2");
-  });
-
-  it("容量があふれても例外を出さない", () => {
-    stubWindow(10);
-    expect(() => saveHookDiff("r1", diff("s1"))).not.toThrow();
-    expect(getHookDiff("r1")).toBeUndefined();
+describe("F-14 より前のフックの差分", () => {
+  it("localStorage に残っていれば読み出せる", () => {
+    window.localStorage.setItem(
+      "rc.hookDiffs",
+      JSON.stringify([{ reviewId: "r1", commit: diff("s1") }]),
+    );
+    expect(getLegacyHookDiff("r1")?.sha).toBe("s1");
+    expect(getLegacyHookDiff("r2")).toBeUndefined();
   });
 });
 
@@ -102,7 +88,7 @@ describe("エラー出力の切り詰め", () => {
     expect(cut[1].output).toBe("short");
   });
 
-  it("saveHookReview は保存するエラー出力を切り、差分も残す", () => {
+  it("saveHookReview は保存するエラー出力を切る", () => {
     const review: Review = {
       id: "rv",
       themeId: "t",
@@ -114,8 +100,7 @@ describe("エラー出力の切り詰め", () => {
       createdAt: "",
       findings: [],
     };
-    saveHookReview(review, diff("d"));
+    saveHookReview(review);
     expect(getReview("rv")?.observedErrors?.[0].output).toHaveLength(500);
-    expect(getHookDiff("rv")?.sha).toBe("d");
   });
 });

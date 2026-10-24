@@ -3,33 +3,29 @@
 import { useState } from "react";
 import { postReview } from "@/lib/api-client";
 import { buildHookReviewRequest } from "@/lib/hook-review";
-import {
-  getHookDiff,
-  getTheme,
-  notifyReviewsChanged,
-  saveReview,
-} from "@/lib/storage";
+import type { DiffResponse } from "@/lib/api-types";
+import { getTheme, notifyReviewsChanged, saveReview } from "@/lib/storage";
 import type { Review } from "@/lib/types";
 
 // フック（F-13）の判定を、作業の目的を直してもう一度判定する
 
 type Props = {
   review: Review;
+  diff: DiffResponse | null | undefined; // undefined：読み込み中 / null：保存されていない
   onUpdated: (review: Review) => void;
 };
 
-export function RejudgePanel({ review, onUpdated }: Props) {
-  // 差分は直近5件の判定ぶんだけ残している
-  const [diff] = useState(() => getHookDiff(review.id));
+export function RejudgePanel({ review, diff, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
   const [purpose, setPurpose] = useState(review.purpose);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!diff) {
+  if (diff === undefined) return null;
+  if (diff === null) {
     return (
       <p className="text-xs text-gray-500">
-        作業の目的を直して判定し直せるのは、直近 5 件のフックの判定だけです。
+        この判定の差分が保存されていないため、判定し直せません。
       </p>
     );
   }

@@ -99,7 +99,6 @@ export function saveReview(review: Review): Review {
 // フックの判定（F-13）
 
 export const OBSERVED_ERROR_SAVE_LIMIT = 500; // 保存するエラー出力の最大文字数
-export const HOOK_DIFF_KEEP = 5; // 差分を残す判定の数
 
 // 保存するときは、エラーの出力を500文字までに切る（localStorage の容量のため）
 export function cutObservedErrors(errors: ObservedError[]): ObservedError[] {
@@ -109,39 +108,21 @@ export function cutObservedErrors(errors: ObservedError[]): ObservedError[] {
   }));
 }
 
-// フックで届いた判定を保存する。エラー出力は切り、差分は直近5件ぶんだけ残す
-export function saveHookReview(review: Review, commit: DiffResponse): Review {
+// フックで届いた判定を保存する。エラー出力は切る（差分は diff-store.ts の saveDiff で別に保存する）
+export function saveHookReview(review: Review): Review {
   const saved = saveReview({
     ...review,
     observedErrors: cutObservedErrors(review.observedErrors ?? []),
   });
-  saveHookDiff(saved.id, commit);
   notifyReviewsChanged();
   return saved;
 }
 
-export type HookDiffEntry = { reviewId: string; commit: DiffResponse };
+type LegacyHookDiffEntry = { reviewId: string; commit: DiffResponse };
 
-// 再判定のために差分を取っておく。古い順に並べ、直近5件だけ残す
-export function saveHookDiff(reviewId: string, commit: DiffResponse): void {
-  const entries = read<HookDiffEntry>(KEYS.hookDiffs).filter(
-    (e) => e.reviewId !== reviewId,
-  );
-  const kept = [...entries, { reviewId, commit }].slice(-HOOK_DIFF_KEEP);
-  try {
-    write(KEYS.hookDiffs, kept);
-  } catch {
-    // 容量があふれたときは、新しい1件だけ残してみる。だめなら諦める（判定の保存は止めない）
-    try {
-      write(KEYS.hookDiffs, kept.slice(-1));
-    } catch {
-      // 何もしない
-    }
-  }
-}
-
-export function getHookDiff(reviewId: string): DiffResponse | undefined {
-  return read<HookDiffEntry>(KEYS.hookDiffs).find(
+// F-14 より前は、フックの判定の直近5件の差分を localStorage に残していた。その読み出しだけ残す
+export function getLegacyHookDiff(reviewId: string): DiffResponse | undefined {
+  return read<LegacyHookDiffEntry>(KEYS.hookDiffs).find(
     (e) => e.reviewId === reviewId,
   )?.commit;
 }
