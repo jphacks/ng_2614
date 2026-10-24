@@ -14,6 +14,7 @@ import {
 import type { ResearchTheme, Review } from "@/lib/types";
 import { ProblemLog } from "@/components/problems/ProblemLog";
 import { DeleteProject } from "@/components/theme/DeleteProject";
+import { HookIntake } from "@/components/theme/HookIntake";
 import { PurposeView } from "@/components/theme/PurposeView";
 import { ReviewList } from "@/components/theme/ReviewList";
 import { ThemeForm, type ThemeFormValues } from "@/components/theme/ThemeForm";
@@ -89,13 +90,10 @@ export default function ThemeDetailPage() {
         </Link>
         <h1 className="mt-2 text-xl font-bold">{theme.name}</h1>
         <p className="mt-1 font-mono text-xs text-gray-500">{theme.repo}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href={`/themes/${theme.id}/reviews/new`}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            変更を取り込む
-          </Link>
+        <div className="mt-4">
+          <HookIntake themeId={theme.id} repo={theme.repo} />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link
             href={`/themes/${theme.id}/teacher`}
             className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
@@ -107,6 +105,13 @@ export default function ThemeDetailPage() {
             className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
           >
             作業フローマップ
+          </Link>
+          {/* 取り込みの主な方法はフックなので、コミットからの取り込みは目立たない副ボタンにする */}
+          <Link
+            href={`/themes/${theme.id}/reviews/new`}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            コミットから取り込む
           </Link>
         </div>
       </div>

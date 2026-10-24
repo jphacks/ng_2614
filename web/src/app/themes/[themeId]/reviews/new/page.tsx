@@ -127,7 +127,7 @@ export default function NewReviewPage() {
         >
           ← {theme.name}
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">変更を取り込んで判定する</h1>
+        <h1 className="mt-2 text-2xl font-bold">コミットから取り込んで判定する</h1>
         <p className="mt-1 text-sm text-gray-600">
           リポジトリ：<code className="font-mono">{theme.repo}</code>
         </p>

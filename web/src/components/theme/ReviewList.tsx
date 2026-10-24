@@ -25,7 +25,7 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
     return (
       <p className="rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500">
-        まだ変更を取り込んでいません。「変更を取り込む」から始めてください。
+        まだ変更が届いていません。Claude Code に作業を頼むと、フックで届いてここに並びます（フックを使わないときは「コミットから取り込む」）。
       </p>
     );
   }

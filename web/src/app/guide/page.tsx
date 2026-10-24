@@ -205,7 +205,7 @@ export default function GuidePage() {
           caption="Claude Code が作業を終えると、画面の右下に知らせが出て判定が始まる。判定が終わると、隠れた問題と研究への影響の数が出て、結果を開ける"
         />
         <p className="text-sm">
-          フックを使わないときは、プロジェクトの「変更を取り込む」から GitHub
+          フックを使わないときは、プロジェクトの「コミットから取り込む」から GitHub
           のコミットを選んで判定することもできます。
         </p>
       </GuideSection>
