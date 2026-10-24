@@ -30,8 +30,8 @@ export const demoTheme: Omit<ResearchTheme, "updatedAt"> = {
 
 // ---- コミットと差分 ----
 
-const MAIN_SHA = "a3f9c2e7b1d84f0c9e6a5b2d7c1f8e3a4b6d9c20";
-const README_SHA = "5d1e8b3c9a7f2e4d6b0c8a1f3e5d7b9c2a4e6f81";
+export const MAIN_SHA = "a3f9c2e7b1d84f0c9e6a5b2d7c1f8e3a4b6d9c20";
+export const README_SHA = "5d1e8b3c9a7f2e4d6b0c8a1f3e5d7b9c2a4e6f81";
 const INIT_SHA = "9c7b5a3e1f2d4c6b8a0e9d7c5b3a1f2e4d6c8b07";
 
 const DEMO_REPO_URL = "https://github.com/demo-lab/health-checkup-classification";
@@ -207,9 +207,9 @@ export function demoDiff(sha: string): DiffResponse | undefined {
 
 type FindingTemplate = Omit<Finding, "id" | "saved">;
 
-const DROPNA_SUMMARY =
+export const DROPNA_SUMMARY =
   "学習時の欠損値エラーに対処するため、欠損のある行をすべて除外している";
-const CLASS_WEIGHT_SUMMARY =
+export const CLASS_WEIGHT_SUMMARY =
   "ベースラインがすべて陰性と予測してしまう問題に対処するため、ロジスティック回帰にだけクラスの重み付けを入れている";
 
 const demoFindings: Record<string, FindingTemplate[]> = {

@@ -11,12 +11,17 @@ import {
   demoTeacherTurn,
 } from "./demo/data";
 import { isDemoMode } from "./demo/mode";
+import { demoMapUpdate, demoWorkflowMap } from "./demo/workflow-map";
 import type {
   ApiError,
   CommitsResponse,
   DiffResponse,
   HookChangeResponse,
   HookChangesResponse,
+  MapGenerateRequest,
+  MapGenerateResponse,
+  MapUpdateRequest,
+  MapUpdateResponse,
   ReviewRequest,
   ReviewResponse,
   TeacherFeedbackRequest,
@@ -133,4 +138,26 @@ export function takeHookChange(id: string): Promise<HookChangeResponse> {
     `/api/hook/changes/${encodeURIComponent(id)}`,
     { method: "DELETE" },
   );
+}
+
+// 作業フローマップ（F-15）。今はデモモードでだけ動く（本物の Route Handlers は未実装）
+const MAP_NOT_READY =
+  "作業フローマップは、今はデモモードでだけ使えます。ヘッダーの「デモモード」を入れてください";
+
+export function postMapGenerate(
+  payload: MapGenerateRequest,
+): Promise<MapGenerateResponse> {
+  if (isDemoMode()) {
+    return demo(2000, () => ({
+      map: demoWorkflowMap(payload, new Date().toISOString()),
+    }));
+  }
+  return Promise.reject(new Error(MAP_NOT_READY));
+}
+
+export function postMapUpdate(
+  payload: MapUpdateRequest,
+): Promise<MapUpdateResponse> {
+  if (isDemoMode()) return demo(1500, () => demoMapUpdate(payload));
+  return Promise.reject(new Error(MAP_NOT_READY));
 }
