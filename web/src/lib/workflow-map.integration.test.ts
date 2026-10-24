@@ -9,7 +9,7 @@ import {
 } from "./demo/data";
 import { demoMapUpdate, demoWorkflowMap } from "./demo/workflow-map";
 import { applyMapOps, undoLastUpdate } from "./map/apply";
-import { deleteTask, editTaskText } from "./map/edit";
+import { deleteTask, editTaskText, setTaskStatus } from "./map/edit";
 import { effectiveStatus, purposeChain } from "./map/view";
 import type { Review, WorkflowMap } from "./types";
 
@@ -53,7 +53,7 @@ describe("デモの作業フローマップの自動更新", () => {
   it("取り込みの変更がすべて当てはまり、見せ場の変化が起きる", () => {
     const map = makeMap();
     const review = makeReview();
-    const { ops } = demoMapUpdate({ theme: purpose, map, review });
+    const { ops } = demoMapUpdate({ theme: purpose, repo: demoTheme.repo, map, review });
     const result = applyMapOps(map, ops, review.id, LATER);
 
     expect(result.skipped).toEqual([]);
@@ -83,13 +83,34 @@ describe("デモの作業フローマップの自動更新", () => {
   it("取り消すと取り込み前に戻り、同じ判定では再び更新しない", () => {
     const map = makeMap();
     const review = makeReview();
-    const { ops } = demoMapUpdate({ theme: purpose, map, review });
+    const { ops } = demoMapUpdate({ theme: purpose, repo: demoTheme.repo, map, review });
     const updated = applyMapOps(map, ops, review.id, LATER).map;
     const undone = undoLastUpdate(updated)!;
 
     expect(undone.tasks).toEqual(map.tasks);
     expect(undone.links).toEqual(map.links);
     expect(undone.appliedReviewIds).toContain(review.id);
+  });
+
+  it("取り消しても、更新のあとの人の手直しは残る", () => {
+    const map = makeMap();
+    const review = makeReview();
+    const { ops } = demoMapUpdate({ theme: purpose, repo: demoTheme.repo, map, review });
+    const updated = applyMapOps(map, ops, review.id, LATER).map;
+
+    // 更新のあとで、人が別のタスクの文言を直し、取り込みで足されたタスクの状態を手で変えた
+    const added = updated.tasks.find((t) => t.flag === "unrecorded")!;
+    const edited = editTaskText(updated, "demo-task-r1", { title: "候補の洗い出し（直した）" }, NOW);
+    const manual = setTaskStatus(edited, added.id, "doing", undefined, NOW);
+    const undone = undoLastUpdate(manual)!;
+
+    expect(undone.tasks.find((t) => t.id === "demo-task-r1")?.title).toBe("候補の洗い出し（直した）");
+    expect(undone.tasks.find((t) => t.id === added.id)?.statusSource).toBe("manual");
+    // 手を入れていない分は取り込み前に戻る
+    expect(undone.tasks.find((t) => t.id === "demo-task-i1")).toEqual(
+      map.tasks.find((t) => t.id === "demo-task-i1"),
+    );
+    expect(undone.links.filter((l) => l.kind === "impact")).toEqual([]);
   });
 
   it("人が直したタスクの文言は、自動更新で上書きされない", () => {
@@ -100,7 +121,7 @@ describe("デモの作業フローマップの自動更新", () => {
       { title: "データの正規化（自分で確認する）" },
       NOW,
     );
-    const { ops } = demoMapUpdate({ theme: purpose, map: edited, review });
+    const { ops } = demoMapUpdate({ theme: purpose, repo: demoTheme.repo, map: edited, review });
     const next = applyMapOps(edited, ops, review.id, LATER).map;
 
     const normalize = next.tasks.find((t) => t.id === "demo-task-r3-normalize")!;
@@ -111,7 +132,7 @@ describe("デモの作業フローマップの自動更新", () => {
   it("人が消したものと同じタイトルの提案は足されない", () => {
     const review = makeReview();
     const base = makeMap();
-    const { ops } = demoMapUpdate({ theme: purpose, map: base, review });
+    const { ops } = demoMapUpdate({ theme: purpose, repo: demoTheme.repo, map: base, review });
     const first = applyMapOps(base, ops, review.id, LATER).map;
     const unrecorded = first.tasks.find((t) => t.flag === "unrecorded")!;
 

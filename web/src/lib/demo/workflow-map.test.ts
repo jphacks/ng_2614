@@ -41,7 +41,7 @@ function makeReview(sha: string): Review {
 }
 
 function makeUpdateReq(review: Review): MapUpdateRequest {
-  return { theme, map: generate(), review };
+  return { theme, repo: demoTheme.repo, map: generate(), review };
 }
 
 describe("デモの作業フローマップ（取り込み前）", () => {
@@ -203,5 +203,11 @@ describe("デモの作業フローマップの更新（取り込み後）", () =
   it("ほかのコミットなら空の一覧を返す", () => {
     expect(demoMapUpdate(makeUpdateReq(makeReview(README_SHA)))).toEqual({ ops: [] });
     expect(demoMapUpdate(makeUpdateReq(makeReview("")))).toEqual({ ops: [] });
+  });
+
+  it("review が無い（ワークスペースから更新）ときは、何も変えない", () => {
+    const { review: _review, ...withoutReview } = makeUpdateReq(makeReview(MAIN_SHA));
+    void _review;
+    expect(demoMapUpdate(withoutReview)).toEqual({ ops: [] });
   });
 });

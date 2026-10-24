@@ -47,6 +47,10 @@ function taskChanged(before: MapTask, after: MapTask): boolean {
   return false;
 }
 
+// add_task の op は、key（作り直しても変わらない目印。merge.ts の diffToOps が付ける）を持てる。
+// types.ts の MapOp に key が無くても通るよう、ここで型を足して読む
+type AddTaskOp = Extract<MapOp, { op: "add_task" }> & { key?: string };
+
 // 変更の一覧をマップに当てはめる。
 // - 当てはめる前のマップを map.previous に入れる（取り消し用。previous の中の previous は持たない）
 // - map.lastUpdate に reviewId・時刻・反映した変更の reason・変わったタスクの id を入れる
@@ -55,8 +59,11 @@ function taskChanged(before: MapTask, after: MapTask): boolean {
 //   - review が "edited" のタスク：title・purpose・status は変えない（link_task は許す）
 //   - review が "confirmed" のタスク：title・purpose は変えない。status は変えてよい
 //   - statusSource が "manual" のタスク：status を変えない
+//   - 状態の優先順位は 手動 ＞ 記録 ＞ AI推測：statusSource が "record" のタスクは、"ai" の update_task で
+//     status（と statusRaw・rejectReason）を変えない。"record" の update_task は "ai" のタスクを変えてよい
 //   - add_task：却下の一覧（map.rejected）とタイトルが同じもの、同じレーン・同じ親に同じタイトルがあるものは足さない
-//     （タイトルは前後の空白を除き、全角・半角の英数字と空白の違いを無視して比べる）
+//     （タイトルは前後の空白を除き、全角・半角の英数字と空白の違いを無視して比べる）。
+//     key があるときは、同じ key のタスクがすでにあるもの、人が消したタスク（map.rejected）に同じ key があるものも足す必要が無い
 //   - add_link：両端のタスクが無いもの、同じ from・to・kind がすでにあるものは足さない
 // - add_task の tempId は、新しい id に置き換える。同じ一覧の後ろの op は parentId・fromTaskId・toTaskId に tempId を使える
 // - 足したタスクは origin: "ai"、review: "unconfirmed"。order は同じレーン・同じ親の末尾
@@ -68,6 +75,7 @@ function taskChanged(before: MapTask, after: MapTask): boolean {
 // - update_task で一部のフィールドだけ保護に当たったときは、通るものだけ当てはめて applied に入れる（skipped には入れない）
 // - statusRaw・rejectReason は status と一緒に動く（status を変えないときは変えない）。result は保護の対象にしない
 // - add_task の parentId があるときは、レーンは親と同じにする。親が見つからない・親がサブタスクのときは足さない
+// - add_task の key があれば、足したタスクの key に入れる
 export function applyMapOps(
   map: WorkflowMap,
   ops: MapOp[],
@@ -93,9 +101,14 @@ export function applyMapOps(
   const skip = (op: MapOp, why: string) => skipped.push({ op, why });
 
   const rejectedTitles = new Set(map.rejected.map((r) => normalizeTitle(r.title)));
+  // 人が消したタスクの key。タイトルが変わっていても、同じ key なら再び足さない
+  const rejectedKeys = new Set(
+    map.rejected.flatMap((r) => r.tasks.map((t) => t.key).filter((k): k is string => !!k)),
+  );
 
   for (const op of ops) {
     if (op.op === "add_task") {
+      const taskKey = (op as AddTaskOp).key || undefined;
       const title = op.title.trim();
       if (!title) {
         skip(op, "タイトルが空");
@@ -124,18 +137,23 @@ export function applyMapOps(
         skip(op, "レーンが見つからない");
         continue;
       }
-      const key = normalizeTitle(title);
-      if (rejectedTitles.has(key)) {
+      const normalized = normalizeTitle(title);
+      if (rejectedTitles.has(normalized) || (taskKey && rejectedKeys.has(taskKey))) {
         skip(op, "却下の一覧に同じタイトルがある");
         continue;
       }
+      if (taskKey && tasks.some((t) => t.key === taskKey)) {
+        skip(op, "同じ key のタスクがすでにある");
+        continue;
+      }
       const siblings = tasks.filter((t) => t.phaseId === phaseId && t.parentId === parentId);
-      if (siblings.some((t) => normalizeTitle(t.title) === key)) {
+      if (siblings.some((t) => normalizeTitle(t.title) === normalized)) {
         skip(op, "同じレーン・同じ親に同じタイトルがある");
         continue;
       }
       const task: MapTask = {
         id: crypto.randomUUID(),
+        ...(taskKey ? { key: taskKey } : {}),
         phaseId,
         parentId,
         milestoneId: map.milestones.some((m) => m.id === op.milestoneId)
@@ -183,6 +201,8 @@ export function applyMapOps(
       }
       const textLocked = task.review !== "unconfirmed";
       const statusLocked = task.review === "edited" || task.statusSource === "manual";
+      // 記録（frontmatter・チェックボックス）で決めた状態を、AI の推測で上書きしない
+      const aiOverRecord = op.statusSource === "ai" && task.statusSource === "record";
       const next: MapTask = { ...task };
       const locked: string[] = [];
 
@@ -198,6 +218,8 @@ export function applyMapOps(
       if (op.status !== undefined) {
         if (statusLocked) {
           locked.push("status");
+        } else if (aiOverRecord) {
+          locked.push("status：記録を優先");
         } else {
           next.status = op.status;
           next.statusSource = op.statusSource ?? task.statusSource;
@@ -207,6 +229,7 @@ export function applyMapOps(
         }
       } else if (
         !statusLocked &&
+        !aiOverRecord &&
         task.status === "rejected" &&
         trimmedOrUndefined(op.rejectReason)
       ) {
@@ -322,15 +345,89 @@ export function applyMapOps(
   };
 }
 
+// 更新で変わりうるタスクのフィールド。取り消しで previous の値に戻すのは、この範囲だけ
+// （レーン・親・マイルストーン・order・review・key は、更新のあとで人が動かしたかもしれないので戻さない）
+const UNDO_FIELDS = [
+  "title",
+  "purpose",
+  "status",
+  "statusSource",
+  "statusRaw",
+  "result",
+  "rejectReason",
+  "sources",
+  "commitShas",
+  "reviewIds",
+] as const;
+
+// 更新のあとで人が直したか。review が "edited"、または statusSource が "manual" に変わったもの
+function editedAfter(task: MapTask, before: MapTask | undefined): boolean {
+  return (
+    (task.review === "edited" && before?.review !== "edited") ||
+    (task.statusSource === "manual" && before?.statusSource !== "manual")
+  );
+}
+
 // 直近の自動更新を取り消す。previous が無ければ undefined。
-// 取り消した後も appliedReviewIds にはその reviewId を残す（同じ判定で再び自動更新しないため）
-// （lastUpdate は消す。updatedAt は取り消す前のスナップショットのまま）
+// previous で丸ごと戻すのではなく、その更新で変わったものだけを戻し、更新のあとの人の手直しは残す：
+// - 足したタスク（lastUpdate.changedTaskIds にあって previous に無い）は消す。ただし、更新のあとで人が直したもの、
+//   人が足したサブタスクを持つものは残す
+// - 変えたタスクは、UNDO_FIELDS だけ previous の値に戻す。更新のあとで人が直したもの、人が消したものは戻さない
+// - 足したリンク（previous に無く、reason が lastUpdate.summaries にあるもの）は消す。消したタスクにつながるリンクも消す
+// - レーン・マイルストーン・却下の一覧・人が足したタスクとリンクは、今のまま
+// 取り消した後も appliedReviewIds にはその reviewId を残す（同じ判定で再び自動更新しないため）。
+// lastUpdate と previous は消す。updatedAt は今のまま
 export function undoLastUpdate(map: WorkflowMap): WorkflowMap | undefined {
   const previous = map.previous;
   if (!previous) return undefined;
-  const appliedReviewIds = [...previous.appliedReviewIds];
-  for (const id of map.appliedReviewIds) {
-    if (!appliedReviewIds.includes(id)) appliedReviewIds.push(id);
+  const { previous: _previous, lastUpdate: last, ...rest } = map;
+  void _previous;
+  if (!last) {
+    // 取り消す範囲が分からないときは、更新前に戻す
+    const appliedReviewIds = [...previous.appliedReviewIds];
+    for (const id of map.appliedReviewIds) {
+      if (!appliedReviewIds.includes(id)) appliedReviewIds.push(id);
+    }
+    return { ...previous, appliedReviewIds };
   }
-  return { ...previous, appliedReviewIds, lastUpdate: undefined };
+
+  const before = new Map(previous.tasks.map((t) => [t.id, t]));
+  const changed = new Set(last.changedTaskIds);
+
+  // 消すタスク：足したもので、人が直していないもの。人が直した（残す）タスクの親も残す
+  const removable = new Set(
+    map.tasks
+      .filter((t) => changed.has(t.id) && !before.has(t.id) && !editedAfter(t, undefined))
+      .map((t) => t.id),
+  );
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const t of map.tasks) {
+      if (t.parentId && !removable.has(t.id) && removable.delete(t.parentId)) grew = true;
+    }
+  }
+
+  const tasks = map.tasks
+    .filter((t) => !removable.has(t.id))
+    .map((t) => {
+      const old = before.get(t.id);
+      if (!old || !changed.has(t.id) || editedAfter(t, old)) return t;
+      const next = { ...t } as Record<string, unknown>;
+      for (const field of UNDO_FIELDS) {
+        if (field in old) next[field] = old[field];
+        else delete next[field];
+      }
+      return next as MapTask;
+    });
+
+  const previousLinkIds = new Set(previous.links.map((l) => l.id));
+  const summaries = new Set(last.summaries);
+  const links = map.links.filter(
+    (l) =>
+      !removable.has(l.fromTaskId) &&
+      !removable.has(l.toTaskId) &&
+      !(!previousLinkIds.has(l.id) && l.reason !== undefined && summaries.has(l.reason)),
+  );
+
+  return { ...rest, tasks, links };
 }

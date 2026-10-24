@@ -213,12 +213,53 @@ describe("applyMapOps: update_task の保護", () => {
 
   it("statusSource が来たら、状態を変えるときにその値にする", () => {
     const result = applyMapOps(
-      baseMap(),
+      baseMap({ tasks: [task("a", { statusSource: "ai" })] }),
       [update("a", { status: "doing", statusSource: "ai", statusRaw: "draft" })],
       "r1",
       NOW,
     );
     expect(result.map.tasks[0]).toMatchObject({ status: "doing", statusSource: "ai", statusRaw: "draft" });
+  });
+
+  it("record のタスクの状態を ai の推測で上書きしない（statusRaw・rejectReason も）。ほかの項目は通る", () => {
+    const map = baseMap({
+      tasks: [task("a", { statusSource: "record", status: "todo", statusRaw: "todo" })],
+    });
+    const only = applyMapOps(
+      map,
+      [update("a", { status: "doing", statusSource: "ai", statusRaw: "draft" })],
+      "r1",
+      NOW,
+    );
+    expect(only.applied).toEqual([]);
+    expect(only.skipped[0].why).toContain("記録を優先");
+    expect(only.map.tasks[0]).toMatchObject({ status: "todo", statusSource: "record", statusRaw: "todo" });
+
+    const mixed = applyMapOps(
+      map,
+      [update("a", { status: "doing", statusSource: "ai", result: "結果" })],
+      "r2",
+      NOW,
+    );
+    expect(mixed.applied).toHaveLength(1);
+    expect(mixed.map.tasks[0]).toMatchObject({ status: "todo", statusSource: "record", result: "結果" });
+
+    const rejected = baseMap({
+      tasks: [task("a", { statusSource: "record", status: "rejected", rejectReason: "もとの理由" })],
+    });
+    const reason = applyMapOps(
+      rejected,
+      [update("a", { rejectReason: "AI の推測", statusSource: "ai" })],
+      "r3",
+      NOW,
+    );
+    expect(reason.map.tasks[0].rejectReason).toBe("もとの理由");
+  });
+
+  it("record の op は ai のタスクの状態を変えてよい", () => {
+    const map = baseMap({ tasks: [task("a", { statusSource: "ai" })] });
+    const result = applyMapOps(map, [update("a", { status: "done", statusSource: "record" })], "r1", NOW);
+    expect(result.map.tasks[0]).toMatchObject({ status: "done", statusSource: "record" });
   });
 
   it("edited は title・purpose・status を変えない", () => {
@@ -408,6 +449,7 @@ describe("applyMapOps: 記録と取り消し", () => {
     expect(result.map.tasks).toBe(first.tasks);
   });
 
+
   it("undoLastUpdate は更新前に戻し、reviewId は残す。previous が無ければ undefined", () => {
     const map = baseMap({ appliedReviewIds: ["r0"] });
     expect(undoLastUpdate(map)).toBeUndefined();
@@ -418,5 +460,140 @@ describe("applyMapOps: 記録と取り消し", () => {
     expect(undone?.previous).toBeUndefined();
     expect(undone?.lastUpdate).toBeUndefined();
     expect(undone && undoLastUpdate(undone)).toBeUndefined();
+  });
+});
+
+// types.ts の MapOp には key が無いので、型を通すために MapOp として返す
+function keyed(op: AddTaskOp, key: string): MapOp {
+  return { ...op, key } as MapOp;
+}
+
+describe("applyMapOps: key", () => {
+  it("add_task の key を MapTask の key に入れる。同じ key のタスクがあれば足さない", () => {
+    const first = applyMapOps(baseMap(), [keyed(addOp("t1"), "specs/a.md")], "r1", NOW);
+    expect(first.map.tasks.find((t) => t.title === "新しい t1")?.key).toBe("specs/a.md");
+    const again = applyMapOps(first.map, [keyed(addOp("t2"), "specs/a.md")], "r2", NOW);
+    expect(again.skipped[0].why).toContain("key");
+  });
+
+  it("人が消したタスクと同じ key の提案は、タイトルが変わっていても足さない", () => {
+    const gone = task("g", { key: "specs/g.md", title: "消したタスク" });
+    const map = baseMap({
+      rejected: [{ title: "消したタスク", at: NOW, tasks: [gone], links: [] }],
+    });
+    const result = applyMapOps(
+      map,
+      [keyed(addOp("t", { title: "別の題" }), "specs/g.md")],
+      "r1",
+      NOW,
+    );
+    expect(result.applied).toEqual([]);
+  });
+});
+
+describe("undoLastUpdate: 更新のあとの人の手直しを残す", () => {
+  const LATER = "2026-10-24T11:00:00.000Z";
+
+  // a を done にし、新しいタスク t（と子 u）とリンクを足した更新のあとのマップ
+  function updated() {
+    const map = baseMap({
+      tasks: [task("a"), task("b", { phaseId: "p2" }), task("c", { order: 1 })],
+      appliedReviewIds: ["r0"],
+    });
+    const ops: MapOp[] = [
+      update("a", { status: "done", result: "PASS" }),
+      addOp("t"),
+      addOp("u", { parentId: "t" }),
+      { op: "add_link", fromTaskId: "a", toTaskId: "t", kind: "flow", reason: "a から t へ" },
+      { op: "add_link", fromTaskId: "a", toTaskId: "b", kind: "impact", reason: "a が b に影響" },
+    ];
+    return { before: map, after: applyMapOps(map, ops, "r1", NOW).map };
+  }
+
+  it("更新で足したタスク・リンクを消し、変えたタスクを戻す", () => {
+    const { before, after } = updated();
+    const undone = undoLastUpdate(after)!;
+    expect(undone.tasks).toEqual(before.tasks);
+    expect(undone.links).toEqual([]);
+    expect(undone.lastUpdate).toBeUndefined();
+    expect(undone.previous).toBeUndefined();
+  });
+
+  it("ほかのタスクの編集・削除・レーンの変更は残る", () => {
+    const { after } = updated();
+    const tasks = after.tasks
+      .filter((t) => t.id !== "b") // 人が消した
+      .map((t) =>
+        t.id === "c" ? { ...t, title: "人が直した題", review: "edited" as const, phaseId: "p2" } : t,
+      );
+    const human: WorkflowMap = {
+      ...after,
+      tasks,
+      phases: [...after.phases, { id: "p3", name: "人が足したレーン", order: 2, kinds: [] }],
+      rejected: [{ title: "タスク b", at: LATER, tasks: [], links: [] }],
+      updatedAt: LATER,
+    };
+    const undone = undoLastUpdate(human)!;
+    expect(undone.tasks.find((t) => t.id === "b")).toBeUndefined();
+    expect(undone.tasks.find((t) => t.id === "c")).toMatchObject({
+      title: "人が直した題",
+      review: "edited",
+      phaseId: "p2",
+    });
+    expect(undone.tasks.find((t) => t.id === "a")).toMatchObject({ status: "todo" });
+    expect(undone.tasks.find((t) => t.id === "a")).not.toHaveProperty("result");
+    expect(undone.phases).toHaveLength(3);
+    expect(undone.rejected).toHaveLength(1);
+    expect(undone.updatedAt).toBe(LATER);
+    // 更新で足したリンクは2本とも消える
+    expect(undone.links).toEqual([]);
+  });
+
+  it("更新のあとで人が直したタスクは戻さない（変えたタスクも、足したタスクも）", () => {
+    const { after } = updated();
+    const added = after.tasks.find((t) => t.title === "新しい t")!;
+    const tasks = after.tasks.map((t) => {
+      if (t.id === "a") return { ...t, status: "doing" as const, statusSource: "manual" as const };
+      if (t.id === added.id) return { ...t, title: "人が直した", review: "edited" as const };
+      return t;
+    });
+    const undone = undoLastUpdate({ ...after, tasks })!;
+    expect(undone.tasks.find((t) => t.id === "a")).toMatchObject({
+      status: "doing",
+      statusSource: "manual",
+    });
+    expect(undone.tasks.find((t) => t.id === added.id)?.title).toBe("人が直した");
+    // 更新で足したリンクは、つなぎ先のタスクを残しても消える
+    expect(undone.links).toEqual([]);
+    // 子 u は人が直していないので消える
+    expect(undone.tasks.some((t) => t.title === "新しい u")).toBe(false);
+  });
+
+  it("人が足したサブタスクを持つ親は、足したタスクでも残す", () => {
+    const { after } = updated();
+    const added = after.tasks.find((t) => t.title === "新しい t")!;
+    const human: MapTask = task("h", {
+      parentId: added.id,
+      origin: "human",
+      review: "edited",
+      statusSource: "manual",
+    });
+    const undone = undoLastUpdate({ ...after, tasks: [...after.tasks, human] })!;
+    expect(undone.tasks.some((t) => t.id === added.id)).toBe(true);
+    expect(undone.tasks.some((t) => t.id === "h")).toBe(true);
+  });
+
+  it("レーンやマイルストーンの付け替えは、変えたタスクを戻しても残る", () => {
+    const { after } = updated();
+    const tasks = after.tasks.map((t) =>
+      t.id === "a" ? { ...t, phaseId: "p2", milestoneId: "m1", order: 9 } : t,
+    );
+    const undone = undoLastUpdate({ ...after, tasks })!;
+    expect(undone.tasks.find((t) => t.id === "a")).toMatchObject({
+      status: "todo",
+      phaseId: "p2",
+      milestoneId: "m1",
+      order: 9,
+    });
   });
 });
