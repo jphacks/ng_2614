@@ -16,14 +16,20 @@ import { jsonError } from "@/lib/http";
 import {
   MAX_STUDENT_TURNS,
   countStudentTurns,
+  decideTurn,
   dontKnowStreak,
   mustFinish,
+  quoteFound,
 } from "@/lib/teacher-rules";
-import type { Finding, TeacherTurn } from "@/lib/types";
+import type { Finding, TeacherTurn, Viewpoint } from "@/lib/types";
 import { LlmError, parseStructured } from "./structured";
 import { TEACHER_STYLE } from "./teacher-style";
 
 // ---- リクエストの検証 ----
+
+// 1つの質問に付ける観点の数
+export const MIN_VIEWPOINTS = 2;
+export const MAX_VIEWPOINTS = 4;
 
 const findingSchema = z.object({
   id: z.string(),
@@ -51,13 +57,27 @@ export const questionsRequestSchema = z.object({
   problems: z.array(findingSchema),
 });
 
+const viewpointSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  required: z.boolean(),
+});
+
 export const turnRequestSchema = z.object({
   theme: themeSchema,
   question: z.object({
     layer: z.enum(["research", "implementation"]),
     question: z.string().min(1),
     findingId: z.string().optional(),
+    viewpoints: z
+      .array(viewpointSchema)
+      .min(1)
+      .max(MAX_VIEWPOINTS)
+      .refine((vs) => vs.some((v) => v.required), {
+        message: "必須の観点が1つ以上必要です",
+      }),
   }),
+  covered: z.array(z.string()).max(MAX_VIEWPOINTS),
   problem: findingSchema.optional(),
   turns: z
     .array(
@@ -92,6 +112,12 @@ export const questionsOutputSchema = z.object({
       layer: z.enum(["research", "implementation"]),
       question: z.string(),
       findingId: z.string().nullable(),
+      viewpoints: z.array(
+        z.object({
+          text: z.string(),
+          required: z.boolean(),
+        }),
+      ),
     }),
   ),
 });
@@ -102,8 +128,14 @@ export const feedbackOutputSchema = z.object({
 });
 
 export const turnOutputSchema = z.object({
-  done: z.boolean(),
-  understood: z.boolean(),
+  // 学生の最後の発言で新しく言えた観点と、その根拠（学生の発言からそのまま引用）
+  covered: z.array(
+    z.object({
+      id: z.string(),
+      evidence: z.string(),
+    }),
+  ),
+  kind: z.enum(["probe", "closing"]), // 問い返しか講評か
   message: z.string(),
 });
 
@@ -116,8 +148,9 @@ const INJECTION_GUARD = `# 入力の扱い
 export const QUESTIONS_SYSTEM_PROMPT = `あなたは情報系の研究室の指導教員です。学生は生成AI（Claude Code など）にコードを書かせながら研究を進めており、先生に「ここどうなってる？」と聞かれて答えられなくなることを心配しています。あなたは先生役として、学生が研究と実装を本当に理解しているかを確かめる質問を作ります。
 
 # 質問の作り方
-- 質問は 3〜5 個。日本語で、学生に直接話しかける口調で書く。口調は下の「口調」に従い、1つの質問は1〜2文にする
-- これは最初の質問で、学生の答えに応じてあとから問い返す。最初は「なぜこの対処をしたのか」「なぜこの手法なのか」のように、入口になる問いにする
+- 質問はちょうど 3 個。日本語で、学生に直接話しかける口調で書く。口調は下の「口調」に従う
+- 1つの質問で聞くのは1つだけ。1文、長くても2文にする。「〜ですか。〜ですか。」のように2つ聞かない
+- これは最初の質問で、学生の答えに応じてあとから問い返す。最初は「なぜこの対処をしたのですか？」「なぜこの評価指標を選んだのですか？」のように、入口になる問いにする。深い内容（研究への影響など）は質問に書かず、観点に入れる
 - 質問は次の 2 つの層をまぜる。layer に "research" か "implementation" を入れる
   - research（研究手法）：なぜこの手法か、ベースラインは何でなぜそれか、この評価指標で何が言えて何が言えないか、先行研究との違いは何か、保存した問題が結果の解釈にどう影響するか、など
   - implementation（実装）：なぜそのエラーが起きたか、AI の対処は何をしていてなぜそれで直るか、他に取りえた対処は何か、など
@@ -129,6 +162,14 @@ export const QUESTIONS_SYSTEM_PROMPT = `あなたは情報系の研究室の指�
 - 保存した問題が無いときは、研究の目的（問い・手法・評価）を中心に聞く。implementation の質問は、研究の目的から必要になるはずの実装の判断について聞く
 - 研究の目的が薄い・曖昧なときは、その曖昧さ自体（ベースラインが書かれていない、指標の理由がない、など）を質問にしてよい
 
+# 観点（先生が想定している解答）の作り方
+- 各質問に、先生が「ここまで言えたら納得する」観点を ${MIN_VIEWPOINTS}〜${MAX_VIEWPOINTS} 個付ける。学生には見せない
+- 1つの観点に1つの主張だけを、40字くらいまでの短い文で書く。「件数が減る」と「比較の条件が変わる」は別の観点にする。「〜なら」「〜し、〜」で主張をつなげない
+- 掘る順（エラーの原因 → 対処の仕組み → 残ったデータや条件の変化 → 研究の問いや比較への影響）に並べる
+- 研究の問いや比較への影響に関わる観点を required: true にする。研究への影響の観点が無い質問（実装の質問など）では、いちばん核心の観点を required: true にする。どの質問にも required: true を必ず1つ以上入れる
+- required: true の観点は、学生がデータの細かい事実（どの列に欠損が多いか、具体的な数値など）を知らなくても、考えれば自分の言葉で言える一般的な主張にする。細かい事実や発展的な内容（別の対処の方法、論文への書き方など）は required: false にする
+- 観点は、学生が自分の言葉で言えたかを判定できる具体的な文にする（「理解している」のような曖昧な文にしない）
+
 ${TEACHER_STYLE}
 
 ${INJECTION_GUARD}`;
@@ -137,15 +178,18 @@ export const TURN_SYSTEM_PROMPT = `あなたは情報系の研究室の指導教
 
 ${TEACHER_STYLE}
 
-# 1回の返答で決めること
-- done：このやりとりを終えるなら true、問い返しを続けるなら false
-- understood：done が true のとき、学生が核心（研究の問いや比較への影響）まで自分の言葉で言えたなら true。done が false のときは false にする
-- message：done が false なら次の問い返し（問いは1つ、1〜2文）。done が true なら講評（2〜3文）
+# 採点（covered）
+- <viewpoints> は、先生が想定している解答の観点です。学生には見えていません
+- 学生の「最後の発言」で新しく言えた観点だけを covered に入れる。すでに言えた観点（status="covered"）は入れない
+- 観点の核になる主張が言えていれば認める。観点の文の細部や例まで言えていなくてよい
+- 言えたとみなすのは、その観点の主張を学生が自分の言葉で述べたときだけ。言い換えは認めるが、単語を並べただけ、逆のこと（「件数は減らない」など）、質問の言葉の繰り返しは認めない
+- 想定と違っても、筋が通っていて同じ主張と言えるなら認めてよい
+- evidence には、根拠になった学生の発言を、要約せずにそのまま抜き出す
 
-# 終える条件
-- 学生が研究の問いや比較への影響まで自分の言葉で説明できたら、done を true、understood を true にする。講評では、届いた点を短く認め、残る課題があれば1つだけ示す
-- 「これが最後の返答です」と指示されたら、必ず done を true にする。understood は、核心まで届いていたかで判断する。届いていなければ講評では「何が抜けていたか」と「ゼミまでに考えておくこと」だけを伝え、模範解答は言わない
-- それ以外は done を false にして問い返しを続ける。届いていないのに、途中で答えを教えて終えない
+# 返答（kind と message）
+- 必須の観点（required="true"）が、今回の分を含めてすべて言えたら：kind は "closing"。届いた点を短く認める講評（1〜2文）
+- 「これが最後の返答です」と指示されたら：kind は "closing"。講評では「何が抜けていたか」と「ゼミまでに考えておくこと」だけを伝え（2〜3文）、模範解答は言わない
+- それ以外：kind は "probe"。まだ言えていない必須の観点のうち、最初のものに向かう問い返しを1つ（1〜2文。3文以上にしない）。観点の文をそのまま言ったり、「〜かもしれません」のように答えのヒントを言ったりしない
 
 # 根拠にしてよいもの
 - 保存した問題（<saved_problem>）のエラー内容や対処方法は、AIの推測を含む。問い返しの材料にしてよいが、断定しすぎない
@@ -248,6 +292,14 @@ function describeConversation(turns: TeacherTurn[]): string {
   return `<conversation>\n${lines.join("\n")}\n</conversation>`;
 }
 
+function describeViewpoints(viewpoints: Viewpoint[], covered: string[]): string {
+  const lines = viewpoints.map(
+    (v) =>
+      `<viewpoint id="${v.id}" required="${v.required}" status="${covered.includes(v.id) ? "covered" : "not_yet"}">${v.text}</viewpoint>`,
+  );
+  return `<viewpoints>\n${lines.join("\n")}\n</viewpoints>`;
+}
+
 export function buildTurnUserPrompt(req: TeacherTurnRequest): string {
   const layerLabel = req.question.layer === "research" ? "研究手法" : "実装";
   const problem = req.problem
@@ -259,7 +311,9 @@ export function buildTurnUserPrompt(req: TeacherTurnRequest): string {
     `学生が答えたのは ${answered} 回目です（上限 ${MAX_STUDENT_TURNS} 回）。`,
     ...(streak > 0 ? [`学生は ${streak} 回続けて「分からない」と答えています。`] : []),
     ...(mustFinish(req.turns)
-      ? ["これが最後の返答です。必ず done を true にして講評してください。"]
+      ? [
+          "これが最後の返答です。今回の採点で必須の観点がそろわなければ、kind を closing にして講評してください。",
+        ]
       : []),
   ].join("\n");
   return `${describeTheme(req.theme)}${problem}
@@ -269,13 +323,16 @@ export function buildTurnUserPrompt(req: TeacherTurnRequest): string {
 ${req.question.question}
 </question>
 
+# 想定している解答の観点
+${describeViewpoints(req.question.viewpoints, req.covered)}
+
 # ここまでのやりとり
 ${describeConversation(req.turns)}
 
 # 状況
 ${status}
 
-学生の最後の発言に対して、先生として返答してください。`;
+学生の最後の発言を採点し、先生として返答してください。`;
 }
 
 // ---- 正規化 ----
@@ -292,12 +349,30 @@ export function normalizeQuestions(
       const question: TeacherQuestion = {
         layer: q.layer,
         question: q.question.trim(),
+        viewpoints: normalizeViewpoints(q.viewpoints),
       };
       if (q.findingId && validIds.has(q.findingId)) {
         question.findingId = q.findingId;
       }
       return question;
-    });
+    })
+    // 観点が無い質問は「理解できた」で終われないので出さない
+    .filter((q) => q.viewpoints.length > 0);
+}
+
+// id はここで振る。必須が1つも無ければ、最後の観点（研究への影響のはず）を必須にする
+export function normalizeViewpoints(
+  raw: { text: string; required: boolean }[],
+): Viewpoint[] {
+  const vs = raw
+    .map((v) => ({ text: v.text.trim(), required: v.required }))
+    .filter((v) => v.text !== "")
+    .slice(0, MAX_VIEWPOINTS)
+    .map((v, i) => ({ id: `v${i + 1}`, ...v }));
+  if (vs.length > 0 && !vs.some((v) => v.required)) {
+    vs[vs.length - 1].required = true;
+  }
+  return vs;
 }
 
 // ---- Claude の呼び出し ----
@@ -339,20 +414,46 @@ export async function takeTurn(
     user: buildTurnUserPrompt(req),
     effort: "medium",
   });
-  return normalizeTurn(output, mustFinish(req.turns));
+  return normalizeTurn(output, req);
 }
 
-// 終える条件を満たしたのに AI が続けようとしたら、ここで終わらせる
+// AI の返答の種類が、コードの判断と食い違ったときに使う文面
+export const FALLBACK_MESSAGES = {
+  understood:
+    "必要な点は自分の言葉で説明できています。ゼミでも同じ順序で説明してください。",
+  notUnderstood:
+    "まだ説明できていない観点があります。下の観点を見直し、ゼミまでに自分の言葉で説明できるようにしてください。",
+  probe:
+    "まだ足りません。いまの説明が、あなたの研究の問いや比較にどう関わるかまで、自分の言葉で言い直してください。",
+};
+
+// 採点の根拠を確かめて言えた観点を積み上げ、終えるかどうかをコードで決める
 export function normalizeTurn(
   output: z.infer<typeof turnOutputSchema>,
-  finish: boolean,
+  req: TeacherTurnRequest,
 ): TeacherTurnResponse {
-  const message = output.message.trim();
+  const { viewpoints } = req.question;
+  const ids = new Set(viewpoints.map((v) => v.id));
+  const newly = output.covered
+    .filter((c) => ids.has(c.id) && quoteFound(c.evidence, req.turns))
+    .map((c) => c.id);
+  const covered = viewpoints
+    .map((v) => v.id)
+    .filter((id) => req.covered.includes(id) || newly.includes(id));
+
+  const { done, understood } = decideTurn(viewpoints, covered, req.turns);
+  let message = output.message.trim();
   if (message === "") {
     throw new LlmError("AIが返答を作れませんでした。もう一度試してください。");
   }
-  const done = output.done || finish;
-  return { done, understood: done && output.understood, message };
+  if (done && output.kind !== "closing") {
+    message = understood
+      ? FALLBACK_MESSAGES.understood
+      : FALLBACK_MESSAGES.notUnderstood;
+  } else if (!done && output.kind !== "probe") {
+    message = FALLBACK_MESSAGES.probe;
+  }
+  return { done, understood, message, covered };
 }
 
 // ---- Route Handlers 共通 ----
