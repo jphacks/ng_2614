@@ -1,4 +1,5 @@
 import type { TeacherItem, TeacherSession } from "@/lib/types";
+import { Conversation } from "./conversation";
 import { LayerBadge } from "./layer-badge";
 
 export type UnderstoodMiss = { sessionId: string; createdAt: string; item: TeacherItem };
@@ -39,13 +40,24 @@ export function UnansweredList({ misses }: { misses: UnderstoodMiss[] }) {
                   {formatDate(createdAt)}
                 </span>
               </div>
-              <p className="mt-2 font-medium">{item.question}</p>
-              <p className="mt-2 text-sm text-gray-700">
-                <span className="font-medium">あなたの回答：</span>
-                <span className="whitespace-pre-wrap">{item.answer}</span>
-              </p>
-              <p className="mt-2 text-sm text-gray-700">
-                <span className="font-medium">先生のフィードバック：</span>
+              {item.turns ? (
+                <div className="mt-3">
+                  {/* 最後の先生の発言は講評なので、下に分けて出す */}
+                  <Conversation turns={item.turns.slice(0, -1)} />
+                </div>
+              ) : (
+                <>
+                  <p className="mt-2 font-medium">{item.question}</p>
+                  <p className="mt-2 text-sm text-gray-700">
+                    <span className="font-medium">あなたの回答：</span>
+                    <span className="whitespace-pre-wrap">{item.answer}</span>
+                  </p>
+                </>
+              )}
+              <p className="mt-3 text-sm text-gray-700">
+                <span className="font-medium">
+                  {item.turns ? "講評：" : "先生のフィードバック："}
+                </span>
                 <span className="whitespace-pre-wrap">{item.feedback}</span>
               </p>
             </li>

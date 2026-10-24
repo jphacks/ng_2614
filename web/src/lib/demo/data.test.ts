@@ -3,10 +3,11 @@ import {
   demoCommits,
   demoDiff,
   demoReviewFindings,
-  demoTeacherFeedback,
   demoTeacherQuestions,
+  demoTeacherTurn,
   demoTheme,
 } from "./data";
+import type { TeacherTurn } from "@/lib/types";
 
 const theme = {
   name: demoTheme.name,
@@ -31,7 +32,7 @@ describe("デモデータ", () => {
     expect(findings.every((f) => f.saved === false)).toBe(true);
   });
 
-  it("保存した問題から質問を作り、キーワードで理解度を判定する", () => {
+  it("保存した問題から、実装と研究手法の両方の質問を作る", () => {
     const problems = demoReviewFindings(demoCommits[0].sha).filter(
       (f) => f.type === "hidden_problem",
     );
@@ -39,17 +40,61 @@ describe("デモデータ", () => {
     expect(questions.length).toBeGreaterThan(1);
     expect(questions.some((q) => q.layer === "research")).toBe(true);
     expect(questions.some((q) => q.layer === "implementation")).toBe(true);
+  });
 
-    const q = questions[0];
-    const good = demoTeacherFeedback({
-      theme,
-      question: q,
-      answer: "ロジスティック回帰は NaN を扱えないので落ちていた",
+  describe("問い返し", () => {
+    const problems = demoReviewFindings(demoCommits[0].sha).filter(
+      (f) => f.type === "hidden_problem",
+    );
+    const q = demoTeacherQuestions({ theme, problems })[0];
+    const start: TeacherTurn[] = [{ role: "teacher", text: q.question }];
+
+    it("浅い答えには、答えを言わずに問い返す", () => {
+      const res = demoTeacherTurn({
+        theme,
+        question: q,
+        turns: [...start, { role: "student", text: "エラーが出たから" }],
+      });
+      expect(res.done).toBe(false);
+      expect(res.message).toContain("理由になっていません");
     });
-    expect(good.understood).toBe(true);
 
-    const bad = demoTeacherFeedback({ theme, question: q, answer: "わかりません" });
-    expect(bad.understood).toBe(false);
+    it("研究への影響まで言えたら、理解できたで終える", () => {
+      const res = demoTeacherTurn({
+        theme,
+        question: q,
+        turns: [
+          ...start,
+          { role: "student", text: "除外で件数が減り、データに偏りが出て比較の条件が変わるからです" },
+        ],
+      });
+      expect(res).toMatchObject({ done: true, understood: true });
+    });
+
+    it("「分かりません」が2回続いたら、講評して終える", () => {
+      const res = demoTeacherTurn({
+        theme,
+        question: q,
+        turns: [
+          ...start,
+          { role: "student", text: "分かりません" },
+          { role: "teacher", text: "問い返し" },
+          { role: "student", text: "分かりません" },
+        ],
+      });
+      expect(res).toMatchObject({ done: true, understood: false });
+      expect(res.message).toContain("ゼミまでに");
+    });
+
+    it("「AIがやった」には、差分の箇所を挙げて問い返す", () => {
+      const res = demoTeacherTurn({
+        theme,
+        question: q,
+        turns: [...start, { role: "student", text: "AIがやったので分かりません" }],
+      });
+      expect(res.done).toBe(false);
+      expect(res.message).toContain("dropna");
+    });
   });
 
   it("問題が無くても研究の目的について質問する", () => {

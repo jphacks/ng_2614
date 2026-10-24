@@ -67,13 +67,20 @@ export type Review = {
 
 export type QuestionLayer = "research" | "implementation";
 
+// 先生モードの1つの質問の中のやりとり（問い返し）
+export type TeacherTurn = {
+  role: "teacher" | "student";
+  text: string;
+};
+
 export type TeacherItem = {
   layer: QuestionLayer;
   question: string;
   findingId?: string; // 保存した問題についての質問なら、その Finding の id
-  answer: string;
-  feedback: string;
+  answer: string; // 学生の最後の回答
+  feedback: string; // 最後の講評
   understood: boolean; // false のものを「答えられなかった点」として残す
+  turns?: TeacherTurn[]; // 最初の質問からのやりとり全体（問い返し型になる前の記録には無い）
 };
 
 // 先生モード

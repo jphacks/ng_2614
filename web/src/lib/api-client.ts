@@ -8,6 +8,7 @@ import {
   demoReviewFindings,
   demoTeacherFeedback,
   demoTeacherQuestions,
+  demoTeacherTurn,
 } from "./demo/data";
 import { isDemoMode } from "./demo/mode";
 import type {
@@ -22,6 +23,8 @@ import type {
   TeacherFeedbackResponse,
   TeacherQuestionsRequest,
   TeacherQuestionsResponse,
+  TeacherTurnRequest,
+  TeacherTurnResponse,
 } from "./api-types";
 
 // HTTP ステータスを持つエラー（404 だけ別に扱いたいときのため）
@@ -103,6 +106,13 @@ export function postTeacherQuestions(
     return demo(1800, () => ({ questions: demoTeacherQuestions(payload) }));
   }
   return postJson<TeacherQuestionsResponse>("/api/teacher/questions", payload);
+}
+
+export function postTeacherTurn(
+  payload: TeacherTurnRequest,
+): Promise<TeacherTurnResponse> {
+  if (isDemoMode()) return demo(1500, () => demoTeacherTurn(payload));
+  return postJson<TeacherTurnResponse>("/api/teacher/turn", payload);
 }
 
 export function postTeacherFeedback(

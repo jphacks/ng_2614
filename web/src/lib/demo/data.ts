@@ -8,7 +8,10 @@ import type {
   TeacherFeedbackResponse,
   TeacherQuestion,
   TeacherQuestionsRequest,
+  TeacherTurnRequest,
+  TeacherTurnResponse,
 } from "@/lib/api-types";
+import { countStudentTurns, isDontKnow, mustFinish } from "@/lib/teacher-rules";
 import type { Finding, ResearchTheme } from "@/lib/types";
 
 export const DEMO_THEME_ID = "demo-theme";
@@ -279,84 +282,107 @@ export function demoReviewFindings(sha: string): Finding[] {
   return templates.map((t) => ({ ...t, id: crypto.randomUUID(), saved: false }));
 }
 
-// ---- 先生モード ----
+// ---- 先生モード（問い返し型。docs/design.md の「先生の聞き方」） ----
 
-// 質問ごとに、回答に含まれていれば「理解できた」とするキーワードと、解説を持つ
+// 質問ごとに、問い返しの順番（掘る順）と、核心に届いたとみなすキーワードを持つ
 type DemoQuestion = {
   layer: TeacherQuestion["layer"];
   question: string;
-  keywords: string[];
-  explanation: string;
+  probes: string[]; // 学生の答えが届かなかったときの問い返し。1回目、2回目…の順
+  goal: string[]; // 回答に含まれていれば、核心（研究への影響）に届いたとみなす
+  missing: string; // 届かなかったときの講評：何が抜けていたか
+  homework: string; // 届かなかったときの講評：ゼミまでに考えておくこと
+  aiDidIt: string; // 「AIがやったので分かりません」への問い返し
 };
 
-const DROPNA_QUESTIONS: DemoQuestion[] = [
-  {
-    layer: "implementation",
-    question:
-      "train.py で欠損のある行を除外していますね。もともと、どんなエラーが起きていて、なぜ除外すると直るのですか？",
-    keywords: ["NaN", "欠損", "扱えない", "StandardScaler", "ロジスティック"],
-    explanation:
-      "ロジスティック回帰や StandardScaler は欠損値（NaN）を入力にできないため、学習時に ValueError で落ちていました。dropna() で欠損のある行を消せば落ちなくなりますが、それは「エラーを消した」だけで、欠損の扱いを決めたわけではありません。",
-  },
-  {
-    layer: "research",
-    question:
-      "欠損のある行を除外したことで、ロジスティック回帰との比較結果はどう変わりうると思いますか？",
-    keywords: ["件数", "減", "偏り", "バイアス", "分布", "陽性率", "データセット"],
-    explanation:
-      "除外でデータ件数が減り、比較に使うデータセット自体が変わります。欠損は未受診の項目に多いので、除外された人に偏りがあれば陽性率や結果も変わりえます。除外の基準と件数を論文に書くこと、補完や LightGBM の欠損値処理と比べることを検討しましょう。",
-  },
-];
+const DROPNA_QUESTION: DemoQuestion = {
+  layer: "implementation",
+  question:
+    "train.py で欠損のある行を除外していますね。なぜこの対処をしたのですか？",
+  probes: [
+    "そのエラーは、データのどこが原因で起きていたのですか？",
+    "欠損している行を消すと、残ったデータはもとのデータと同じ性質だと言えますか？",
+    "では、それはベースラインとの比較実験にとって問題になりますか？",
+  ],
+  goal: ["偏り", "バイアス", "性質", "分布", "比較", "公平", "件数"],
+  missing:
+    "欠損行の除外で、比較に使うデータそのものが変わる点まで届いていません。",
+  homework:
+    "除外で何件減ったか、除外された行に偏りがないかを確かめ、除外と補完のどちらが研究の問いに合うか説明できるようにしてください。",
+  aiDidIt:
+    "AIがやったかどうかは関係ありません。train.py の df.dropna() の行を見て、何をしているか説明してください。",
+};
 
-const CLASS_WEIGHT_QUESTIONS: DemoQuestion[] = [
-  {
-    layer: "research",
-    question:
-      'ベースラインにだけ class_weight="balanced" が入っています。この状態で「LightGBM のほうが良い」と言えますか？',
-    keywords: ["条件", "揃", "公平", "両方", "不均衡"],
-    explanation:
-      "不均衡への対処がベースラインにだけ入っているので、比較条件が揃っていません。差が出ても、手法の差なのか対処の差なのか区別できません。両方に同じ対処を入れる（LightGBM にも class_weight や is_unbalance を指定する）必要があります。",
-  },
-];
+const CLASS_WEIGHT_QUESTION: DemoQuestion = {
+  layer: "research",
+  question:
+    'ロジスティック回帰にだけ class_weight="balanced" が入っています。なぜこの重みが必要だったのですか？',
+  probes: [
+    "陽性が少ないと、重みなしのロジスティック回帰は何を予測するようになりますか？",
+    "その対処は、LightGBM 側にも入っていますか？",
+    "その状態で「LightGBM のほうが良い」と言えますか？",
+  ],
+  goal: ["条件", "揃", "公平", "両方", "LightGBMにも", "LightGBM にも"],
+  missing: "不均衡への対処が片方の手法にしか入っていない点まで届いていません。",
+  homework:
+    "両方の手法で不均衡への対処を揃えたときに、比較の結論が変わるかを確かめてください。",
+  aiDidIt:
+    "AIがやったかどうかは関係ありません。make_baseline() の中を見て、何を指定しているか説明してください。",
+};
 
 function evaluationQuestion(evaluation: string): DemoQuestion {
+  const short = evaluation.length > 40 ? `${evaluation.slice(0, 40)}…` : evaluation;
   return {
     layer: "research",
-    question: `評価方法を「${evaluation.slice(0, 60)}${evaluation.length > 60 ? "…" : ""}」としています。なぜこの評価指標を選んだのですか？`,
-    keywords: ["不均衡", "陽性", "少ない", "正解率", "適合率", "再現率"],
-    explanation:
-      "陽性が少ない不均衡データでは、すべて陰性と予測するだけで正解率が高くなってしまいます。マクロ F1 は各クラスの適合率と再現率のバランスを平均するので、少数の陽性クラスの性能も評価に反映されます。",
+    question: `評価を「${short}」としています。なぜこの評価指標を選んだのですか？`,
+    probes: [
+      "このデータで、すべて陰性と予測するモデルの正解率はどのくらいになりますか？",
+      "その数字を見て、モデルが良いと言えますか？",
+      "では、この指標はその問題をどう避けていますか？",
+    ],
+    goal: ["不均衡", "少数", "陽性クラス", "各クラス", "適合率", "再現率"],
+    missing: "陽性が少ないデータで正解率が当てにならない理由まで届いていません。",
+    homework:
+      "すべて陰性と予測するモデルの正解率とマクロ F1 を実際に計算して、比べておいてください。",
+    aiDidIt:
+      "評価指標を決めるのはあなたです。研究の問いに照らして、何を測りたいのか説明してください。",
   };
 }
 
 function genericProblemQuestion(problem: Finding): DemoQuestion {
   return {
     layer: "implementation",
-    question: `「${problem.summary}」について、どんな問題が起きていて、なぜこの対処になったのか説明してください。`,
-    keywords: ["エラー", "原因", "対処"],
-    explanation: `記録では、問題は「${problem.error ?? "不明"}」、対処は「${problem.fix ?? "不明"}」でした。${problem.researchImpact?.exists ? `研究への影響：${problem.researchImpact.description}` : ""}`,
+    question: `「${problem.summary}」とあります。なぜこの対処をしたのですか？`,
+    probes: [
+      "そのエラーは、何が原因で起きていたのですか？",
+      "その対処で、データや実験の条件は何か変わりましたか？",
+      "それは、あなたの研究の問いに答えるうえで問題になりますか？",
+    ],
+    goal: ["影響", "条件", "比較", "結果"],
+    missing: "対処が研究の結果にどう影響するかまで届いていません。",
+    homework: `記録では、対処は「${problem.fix ?? "不明"}」です。それで実験の条件が変わらないか確かめてください。`,
+    aiDidIt: `AIがやったかどうかは関係ありません。${problem.files[0] ?? "変更されたファイル"} の該当箇所を見て、何をしているか説明してください。`,
   };
 }
 
-// 質問の文面から、キーワードと解説を引けるようにしておく
+// 質問の文面から、問い返しの材料を引けるようにしておく
 const asked = new Map<string, DemoQuestion>();
 
-function questionsFor(problem: Finding): DemoQuestion[] {
-  if (problem.summary === DROPNA_SUMMARY) return DROPNA_QUESTIONS;
-  if (problem.summary === CLASS_WEIGHT_SUMMARY) return CLASS_WEIGHT_QUESTIONS;
-  return [genericProblemQuestion(problem)];
+function questionFor(problem: Finding): DemoQuestion {
+  if (problem.summary === DROPNA_SUMMARY) return DROPNA_QUESTION;
+  if (problem.summary === CLASS_WEIGHT_SUMMARY) return CLASS_WEIGHT_QUESTION;
+  return genericProblemQuestion(problem);
 }
 
 export function demoTeacherQuestions(
   req: TeacherQuestionsRequest,
 ): TeacherQuestion[] {
-  const list: { q: DemoQuestion; findingId?: string }[] = [];
-  for (const problem of req.problems.slice(0, 2)) {
-    for (const q of questionsFor(problem)) list.push({ q, findingId: problem.id });
-  }
+  const list: { q: DemoQuestion; findingId?: string }[] = req.problems
+    .slice(0, 2)
+    .map((p) => ({ q: questionFor(p), findingId: p.id }));
   list.push({ q: evaluationQuestion(req.theme.evaluation) });
 
-  return list.slice(0, 4).map(({ q, findingId }) => {
+  return list.map(({ q, findingId }) => {
     asked.set(q.question, q);
     return {
       layer: q.layer,
@@ -366,28 +392,65 @@ export function demoTeacherQuestions(
   });
 }
 
-const DONT_KNOW = ["わからない", "わかりません", "分からない", "分かりません", "不明"];
+function reachedGoal(q: DemoQuestion | undefined, answer: string): boolean {
+  if (!q) return answer.length >= 30;
+  return q.goal.some((k) => answer.toLowerCase().includes(k.toLowerCase()));
+}
 
+function isAiDidIt(answer: string): boolean {
+  return /AI|ＡＩ|Claude|クロード/i.test(answer) && isDontKnow(answer);
+}
+
+export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
+  const q = asked.get(req.question.question);
+  const last = req.turns[req.turns.length - 1]?.text.trim() ?? "";
+  const answered = countStudentTurns(req.turns);
+
+  if (!isDontKnow(last) && reachedGoal(q, last)) {
+    return {
+      done: true,
+      understood: true,
+      message:
+        "そこまで自分の言葉で言えれば十分です。ゼミでも同じ順序で説明してください。",
+    };
+  }
+
+  if (mustFinish(req.turns)) {
+    return {
+      done: true,
+      understood: false,
+      message: q
+        ? `${q.missing}\nゼミまでに：${q.homework}`
+        : "核心まで届いていません。ゼミまでに、この変更が研究の結果にどう影響するか整理してください。",
+    };
+  }
+
+  let message: string;
+  if (q && isAiDidIt(last)) {
+    message = q.aiDidIt;
+  } else {
+    const probe =
+      q?.probes[Math.min(answered - 1, q.probes.length - 1)] ??
+      "それは、あなたの研究の問いにどう関係しますか？";
+    if (isDontKnow(last)) message = `では、ここから考えてください。${probe}`;
+    else if (last.length < 15) message = `それでは理由になっていません。${probe}`;
+    else message = probe;
+  }
+  return { done: false, understood: false, message };
+}
+
+// 一問一答の API（POST /api/teacher/feedback）のデモ。今の先生モードの画面は使っていない
 export function demoTeacherFeedback(
   req: TeacherFeedbackRequest,
 ): TeacherFeedbackResponse {
   const q = asked.get(req.question.question);
   const answer = req.answer.trim();
-  const dontKnow = DONT_KNOW.some((w) => answer.includes(w));
-  const hits = q
-    ? q.keywords.filter((k) => answer.toLowerCase().includes(k.toLowerCase()))
-    : [];
-  const understood = !dontKnow && (q ? hits.length > 0 : answer.length >= 20);
-  const explanation = q?.explanation ?? "";
-
-  if (understood) {
-    return {
-      understood,
-      feedback: `よく理解できています。${hits.length > 0 ? `「${hits.join("」「")}」に触れられていて良いですね。` : ""}\n補足：${explanation}`,
-    };
-  }
+  const understood = !isDontKnow(answer) && reachedGoal(q, answer);
   return {
     understood,
-    feedback: `${dontKnow ? "正直に書いてくれてありがとう。ゼミの前に整理しておきましょう。" : "大事な点が抜けています。"}\n解説：${explanation}`,
+    feedback: understood
+      ? "要点は押さえられています。"
+      : (q?.missing ?? "核心まで届いていません。"),
   };
 }
+
