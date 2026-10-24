@@ -1,12 +1,18 @@
 "use client";
 
 // 作業フローマップの帯（F-15）の縦の形：画面の右端に固定するサイドバー。
-// 畳むと48px（レーンの頭文字と件数だけ）、開くと208px（小さなマップ）。
+// 畳むと48px（レーンの頭文字と件数だけ）、開くと初期値208px（小さなマップ。幅は左端のつまみ SideResizeHandle で変えられる）。
 // 本文の右側を空けるのは親（MapStrip）がやる。
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { setStripOpen, setStripOrientation, useStripOpen } from "@/lib/map/prefs";
+import {
+  setStripOpen,
+  setStripOrientation,
+  SIDE_OPEN_WIDTH,
+  useSideWidth,
+  useStripOpen,
+} from "@/lib/map/prefs";
 import {
   changedParentIds,
   currentFocus,
@@ -38,6 +44,7 @@ export function StripSide({
   map: WorkflowMap;
 }) {
   const open = useStripOpen();
+  const openWidth = useSideWidth();
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
@@ -71,13 +78,15 @@ export function StripSide({
     setOpenSubs(allSubsOpen ? new Set() : new Set(parentsWithSubs));
   }
 
-  const width = open ? SIDE_WIDTH.open : SIDE_WIDTH.collapsed;
+  const width = open ? openWidth : SIDE_WIDTH.collapsed;
 
   return (
     <aside
       aria-label="作業フローマップ"
       style={{ width }}
-      className="fixed inset-y-0 right-0 z-30 overflow-y-auto overflow-x-hidden border-l border-gray-200 bg-white"
+      className={`fixed inset-y-0 right-0 z-30 overflow-y-auto overflow-x-hidden border-l border-gray-200 bg-white ${
+        open && openWidth > SIDE_OPEN_WIDTH.initial ? "shadow-xl" : ""
+      }`}
     >
       {open ? (
         <div className="px-2 py-2">

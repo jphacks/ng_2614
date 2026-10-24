@@ -164,6 +164,45 @@ describe("getStripOrientation / setStripOrientation", () => {
   });
 });
 
+describe("getSideWidth / setSideWidth", () => {
+  it("初期値は 208", async () => {
+    stubWindow();
+    const { getSideWidth } = await load();
+    expect(getSideWidth()).toBe(208);
+  });
+
+  it("範囲に収めて保存し、初期値と同じなら消す", async () => {
+    const { data, dispatched } = stubWindow();
+    const { getSideWidth, setSideWidth } = await load();
+    setSideWidth(300.4);
+    expect(data.get("rc.mapSideWidth")).toBe("300");
+    expect(getSideWidth()).toBe(300);
+    setSideWidth(9999);
+    expect(getSideWidth()).toBe(480);
+    setSideWidth(10);
+    expect(getSideWidth()).toBe(180);
+    setSideWidth(208);
+    expect(data.has("rc.mapSideWidth")).toBe(false);
+    expect(dispatched).toEqual(Array(4).fill("rc:map-side-width"));
+  });
+
+  it("保存された値が壊れていれば初期値、範囲外なら収める", async () => {
+    const { data } = stubWindow();
+    const { getSideWidth } = await load();
+    data.set("rc.mapSideWidth", "abc");
+    expect(getSideWidth()).toBe(208);
+    data.set("rc.mapSideWidth", "1000");
+    expect(getSideWidth()).toBe(480);
+  });
+
+  it("保存できなくても、この画面の中では変わる", async () => {
+    stubWindow(true);
+    const { getSideWidth, setSideWidth } = await load();
+    setSideWidth(320);
+    expect(getSideWidth()).toBe(320);
+  });
+});
+
 describe("useMediaQuery", () => {
   it("サーバー側と matchMedia が無いときは false", async () => {
     stubWindow(); // matchMedia の無い window
