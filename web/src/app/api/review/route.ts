@@ -11,6 +11,10 @@ import { LlmError } from "@/lib/llm/structured";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// 長すぎる文字列は、エラーにせずサーバー側で切る（フックからは大きな出力が届きうる）
+const clipped = (max: number) =>
+  z.string().transform((s) => (s.length > max ? s.slice(0, max) : s));
+
 const requestSchema = z.object({
   theme: z.object({
     name: z.string(),
@@ -36,6 +40,20 @@ const requestSchema = z.object({
       .min(1, "変更されたファイルがありません"),
     truncated: z.boolean(),
   }),
+  // 以下はフック（F-13）のときだけ
+  earlierPrompts: z.array(clipped(4000)).max(5).optional(),
+  observedErrors: z
+    .array(
+      z.object({
+        tool: clipped(100),
+        input: clipped(500),
+        output: clipped(2000),
+      }),
+    )
+    .max(10)
+    .optional(),
+  generatedFiles: z.array(clipped(500)).max(200).optional(),
+  headMoved: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
