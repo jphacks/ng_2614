@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { postMapGenerate } from "@/lib/api-client";
+import { useDemoMode } from "@/lib/demo/mode";
 import { undoLastUpdate } from "@/lib/map/apply";
+import {
+  generateOrRegenerate,
+  refreshFromWorkspace,
+} from "@/lib/map/auto-update";
 import {
   addPhase,
   addTask,
@@ -15,7 +19,13 @@ import {
   restoreRejected,
 } from "@/lib/map/edit";
 import { unconfirmedCount } from "@/lib/map/view";
-import { getTheme, getWorkflowMap, nowIso, saveWorkflowMap } from "@/lib/storage";
+import {
+  getTheme,
+  getWorkflowMap,
+  MAPS_CHANGED_EVENT,
+  nowIso,
+  saveWorkflowMap,
+} from "@/lib/storage";
 import type { ResearchTheme, WorkflowMap } from "@/lib/types";
 import type { AddTaskValues } from "@/components/map/AddTaskForm";
 import { DetailPanel } from "@/components/map/DetailPanel";
@@ -24,6 +34,11 @@ import { MapBoard } from "@/components/map/MapBoard";
 import { PhaseControls } from "@/components/map/PhaseControls";
 import { RejectedList } from "@/components/map/RejectedList";
 import { UpdateNotice } from "@/components/map/UpdateNotice";
+import {
+  WorkspaceForm,
+  WorkspaceSendNotice,
+  type WorkspaceValues,
+} from "@/components/map/WorkspaceForm";
 
 type Loaded =
   | { status: "loading" }
@@ -49,12 +64,39 @@ export default function WorkflowMapPage() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const demo = useDemoMode();
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   useEffect(() => {
     setState(load(themeId));
     setSelectedId(undefined);
     setFilter("all");
     setExpandedIds(new Set());
+    setRefreshResult(null);
+    setRefreshError(null);
+    setSettingsOpen(false);
+    setSettingsSaved(false);
+  }, [themeId]);
+
+  // 判定の保存で始まった自動更新や、ほかのタブでの変更を、開いたままの画面に反映する
+  useEffect(() => {
+    function reload() {
+      setState((prev) =>
+        prev.status === "ready"
+          ? { ...prev, map: getWorkflowMap(themeId) }
+          : prev,
+      );
+    }
+    window.addEventListener(MAPS_CHANGED_EVENT, reload);
+    window.addEventListener("storage", reload);
+    return () => {
+      window.removeEventListener(MAPS_CHANGED_EVENT, reload);
+      window.removeEventListener("storage", reload);
+    };
   }, [themeId]);
 
   // マウント後に ?task= を読む（useSearchParams は使わない）
@@ -88,12 +130,12 @@ export default function WorkflowMapPage() {
   if (state.status === "notFound") {
     return (
       <div>
-        <p className="text-gray-700">研究テーマが見つかりません。</p>
+        <p className="text-gray-700">プロジェクトが見つかりません。</p>
         <Link
           href="/"
           className="mt-2 inline-block text-blue-700 hover:underline"
         >
-          研究テーマ一覧へ戻る
+          プロジェクト一覧へ戻る
         </Link>
       </div>
     );
@@ -183,28 +225,22 @@ export default function WorkflowMapPage() {
     }
   };
 
-  const generate = async (existing: WorkflowMap | undefined) => {
+  // マップを作る／作り直す。作り直しは丸ごと置き換えず、人の手直しと却下の記録を残して当てはめる
+  const generate = async (workspace: {
+    workspaceRepo?: string;
+    workspaceProject?: string;
+  }) => {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const response = await postMapGenerate({
-        themeId: theme.id,
-        theme: {
-          name: theme.name,
-          question: theme.question,
-          method: theme.method,
-          evaluation: theme.evaluation,
-        },
-        repo: theme.repo,
-        workspaceRepo: existing?.workspaceRepo,
-        workspaceProject: existing?.workspaceProject,
-      });
-      saveWorkflowMap(response.map);
-      setState({ status: "ready", theme, map: response.map });
+      await generateOrRegenerate(theme, workspace);
+      setState({ status: "ready", theme, map: getWorkflowMap(theme.id) });
       setSelectedId(undefined);
       setFilter("all");
       setExpandedIds(new Set());
       setActionError(null);
+      setRefreshResult(null);
+      setRefreshError(null);
     } catch (e) {
       setGenerateError(errorMessage(e));
     } finally {
@@ -214,9 +250,55 @@ export default function WorkflowMapPage() {
 
   const handleRegenerate = () => {
     const ok = window.confirm(
-      "マップを作り直します。人が直した内容や、消したものの記録は、新しいマップに置き換わります。よろしいですか？",
+      "ワークスペースの今の内容から、マップを作り直します。人が直した内容と、消したものの記録は残し、AI が作った部分だけを今の内容に合わせて更新します。ワークスペースの中身は AI（Claude）に送られます。よろしいですか？",
     );
-    if (ok) void generate(map);
+    if (ok) {
+      void generate({
+        workspaceRepo: map?.workspaceRepo,
+        workspaceProject: map?.workspaceProject,
+      });
+    }
+  };
+
+  const hasWorkspace = !!map?.workspaceRepo && !!map?.workspaceProject;
+
+  // ワークスペースから更新。前回から変わったファイルだけを読む
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setRefreshResult(null);
+    setRefreshError(null);
+    try {
+      const count = await refreshFromWorkspace(theme);
+      setState({ status: "ready", theme, map: getWorkflowMap(theme.id) });
+      setRefreshResult(
+        count > 0
+          ? `ワークスペースの変更を ${count} 件、マップに反映しました。`
+          : "ワークスペースに、反映する変更はありませんでした。",
+      );
+    } catch (e) {
+      setRefreshError(errorMessage(e));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // ワークスペースの設定を変える。別のリポジトリ・プロジェクトになったら、前回読んだ位置は使えないので消す
+  const handleSaveSettings = (values: WorkspaceValues) => {
+    if (!map) return;
+    const changed =
+      values.workspaceRepo !== map.workspaceRepo ||
+      values.workspaceProject !== map.workspaceProject;
+    const { workspaceSha, ...rest } = map;
+    persist({
+      ...rest,
+      ...(changed || !workspaceSha ? {} : { workspaceSha }),
+      ...values,
+      updatedAt: nowIso(),
+    });
+    setSettingsOpen(false);
+    setSettingsSaved(true);
+    setRefreshResult(null);
+    setRefreshError(null);
   };
 
   const selected =
@@ -229,7 +311,7 @@ export default function WorkflowMapPage() {
           href={`/themes/${theme.id}`}
           className="text-sm text-blue-700 hover:underline"
         >
-          ← 研究テーマ
+          ← プロジェクト
         </Link>
         <h1 className="mt-2 text-xl font-bold">作業フローマップ</h1>
         <p className="mt-1 text-sm text-gray-600">
@@ -244,28 +326,45 @@ export default function WorkflowMapPage() {
       </div>
 
       {!map ? (
-        <section className="rounded-md border border-gray-200 p-4">
+        <section className="space-y-3 rounded-md border border-gray-200 p-4">
           <p className="text-sm text-gray-700">
             まだマップがありません。研究の工程（調査・選定・実装・検証・報告など）を、
             タスクとそのつながりとして AI が並べます。作ったあとで、人が直せます。
           </p>
-          <div className="mt-3">
-            <button
-              type="button"
-              disabled={generating}
-              onClick={() => void generate(undefined)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {generating ? "ワークスペースを読んでいます…" : "マップを作る"}
-            </button>
-          </div>
+          {demo ? (
+            <>
+              <p className="text-sm text-gray-600">
+                デモモードです。ワークスペースは読まず、デモ用のデータでマップを作ります。
+              </p>
+              <button
+                type="button"
+                disabled={generating}
+                onClick={() => void generate({})}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {generating ? "マップを作っています…" : "マップを作る"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                マップの元にする research-workspace（GitHub のリポジトリと、その中のプロジェクト名）を入力してください。入力した内容はこのマップに保存され、次からは聞きません（あとで設定から変えられます）。
+              </p>
+              <WorkspaceForm
+                submitLabel="マップを作る"
+                busyLabel="ワークスペースを読んでいます…"
+                busy={generating}
+                onSubmit={(values) => void generate(values)}
+              />
+            </>
+          )}
           {generating && (
-            <p role="status" className="mt-2 text-sm text-gray-500">
-              ワークスペースを読んでいます…
+            <p role="status" className="text-sm text-gray-500">
+              {demo ? "マップを作っています…" : "ワークスペースを読んでいます…"}
             </p>
           )}
           {generateError && (
-            <p role="alert" className="mt-2 text-sm text-red-700">
+            <p role="alert" className="text-sm text-red-700">
               {generateError}
             </p>
           )}
@@ -281,6 +380,49 @@ export default function WorkflowMapPage() {
             </p>
           )}
           <UpdateNotice map={map} onUndo={handleUndo} />
+
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                disabled={refreshing || generating || demo || !hasWorkspace}
+                onClick={() => void handleRefresh()}
+                className="rounded-md border border-blue-600 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {refreshing
+                  ? "ワークスペースを読んでいます…"
+                  : "ワークスペースから更新"}
+              </button>
+              {demo ? (
+                <span className="text-xs text-gray-600">
+                  デモモードでは、ワークスペースを読まないので使えません。
+                </span>
+              ) : !hasWorkspace ? (
+                <span className="text-xs text-gray-600">
+                  ワークスペースが未設定です。下の「ワークスペースの設定」で入力してください。
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  前回から変わったファイルだけを読みます。
+                </span>
+              )}
+            </div>
+            {refreshing && (
+              <p role="status" className="text-xs text-gray-500">
+                変わったファイルを AI（Claude）に送って、マップへの変更を考えています…
+              </p>
+            )}
+            {refreshResult && (
+              <p role="status" className="text-sm text-blue-900">
+                {refreshResult}
+              </p>
+            )}
+            {refreshError && (
+              <p role="alert" className="text-sm text-red-700">
+                {refreshError}
+              </p>
+            )}
+          </div>
 
           {/* main（max-w-4xl）より広く使う。transform で動かすとページに横スクロールが出るので、余白で中央に寄せる */}
           <div className="ml-[calc(50%-min(40rem,calc(50vw-2rem)))] w-[min(80rem,calc(100vw-4rem))]">
@@ -349,21 +491,93 @@ export default function WorkflowMapPage() {
                 edit((m, now) => deletePhase(m, phaseId, now))
               }
             />
-            <div>
-              <button
-                type="button"
-                disabled={generating}
-                onClick={handleRegenerate}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            <section
+              aria-labelledby="map-workspace-heading"
+              className="space-y-3 rounded-md border border-gray-200 p-3"
+            >
+              <h2
+                id="map-workspace-heading"
+                className="text-sm font-semibold text-gray-800"
               >
-                {generating ? "ワークスペースを読んでいます…" : "マップを作り直す"}
-              </button>
-              {generateError && (
-                <p role="alert" className="mt-2 text-sm text-red-700">
-                  {generateError}
+                ワークスペース
+              </h2>
+              {demo ? (
+                <p className="text-sm text-gray-600">
+                  デモモードです。ワークスペースは読まず、デモ用のデータを使います（設定は不要です）。
+                </p>
+              ) : hasWorkspace ? (
+                <p className="text-sm text-gray-700">
+                  <code className="font-mono">{map.workspaceRepo}</code> の{" "}
+                  <code className="font-mono">{map.workspaceProject}</code>
+                </p>
+              ) : (
+                <p className="text-sm text-amber-800">
+                  ワークスペースが未設定です。下の設定で入力すると、「ワークスペースから更新」と「マップを作り直す」が使えます。
                 </p>
               )}
-            </div>
+              {settingsSaved && !settingsOpen && (
+                <p role="status" className="text-sm text-green-700">
+                  ワークスペースの設定を保存しました。
+                </p>
+              )}
+              {!demo && (
+                <div>
+                  <button
+                    type="button"
+                    aria-expanded={settingsOpen}
+                    aria-controls="map-workspace-settings"
+                    onClick={() => {
+                      setSettingsOpen((v) => !v);
+                      setSettingsSaved(false);
+                    }}
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    {settingsOpen
+                      ? "ワークスペースの設定を閉じる"
+                      : "ワークスペースの設定"}
+                  </button>
+                  <div id="map-workspace-settings" className="mt-3">
+                    {settingsOpen && (
+                      <WorkspaceForm
+                        key={`${map.workspaceRepo ?? ""}/${map.workspaceProject ?? ""}`}
+                        initialRepo={map.workspaceRepo}
+                        initialProject={map.workspaceProject}
+                        submitLabel="設定を保存"
+                        onSubmit={handleSaveSettings}
+                        onCancel={() => setSettingsOpen(false)}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2 border-t border-gray-100 pt-3">
+                {!settingsOpen && !demo && <WorkspaceSendNotice />}
+                <div>
+                  <button
+                    type="button"
+                    disabled={
+                      generating || refreshing || (!demo && !hasWorkspace)
+                    }
+                    onClick={handleRegenerate}
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generating
+                      ? demo
+                        ? "マップを作り直しています…"
+                        : "ワークスペースを読んでいます…"
+                      : "マップを作り直す"}
+                  </button>
+                  <span className="ml-2 text-xs text-gray-500">
+                    人が直した内容と、消したものの記録は残ります。
+                  </span>
+                </div>
+                {generateError && (
+                  <p role="alert" className="text-sm text-red-700">
+                    {generateError}
+                  </p>
+                )}
+              </div>
+            </section>
           </div>
         </>
       )}

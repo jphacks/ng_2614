@@ -11,6 +11,7 @@ import {
 import type { DiffResponse, HookChange } from "@/lib/api-types";
 import { buildHookReviewRequest, hookPurpose } from "@/lib/hook-review";
 import { saveDiff } from "@/lib/diff-store";
+import { startMapUpdate } from "@/lib/map/auto-update";
 import { findThemeByRepo, newId, nowIso, saveHookReview } from "@/lib/storage";
 import type { Review } from "@/lib/types";
 import { headline } from "@/components/review/labels";
@@ -107,6 +108,7 @@ export function HookInbox() {
           findings,
         };
         saveHookReview(review);
+        startMapUpdate(review); // 待たない
         await saveDiff(review.id, commit);
         upsert({
           id: change.id,
