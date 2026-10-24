@@ -67,6 +67,13 @@ export type Review = {
 
 export type QuestionLayer = "research" | "implementation";
 
+// 先生が想定している解答の観点（F-8 の採点に使う）
+export type Viewpoint = {
+  id: string; // 質問の中で一意（"v1" など）
+  text: string; // 1つの観点に1つの主張
+  required: boolean; // true の観点がすべて言えたら「理解できた」で終える
+};
+
 // 先生モードの1つの質問の中のやりとり（問い返し）
 export type TeacherTurn = {
   role: "teacher" | "student";
@@ -81,6 +88,8 @@ export type TeacherItem = {
   feedback: string; // 最後の講評
   understood: boolean; // false のものを「答えられなかった点」として残す
   turns?: TeacherTurn[]; // 最初の質問からのやりとり全体（問い返し型になる前の記録には無い）
+  viewpoints?: Viewpoint[]; // 想定解答の観点（観点による採点の前の記録には無い）
+  covered?: string[]; // 言えた観点の id
 };
 
 // 先生モード

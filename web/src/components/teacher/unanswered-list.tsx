@@ -1,6 +1,7 @@
 import type { TeacherItem, TeacherSession } from "@/lib/types";
 import { Conversation } from "./conversation";
 import { LayerBadge } from "./layer-badge";
+import { ViewpointList } from "./viewpoint-list";
 
 export type UnderstoodMiss = { sessionId: string; createdAt: string; item: TeacherItem };
 
@@ -60,6 +61,14 @@ export function UnansweredList({ misses }: { misses: UnderstoodMiss[] }) {
                 </span>
                 <span className="whitespace-pre-wrap">{item.feedback}</span>
               </p>
+              {item.viewpoints && (
+                <div className="mt-3">
+                  <ViewpointList
+                    viewpoints={item.viewpoints}
+                    covered={item.covered ?? []}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>
