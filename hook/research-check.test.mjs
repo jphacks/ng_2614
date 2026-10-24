@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  maskSecrets, parseRepo, isGeneratedFile, parseObservedErrors, parseTranscript, pickErrorLines, parseDotenv,
+  maskSecrets, parseRepo, isGeneratedFile, parseObservedErrors, parseTranscript, pickErrorLines, pickNumericAnomalyLines, analyzeCommand, parseDotenv,
   loadConfig, enqueueOutbox, MASK, MAX_OUTBOX,
 } from "./research-check.mjs";
 
@@ -145,6 +145,176 @@ test("parseTranscript: 成功したコマンドの出力に出たエラーの行
 test("pickErrorLines: エラーらしい行が無ければ空", () => {
   assert.equal(pickErrorLines("all good\nmacro F1 0.73"), "");
   assert.ok(pickErrorLines("x\nConvergenceWarning: lbfgs failed to converge").includes("ConvergenceWarning"));
+});
+
+// 1つの Bash 呼び出しの結果を作る。detail を渡すと、成功したときの toolUseResult（stdout / stderr）も付ける
+function bashRun(command, { content = "", isError = false, detail } = {}) {
+  const assistant = transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
+    { type: "tool_use", id: "b1", name: "Bash", input: { command } },
+  ]);
+  const user = JSON.parse(
+    transcriptLine("user", "2026-10-24T10:00:02.000Z", [
+      { type: "tool_result", tool_use_id: "b1", is_error: isError, content },
+    ]),
+  );
+  if (detail) user.toolUseResult = detail;
+  return [assistant, JSON.stringify(user)].join("\n");
+}
+
+function observed(run) {
+  return parseTranscript(run, "2026-10-24T10:00:00.000Z").errors;
+}
+
+test("analyzeCommand: 区切り・ヒアドキュメント・ラッパー・パスを読んで、探索のコマンドかを判定する", () => {
+  const explore = (c) => analyzeCommand(c).exploration;
+  assert.ok(explore("git ls-files && cat README.md && for f in $(git ls-files '*.py'); do echo \"=== $f\"; cat $f; done"));
+  assert.ok(explore("cd src && ls -la | head -5"));
+  assert.ok(explore("FOO=1 command -v uv"));
+  assert.ok(explore("cat <<'EOF'\npython train.py; rm -rf x\nEOF"));
+  assert.ok(explore("ls # python train.py"));
+  assert.ok(!explore("cd src && python train.py"));
+  assert.ok(!explore(".venv/bin/python - <<'EOF'\nprint(1)\nEOF"));
+  assert.ok(!explore("time timeout 600 nohup uv run python a.py 2>&1 | tail -20"));
+  assert.ok(!explore("python -c \"print(1); print(2)\" ; echo done"));
+  assert.ok(!explore(""));
+  assert.equal(analyzeCommand("python train.py | grep loss").lastName, "grep");
+  assert.equal(analyzeCommand("sudo -u bob env X=1 /usr/bin/python3 a.py").lastName, "python3");
+  assert.equal(analyzeCommand("python a.py 2>&1 | tail").mergesStderr, true);
+  assert.equal(analyzeCommand("python a.py > out.txt").mergesStderr, false);
+});
+
+test("parseTranscript: 探索のコマンドが表示したコードは、成功でも失敗でもエラーにしない", () => {
+  const code = 'def get(name):\n    raise ValueError(f"unknown schedule: {name}")\n';
+  const listing = "git ls-files && cat README.md && for f in $(git ls-files '*.py'); do echo \"=== $f\"; cat $f; done";
+  assert.deepEqual(
+    observed(bashRun(listing, { content: code, detail: { stdout: code, stderr: "", interrupted: false } })),
+    [],
+  );
+  assert.deepEqual(observed(bashRun("cat a.py", { content: code })), []); // toolUseResult が無い古い形式でも
+  assert.deepEqual(observed(bashRun("cat missing.py", { isError: true, content: "Exit code 1\ncat: missing.py: No such file" })), []);
+  // 実行するコマンドが、コードを stdout に表示しただけ（stderr は空）
+  const heredoc = ".venv/bin/python - <<'EOF'\nprint(open('a.py').read())\nEOF";
+  assert.deepEqual(
+    observed(bashRun(heredoc, { content: code, detail: { stdout: code, stderr: "", interrupted: false } })),
+    [],
+  );
+});
+
+test("parseTranscript: 成功した実行コマンドは、stderr のエラーらしい行だけを取る", () => {
+  const stderr = "x.py:3: RuntimeWarning: something odd\nTraceback (most recent call last):\n  File \"a.py\"\nKeyError: 'a'";
+  const errors = observed(
+    bashRun("python train.py", { content: "ok\n" + stderr, detail: { stdout: "ok", stderr, interrupted: false } }),
+  );
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].kind, "in_output");
+  assert.ok(errors[0].output.includes("Traceback"));
+  assert.ok(errors[0].output.includes("RuntimeWarning"));
+  // 2>&1 で stderr が stdout に混ざっているときは、stdout からも探す
+  const merged = "epoch 1\nValueError: bad value";
+  const e2 = observed(
+    bashRun("python train.py 2>&1 | tail -5", { content: merged, detail: { stdout: merged, stderr: "", interrupted: false } }),
+  );
+  assert.equal(e2.length, 1);
+  assert.ok(e2[0].output.includes("ValueError: bad value"));
+});
+
+test("parseTranscript: grep の0件など、終了コード 1 が普通のコマンドの失敗はエラーにしない", () => {
+  assert.deepEqual(observed(bashRun("grep foo file.txt", { isError: true, content: "Exit code 1" })), []);
+  assert.deepEqual(
+    observed(bashRun(".venv/bin/python train.py | grep loss", { isError: true, content: "Exit code 1" })),
+    [],
+  );
+  // grep だけのコマンドは探索なので、終了コード 2 でも無視する
+  assert.equal(observed(bashRun("grep foo nofile", { isError: true, content: "Exit code 2\nno such file" })).length, 0);
+  // 終了コード 2 以上や、最後が grep ではない実行コマンドの失敗は残す
+  assert.equal(
+    observed(bashRun("python train.py | grep loss", { isError: true, content: "Exit code 2\nTraceback boom" })).length,
+    1,
+  );
+  assert.equal(
+    observed(bashRun("python train.py | tail -3", { isError: true, content: "Exit code 1\nTraceback boom" })).length,
+    1,
+  );
+});
+
+test("parseTranscript: 実行コマンドの失敗は、これまでどおり失敗として取る", () => {
+  const content = "Exit code 1\nTraceback (most recent call last):\nValueError: boom";
+  assert.deepEqual(observed(bashRun("python train.py", { isError: true, content })), [
+    { kind: "failed", tool: "Bash", input: "python train.py", output: content },
+  ]);
+});
+
+test("parseTranscript: nan・inf・overflow などの数値の異常を、成功した実行コマンドの出力から取る", () => {
+  const stdout = "epoch 1 loss: 0.9\nepoch 2 loss: nan\nepoch 3 loss: nan";
+  const errors = observed(
+    bashRun("python train.py", { content: stdout, detail: { stdout, stderr: "", interrupted: false } }),
+  );
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].kind, "in_output");
+  assert.ok(errors[0].output.includes("epoch 2 loss: nan"));
+
+  // stderr のエラーと stdout の数値の異常は、1件にまとめる
+  const merged = observed(
+    bashRun("python train.py", {
+      content: "",
+      detail: { stdout: "w = -inf", stderr: "RuntimeWarning: overflow encountered in exp", interrupted: false },
+    }),
+  );
+  assert.equal(merged.length, 1);
+  assert.ok(merged[0].output.includes("w = -inf"));
+  assert.ok(merged[0].output.includes("overflow encountered"));
+
+  // 失敗したが grep の0件と同じ扱いのとき（終了コード 1）も、実行コマンドなら数値の異常は拾う
+  const piped = observed(
+    bashRun("python train.py | grep loss", { isError: true, content: "Exit code 1\nloss=nan" }),
+  );
+  assert.equal(piped.length, 1);
+  assert.equal(piped[0].kind, "in_output");
+
+  // diverg は見ない（KL divergence は普通の指標名）。探索のコマンドの出力も見ない
+  assert.deepEqual(
+    observed(bashRun("python eval.py", { content: "kl_divergence: 0.2", detail: { stdout: "kl_divergence: 0.2", stderr: "", interrupted: false } })),
+    [],
+  );
+  assert.deepEqual(observed(bashRun("echo loss: nan", { content: "loss: nan", detail: { stdout: "loss: nan", stderr: "", interrupted: false } })), []);
+});
+
+test("pickNumericAnomalyLines: コードに書かれた nan・inf の名前は、数値の異常と見なさない", () => {
+  for (const line of [
+    "x = np.nan", "if math.isnan(x):", "y = float('inf')", 'z = float("-inf")', "torch.nan_to_num(x)",
+    "info: done", "infinity", "import nan_utils", "r = math.inf", "see nan.csv",
+  ]) {
+    assert.equal(pickNumericAnomalyLines(line), "", line);
+  }
+  for (const line of ["loss: nan", "loss=NaN", "grad -inf", "[inf, 2.0]", "overflow encountered in exp", "RuntimeWarning: invalid value encountered in divide", "divide by zero encountered in log"]) {
+    assert.notEqual(pickNumericAnomalyLines(line), "", line);
+  }
+});
+
+test("parseTranscript: toolUseResult が無いとき、または tool_result が複数のときは、出力の全体から探す", () => {
+  const out = "loading\nTraceback (most recent call last):\nKeyError: 'a'";
+  const errors = observed(bashRun("python a.py", { content: out }));
+  assert.equal(errors.length, 1);
+  assert.ok(errors[0].output.includes("KeyError"));
+
+  // tool_result が2つ並ぶ entry の toolUseResult は、どちらのものか分からないので信用しない
+  const lines = [
+    transcriptLine("assistant", "2026-10-24T10:00:01.000Z", [
+      { type: "tool_use", id: "p1", name: "Bash", input: { command: "python a.py" } },
+      { type: "tool_use", id: "p2", name: "Bash", input: { command: "python b.py" } },
+    ]),
+  ];
+  const user = JSON.parse(
+    transcriptLine("user", "2026-10-24T10:00:02.000Z", [
+      { type: "tool_result", tool_use_id: "p1", is_error: false, content: out },
+      { type: "tool_result", tool_use_id: "p2", is_error: false, content: "fine" },
+    ]),
+  );
+  user.toolUseResult = { stdout: "", stderr: "", interrupted: false };
+  lines.push(JSON.stringify(user));
+  const multi = parseTranscript(lines.join("\n"), "2026-10-24T10:00:00.000Z").errors;
+  assert.equal(multi.length, 1);
+  assert.equal(multi[0].input, "python a.py");
 });
 
 test("parseTranscript: AI の最終報告（最後のツールの動きより後の文章）を取る", () => {
