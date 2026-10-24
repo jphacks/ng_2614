@@ -3,6 +3,7 @@
 import type { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { MODEL, getAnthropic } from "./client";
+import { llmChoice, recordLlmUsage } from "./context";
 
 export class LlmError extends Error {}
 
@@ -13,15 +14,26 @@ export async function parseStructured<S extends z.ZodType>(params: {
   effort?: "low" | "medium" | "high";
   maxTokens?: number;
 }): Promise<z.infer<S>> {
+  // 設定画面（F-17）で選んだモデル・エフォートがあれば、それを優先する
+  const choice = llmChoice();
+  const model = choice.model ?? MODEL;
   const response = await getAnthropic().messages.parse({
-    model: MODEL,
+    model,
     max_tokens: params.maxTokens ?? 16000,
     system: params.system,
     messages: [{ role: "user", content: params.user }],
     output_config: {
-      effort: params.effort ?? "medium",
+      effort: choice.effort ?? params.effort ?? "medium",
       format: zodOutputFormat(params.schema),
     },
+  });
+
+  // 途中で切れたり拒否されたりしても料金はかかるので、先に記録する
+  recordLlmUsage(model, {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
   });
 
   if (response.stop_reason === "refusal") {

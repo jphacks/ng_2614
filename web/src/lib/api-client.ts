@@ -13,6 +13,9 @@ import {
 import { isDemoMode } from "./demo/mode";
 import { demoMapUpdate, demoWorkflowMap } from "./demo/workflow-map";
 import { demoRepos } from "./demo/repos";
+import { llmHeaders, type LlmFeature } from "./llm-settings";
+import { parseUsageHeader, recordUsage } from "./llm-usage";
+import { LLM_HEADERS } from "./llm/models";
 import type {
   ApiError,
   CommitsResponse,
@@ -45,8 +48,28 @@ export class ApiRequestError extends Error {
   }
 }
 
-async function request<T>(input: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, init);
+// feature を渡すと、AI の設定をヘッダーで送り、返ってきた使用量を記録する（F-17）
+async function request<T>(
+  input: string,
+  init?: RequestInit,
+  feature?: LlmFeature,
+): Promise<T> {
+  const res = await fetch(
+    input,
+    feature
+      ? {
+          ...init,
+          headers: {
+            ...(init?.headers as Record<string, string>),
+            ...llmHeaders(feature),
+          },
+        }
+      : init,
+  );
+  if (feature) {
+    const usage = parseUsageHeader(res.headers.get(LLM_HEADERS.usage));
+    if (usage) recordUsage(feature, usage);
+  }
   const body = (await res.json().catch(() => null)) as T | ApiError | null;
   if (!res.ok) {
     const message =
@@ -58,12 +81,20 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-function postJson<T>(path: string, payload: unknown): Promise<T> {
-  return request<T>(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+function postJson<T>(
+  path: string,
+  payload: unknown,
+  feature?: LlmFeature,
+): Promise<T> {
+  return request<T>(
+    path,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    feature,
+  );
 }
 
 // AI が考えている感じを出すため、デモデータは少し待ってから返す
@@ -110,7 +141,7 @@ export function postReview(payload: ReviewRequest): Promise<ReviewResponse> {
       findings: demoReviewFindings(payload.commit.sha),
     }));
   }
-  return postJson<ReviewResponse>("/api/review", payload);
+  return postJson<ReviewResponse>("/api/review", payload, "review");
 }
 
 export function postTeacherQuestions(
@@ -119,21 +150,29 @@ export function postTeacherQuestions(
   if (isDemoMode()) {
     return demo(1800, () => ({ questions: demoTeacherQuestions(payload) }));
   }
-  return postJson<TeacherQuestionsResponse>("/api/teacher/questions", payload);
+  return postJson<TeacherQuestionsResponse>(
+    "/api/teacher/questions",
+    payload,
+    "teacher",
+  );
 }
 
 export function postTeacherTurn(
   payload: TeacherTurnRequest,
 ): Promise<TeacherTurnResponse> {
   if (isDemoMode()) return demo(1500, () => demoTeacherTurn(payload));
-  return postJson<TeacherTurnResponse>("/api/teacher/turn", payload);
+  return postJson<TeacherTurnResponse>("/api/teacher/turn", payload, "teacher");
 }
 
 export function postTeacherFeedback(
   payload: TeacherFeedbackRequest,
 ): Promise<TeacherFeedbackResponse> {
   if (isDemoMode()) return demo(1500, () => demoTeacherFeedback(payload));
-  return postJson<TeacherFeedbackResponse>("/api/teacher/feedback", payload);
+  return postJson<TeacherFeedbackResponse>(
+    "/api/teacher/feedback",
+    payload,
+    "teacher",
+  );
 }
 
 // フック（F-13）の受け取り箱
@@ -158,12 +197,12 @@ export function postMapGenerate(
       map: demoWorkflowMap(payload, new Date().toISOString()),
     }));
   }
-  return postJson<MapGenerateResponse>("/api/map/generate", payload);
+  return postJson<MapGenerateResponse>("/api/map/generate", payload, "map");
 }
 
 export function postMapUpdate(
   payload: MapUpdateRequest,
 ): Promise<MapUpdateResponse> {
   if (isDemoMode()) return demo(1500, () => demoMapUpdate(payload));
-  return postJson<MapUpdateResponse>("/api/map/update", payload);
+  return postJson<MapUpdateResponse>("/api/map/update", payload, "map");
 }

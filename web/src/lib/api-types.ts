@@ -182,3 +182,21 @@ export type MapUpdateResponse = {
   ops: MapOp[];
   workspaceSha?: string; // 今回読んだワークスペースのコミット
 };
+
+// ---- AI の設定と使用量（F-17） ----
+// AI を呼ぶ API（/api/review、/api/teacher/*、/api/map/*）は、本文ではなく HTTP ヘッダーでやりとりする。
+// リクエスト：X-LLM-Model、X-LLM-Effort（どちらも省略可）。レスポンス：X-LLM-Usage（LlmUsage の JSON）
+
+export type LlmModel = "claude-haiku-5-5" | "claude-sonnet-5-5" | "claude-opus-5-5";
+export type LlmEffort = "low" | "medium" | "high";
+
+// 1 回のリクエストで AI を呼んだ分の合計
+export type LlmUsage = {
+  model: LlmModel;
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  costUsd: number; // 単価表から計算した目安（米ドル）
+};
