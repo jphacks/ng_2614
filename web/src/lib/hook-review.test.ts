@@ -44,3 +44,24 @@ describe("buildHookReviewRequest", () => {
     expect(req.headMoved).toBe(true);
   });
 });
+
+describe("buildHookReviewRequest の AI の最終報告", () => {
+  const theme = { name: "n", question: "q", method: "m", evaluation: "e" };
+  const commit = { sha: "", message: "", url: "", files: [], truncated: false };
+  const extras = {
+    earlierPrompts: [],
+    observedErrors: [],
+    generatedFiles: [],
+    headMoved: false,
+  };
+
+  it("報告があれば渡し、無ければ項目ごと付けない", () => {
+    expect(
+      buildHookReviewRequest(theme, "p", commit, { ...extras, aiReport: "r" })
+        .aiReport,
+    ).toBe("r");
+    expect(
+      "aiReport" in buildHookReviewRequest(theme, "p", commit, extras),
+    ).toBe(false);
+  });
+});

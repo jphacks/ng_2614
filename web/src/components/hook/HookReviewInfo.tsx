@@ -1,8 +1,13 @@
 import type { Review } from "@/lib/types";
 
-// フック（F-13）で届いた判定の、作業中のエラー・できたファイル・注意
+// フック（F-13）で届いた判定の、作業中のエラー・AI の最終報告・できたファイル・注意
 
 const LONG_OUTPUT = 300;
+
+const KIND_LABEL = {
+  failed: "失敗したコマンド",
+  in_output: "出力に出たエラー",
+} as const;
 
 export function HookReviewInfo({ review }: { review: Review }) {
   const errors = review.observedErrors ?? [];
@@ -20,7 +25,8 @@ export function HookReviewInfo({ review }: { review: Review }) {
         <section className="space-y-2">
           <h2 className="text-lg font-bold">作業中に起きたエラー</h2>
           <p className="text-sm text-gray-600">
-            Claude Code が実際に実行して失敗したものです（{errors.length} 件）。
+            Claude Code が作業中に実際に出したエラーです（{errors.length}{" "}
+            件）。コマンドが失敗したものと、コマンドは成功したが出力にエラーが出たもの（例外を捕まえて表示した、警告が出たなど）があります。
           </p>
           <ul className="space-y-2">
             {errors.map((e, i) => (
@@ -28,7 +34,12 @@ export function HookReviewInfo({ review }: { review: Review }) {
                 key={i}
                 className="space-y-1.5 rounded-lg border border-gray-200 p-3"
               >
-                <p className="text-xs font-bold text-gray-600">{e.tool}</p>
+                <p className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                  {e.tool}
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
+                    {KIND_LABEL[e.kind ?? "failed"]}
+                  </span>
+                </p>
                 <pre className="whitespace-pre-wrap break-words rounded bg-gray-50 p-2 font-mono text-xs text-gray-800">
                   {e.input}
                 </pre>
@@ -45,6 +56,24 @@ export function HookReviewInfo({ review }: { review: Review }) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {review.aiReport && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-bold">AI の報告</h2>
+          <p className="text-sm text-gray-600">
+            作業を終えたときの Claude Code 自身の報告です。AI
+            の自己申告なので、差分と合わせて確かめてください。
+          </p>
+          <details className="rounded-lg border border-gray-200 p-3">
+            <summary className="cursor-pointer text-sm text-blue-700">
+              報告を読む
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">
+              {review.aiReport}
+            </p>
+          </details>
         </section>
       )}
 
