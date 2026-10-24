@@ -1,6 +1,7 @@
-// コードの差分（unified diff の patch）の表示（F-14）。追加は緑、削除は赤で示す。
+// コードの差分（unified diff の patch）の表示（F-14）。追加は緑、削除は赤で示し、行番号を付ける。
 
 import type { DiffFile } from "@/lib/api-types";
+import { parsePatch } from "./patch-lines";
 
 const STATUS_LABEL: Record<string, string> = {
   added: "追加",
@@ -9,26 +10,75 @@ const STATUS_LABEL: Record<string, string> = {
   renamed: "名前の変更",
 };
 
-function lineClass(line: string): string {
-  if (line.startsWith("@@")) return "bg-blue-50 text-blue-800";
-  if (line.startsWith("+")) return "bg-green-50 text-green-900";
-  if (line.startsWith("-")) return "bg-red-50 text-red-900";
-  if (line.startsWith("\\")) return "text-gray-400"; // \ No newline at end of file
-  return "text-gray-700";
-}
+const ROW_CLASS = {
+  add: "bg-green-50 text-green-900",
+  del: "bg-red-50 text-red-900",
+  ctx: "text-gray-700",
+} as const;
 
+const NUM_CLASS = {
+  add: "bg-green-100/60 text-green-700",
+  del: "bg-red-100/60 text-red-700",
+  ctx: "text-gray-400",
+} as const;
+
+const MARK = { add: "+", del: "-", ctx: " " } as const;
+
+// 行番号（元・変更後）と、変更のない行を省いたところの印を付けて出す
 export function PatchView({ patch }: { patch: string }) {
+  const rows = parsePatch(patch);
   return (
-    <pre className="overflow-x-auto rounded-md border border-gray-200 bg-white py-1 font-mono text-xs leading-5">
-      {patch.split("\n").map((line, i) => (
-        <span
-          key={i}
-          className={`block whitespace-pre px-3 ${lineClass(line)}`}
-        >
-          {line || " "}
-        </span>
-      ))}
-    </pre>
+    <div className="overflow-x-auto rounded-md border border-gray-200 bg-white font-mono text-xs leading-5">
+      <table className="w-full border-collapse">
+        <tbody>
+          {rows.map((row, i) => {
+            if (row.kind === "gap") {
+              // 先頭のハンクで省いた行も見出しも無ければ、何も出さない
+              if (row.skipped === 0 && !row.context && i === 0) return null;
+              return (
+                <tr key={i} className="bg-blue-50 text-blue-800">
+                  <td colSpan={4} className="px-3 py-0.5 font-sans">
+                    {row.skipped > 0 ? `⋯ 変更のない ${row.skipped} 行` : "⋯"}
+                    {row.context && (
+                      <span className="ml-2 font-mono text-blue-700/80">
+                        {row.context}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            }
+            if (row.kind === "note") {
+              return (
+                <tr key={i} className="text-gray-400">
+                  <td colSpan={4} className="px-3">
+                    {row.text}
+                  </td>
+                </tr>
+              );
+            }
+            return (
+              <tr key={i} className={ROW_CLASS[row.kind]}>
+                <td
+                  className={`w-10 select-none border-r border-gray-100 px-2 text-right tabular-nums ${NUM_CLASS[row.kind]}`}
+                >
+                  {row.oldNo ?? ""}
+                </td>
+                <td
+                  className={`w-10 select-none border-r border-gray-100 px-2 text-right tabular-nums ${NUM_CLASS[row.kind]}`}
+                >
+                  {row.newNo ?? ""}
+                </td>
+                <td className="w-4 select-none pl-2 text-center">
+                  {MARK[row.kind]}
+                </td>
+                <td className="whitespace-pre pr-3">{row.text || " "}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

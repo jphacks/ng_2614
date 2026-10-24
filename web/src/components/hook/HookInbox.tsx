@@ -16,21 +16,22 @@ import { findThemeByRepo, newId, nowIso, saveHookReview } from "@/lib/storage";
 import type { Review } from "@/lib/types";
 import { headline } from "@/components/review/labels";
 
-// Claude Code のフック（F-13）で届いた変更の知らせ。全画面のヘッダーの下に出す
+// Claude Code のフック（F-13）で届いた変更の知らせ。全画面の右下にトーストで出す
 
 const POLL_MS = 3000;
-const MAX_VISIBLE = 5;
+const MAX_VISIBLE = 3;
 const MAX_KEPT = 20;
 
 type Notice =
   | { id: string; kind: "unregistered"; repo: string }
-  | { id: string; kind: "judging"; title: string }
+  | { id: string; kind: "judging"; title: string; startedAt: number }
   | {
       id: string;
       kind: "done";
       title: string;
       reviewId: string;
       hidden: number;
+      impact: number; // 隠れた問題のうち、研究への影響ありの数
       extra: number;
     }
   | {
@@ -71,7 +72,7 @@ export function HookInbox() {
   const judge = useCallback(
     async (change: HookChange) => {
       const title = titleOf(change.prompt);
-      upsert({ id: change.id, kind: "judging", title });
+      upsert({ id: change.id, kind: "judging", title, startedAt: Date.now() });
       try {
         const theme = findThemeByRepo(change.repo);
         if (!theme) throw new Error("プロジェクトが見つかりません。");
@@ -116,6 +117,9 @@ export function HookInbox() {
           title,
           reviewId: review.id,
           hidden: findings.filter((f) => f.type === "hidden_problem").length,
+          impact: findings.filter(
+            (f) => f.type === "hidden_problem" && f.researchImpact?.exists,
+          ).length,
           extra: findings.filter((f) => f.type === "extra_addition").length,
         });
       } catch (e) {
@@ -138,7 +142,12 @@ export function HookInbox() {
   const handle = useCallback(
     (id: string, prompt: string) => {
       seen.current.add(id);
-      upsert({ id, kind: "judging", title: titleOf(prompt) });
+      upsert({
+        id,
+        kind: "judging",
+        title: titleOf(prompt),
+        startedAt: Date.now(),
+      });
       enqueue(async () => {
         let change: HookChange;
         try {
@@ -215,33 +224,56 @@ export function HookInbox() {
     enqueue(() => judge(change));
   }
 
-  const visible = notices.slice(0, MAX_VISIBLE);
-  if (visible.length === 0) return null;
+  function dismissAll() {
+    for (const n of notices) dismissed.current.add(n.id);
+    setNotices((prev) => prev.filter((n) => n.kind === "judging"));
+  }
+
+  // 判定中の経過秒数を出すため、判定中の知らせがあるあいだ 1 秒ごとに描き直す
+  const judging = notices.some((n) => n.kind === "judging");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!judging) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [judging]);
+
+  if (notices.length === 0) return null;
+  // notices は新しい順。画面では新しいものを下に置く
+  const visible = notices.slice(0, MAX_VISIBLE).reverse();
+  const older = notices.length - visible.length;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-2 px-4 pt-4">
+    <div
+      aria-live="polite"
+      className="fixed bottom-4 right-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+    >
+      {older > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white/95 px-3 py-1.5 text-xs text-gray-600 shadow-sm backdrop-blur">
+          <span>ほか {older} 件の知らせ</span>
+          <button
+            type="button"
+            onClick={dismissAll}
+            className="text-blue-700 hover:underline"
+          >
+            すべて閉じる
+          </button>
+        </div>
+      )}
       {visible.map((n) => (
         <div
           key={n.id}
           role="status"
-          className={`flex items-start justify-between gap-3 rounded-lg border p-3 text-sm ${
-            n.kind === "error"
-              ? "border-red-300 bg-red-50 text-red-800"
-              : n.kind === "done"
-                ? "border-green-300 bg-green-50 text-green-900"
-                : n.kind === "unregistered"
-                  ? "border-yellow-300 bg-yellow-50 text-yellow-900"
-                  : "border-blue-200 bg-blue-50 text-blue-900"
-          }`}
+          className={`flex items-start gap-3 rounded-xl border bg-white p-3 text-sm text-gray-800 shadow-lg ${ACCENT[toneOf(n)]}`}
         >
           <div className="min-w-0 flex-1 space-y-1">
-            <NoticeBody notice={n} onRetry={retry} />
+            <NoticeBody notice={n} now={now} onRetry={retry} />
           </div>
           <button
             type="button"
             onClick={() => dismiss(n.id)}
             aria-label="閉じる"
-            className="shrink-0 px-1 text-lg leading-none opacity-60 hover:opacity-100"
+            className="-mr-1 -mt-1 shrink-0 rounded px-1.5 text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
           >
             ×
           </button>
@@ -251,21 +283,49 @@ export function HookInbox() {
   );
 }
 
+type Tone = "info" | "ok" | "warn" | "danger";
+
+// 左の太い線の色で、知らせの種類を分ける
+const ACCENT: Record<Tone, string> = {
+  info: "border-gray-200 border-l-4 border-l-blue-500",
+  ok: "border-gray-200 border-l-4 border-l-green-500",
+  warn: "border-gray-200 border-l-4 border-l-amber-500",
+  danger: "border-red-200 border-l-4 border-l-red-500",
+};
+
+function toneOf(n: Notice): Tone {
+  switch (n.kind) {
+    case "judging":
+      return "info";
+    case "unregistered":
+      return "warn";
+    case "error":
+      return "danger";
+    case "done":
+      return n.impact > 0 ? "danger" : n.hidden > 0 ? "warn" : "ok";
+  }
+}
+
 function NoticeBody({
   notice,
+  now,
   onRetry,
 }: {
   notice: Notice;
+  now: number;
   onRetry: (change: HookChange) => void;
 }) {
   switch (notice.kind) {
     case "unregistered":
       return (
         <>
-          <p>
+          <p className="text-xs font-medium text-amber-700">
+            プロジェクトが未登録です
+          </p>
+          <p className="break-words">
             {notice.repo
-              ? `Claude Code から変更が届いています（リポジトリ：${notice.repo}）。このリポジトリのプロジェクトが登録されていないため判定できません。`
-              : "Claude Code から変更が届いていますが、リポジトリを特定できなかったため判定できません。"}
+              ? `Claude Code から ${notice.repo} の変更が届きましたが、このリポジトリのプロジェクトが無いため判定できません。`
+              : "Claude Code から変更が届きましたが、リポジトリを特定できなかったため判定できません。"}
           </p>
           <Link
             href={
@@ -273,41 +333,65 @@ function NoticeBody({
                 ? `/projects/new?repo=${encodeURIComponent(notice.repo)}`
                 : "/projects/new"
             }
-            className="text-blue-700 underline"
+            className="inline-block rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700"
           >
             プロジェクトを登録する
           </Link>
         </>
       );
-    case "judging":
-      return <p>Claude Code の作業を判定中…（{notice.title}）</p>;
+    case "judging": {
+      const sec = Math.max(0, Math.floor((now - notice.startedAt) / 1000));
+      return (
+        <>
+          <p className="flex items-center gap-2 text-xs font-medium text-blue-700">
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"
+            />
+            Claude Code の作業を判定中… {sec} 秒
+          </p>
+          <p className="break-words">{notice.title}</p>
+        </>
+      );
+    }
     case "done":
       return (
         <>
-          <p className="break-words font-medium">
-            判定できました：{notice.title}
+          <p
+            className={`text-xs font-medium ${
+              notice.impact > 0
+                ? "text-red-700"
+                : notice.hidden > 0
+                  ? "text-amber-700"
+                  : "text-green-700"
+            }`}
+          >
+            {notice.impact > 0
+              ? `研究への影響あり ${notice.impact} 件・隠れた問題 ${notice.hidden} 件`
+              : notice.hidden > 0
+                ? `隠れた問題 ${notice.hidden} 件`
+                : "隠れた問題はありません"}
+            {notice.extra > 0 && `・余計な追加 ${notice.extra} 件`}
           </p>
-          <p>
-            隠れた問題 {notice.hidden} 件・余計な追加 {notice.extra} 件
-            <Link
-              href={`/reviews/${notice.reviewId}`}
-              className="ml-3 text-blue-700 underline"
-            >
-              結果を見る
-            </Link>
-          </p>
+          <p className="break-words">{notice.title}</p>
+          <Link
+            href={`/reviews/${notice.reviewId}`}
+            className="inline-block rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            結果を見る
+          </Link>
         </>
       );
     case "error":
       return (
         <>
-          <p className="break-words">
-            判定に失敗しました（{notice.title}）：{notice.message}
-          </p>
+          <p className="text-xs font-medium text-red-700">判定に失敗しました</p>
+          <p className="break-words">{notice.title}</p>
+          <p className="break-words text-xs text-gray-600">{notice.message}</p>
           <button
             type="button"
             onClick={() => onRetry(notice.change)}
-            className="rounded border border-red-600 px-3 py-1 text-red-700 hover:bg-red-100"
+            className="rounded-md border border-red-300 px-3 py-1 text-xs text-red-700 hover:bg-red-50"
           >
             もう一度判定する
           </button>
