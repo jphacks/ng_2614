@@ -92,7 +92,7 @@ export function MapStrip() {
       {loaded.map ? (
         <StripBody themeId={loaded.themeId} map={loaded.map} />
       ) : (
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-3 px-4 py-1 text-xs text-gray-600">
+        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-x-3 px-4 py-1 text-xs text-gray-600 sm:px-6 lg:px-8">
           <span>このプロジェクトの作業フローマップはまだありません</span>
           <Link
             href={`/themes/${encodeURIComponent(loaded.themeId)}/map`}

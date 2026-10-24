@@ -89,6 +89,7 @@ export function MapBoard({
       </div>
 
       <div className="overflow-x-auto pb-2">
+        {/* レーンは盤面の幅を等分する（最小 160px）。詳細パネルが開いて狭くなっても縮めて収め、入らないときだけこの部分を横にスクロールする */}
         <div className="flex items-start gap-3">
           {phases.map((phase) => (
             <PhaseLane

@@ -11,7 +11,7 @@ export type ProjectCard = {
 
 export function ProjectList({ projects }: { projects: ProjectCard[] }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {projects.map(
         ({ theme, reviewCount, savedProblemCount, lastImportedAt }) => (
           <li key={theme.id}>

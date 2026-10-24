@@ -73,12 +73,12 @@ export function StripBody({
 
   return (
     <div
-      className={`relative mx-auto max-w-4xl ${
+      className={`relative mx-auto max-w-screen-2xl ${
         open ? "max-h-[min(30vh,240px)] overflow-y-auto" : ""
       }`}
     >
       {/* 見出しの行。開いて中身をスクロールしても見えるよう、帯の中で固定する */}
-      <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-white px-3 sm:px-4">
+      <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-white px-4 sm:px-6 lg:px-8">
         <span className="shrink-0 text-xs font-semibold text-gray-800">
           <span className="hidden sm:inline">作業フローマップ</span>
           <span className="sm:hidden">マップ</span>
@@ -199,7 +199,7 @@ export function StripBody({
       </div>
 
       {open && (
-        <div className="px-3 pb-1.5 sm:px-4">
+        <div className="px-4 pb-1.5 sm:px-6 lg:px-8">
           {unconfirmed > 0 && (
             <p className="mb-1 text-[11px] text-amber-800">
               AI が作ったままで、まだ確認していないものが {unconfirmed} 件あります。

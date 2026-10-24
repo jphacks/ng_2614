@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+// 詳細パネルを盤面の右に置く画面の幅（Tailwind の lg と合わせる）。これより狭いときは盤面の下に出す
+const DETAIL_BESIDE_QUERY = "(min-width: 1024px)";
 import { useDemoMode } from "@/lib/demo/mode";
 import { undoLastUpdate } from "@/lib/map/apply";
 import {
@@ -62,6 +65,7 @@ export default function WorkflowMapPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   // URL の ?task=<taskId>（画面上部の帯から飛んでくる）。マップを読めたら一度だけ使う
   const pendingTaskRef = useRef<string | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -124,6 +128,22 @@ export default function WorkflowMapPage() {
       el?.scrollIntoView({ block: "center" });
     }, 50);
   }, [state]);
+
+  // 選んだものが見えるようにする。広い画面では詳細パネルが開いて盤面が狭くなるので、
+  // 選んだカード（サブタスク）が見える位置まで盤面をスクロールする。狭い画面ではパネルが盤面の下に出るので、パネルまでスクロールする
+  useEffect(() => {
+    if (!selectedId) return;
+    const timer = window.setTimeout(() => {
+      if (window.matchMedia(DETAIL_BESIDE_QUERY).matches) {
+        document
+          .getElementById(`map-task-${selectedId}`)
+          ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      } else {
+        detailRef.current?.scrollIntoView({ block: "start" });
+      }
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [selectedId]);
 
   if (state.status === "loading") {
     return <p className="text-sm text-gray-500">読み込み中...</p>;
@@ -426,9 +446,9 @@ export default function WorkflowMapPage() {
             )}
           </div>
 
-          {/* main（max-w-4xl）より広く使う。transform で動かすとページに横スクロールが出るので、余白で中央に寄せる */}
-          <div className="ml-[calc(50%-min(40rem,calc(50vw-2rem)))] w-[min(80rem,calc(100vw-4rem))]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+          {/* 画面の幅が 1024px 以上なら、詳細パネルを盤面の右に置き、スクロールしても画面に残す */}
+          <div>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
               <div className="min-w-0 flex-1">
                 <MapBoard
                   map={map}
@@ -450,7 +470,10 @@ export default function WorkflowMapPage() {
                 )}
               </div>
               {selected && (
-                <div className="lg:w-96 lg:shrink-0">
+                <div
+                  ref={detailRef}
+                  className="scroll-mt-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[clamp(18rem,26vw,26rem)] lg:shrink-0 lg:overflow-y-auto"
+                >
                   <DetailPanel
                     map={map}
                     task={selected}

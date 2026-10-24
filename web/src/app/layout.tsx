@@ -27,22 +27,21 @@ export default function RootLayout({
         <div className="md:pr-[var(--map-side-w,0px)]">
           <header className="border-b border-gray-200">
             <DemoModeBanner />
-            <div className="relative">
-              {/* メニューのボタンは画面の左端に置く。狭い画面では、アプリ名と重ならないよう左を空ける */}
-              <div className="absolute inset-y-0 left-3 flex items-center">
+            {/* メニューのボタンはアプリ名の左に並べる。枠の左右の余白は本文（main）と合わせる */}
+            <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3">
                 <NavMenu />
-              </div>
-              <div className="mx-auto flex max-w-4xl items-center justify-between py-3 pr-4 pl-16 min-[1024px]:pl-4">
                 <Link href="/" className="font-bold">
                   TAZUNA
                 </Link>
-                <DemoModeToggle />
               </div>
+              <DemoModeToggle />
             </div>
           </header>
           <MapStrip />
           <HookInbox />
-          <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+          {/* 全体の枠は最大 1536px。本文の幅は画面ごとに決める（components/layout/PageWidth.tsx） */}
+          <main className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
         </div>
       </body>
     </html>
