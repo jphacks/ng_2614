@@ -10,7 +10,7 @@ import { NavMenu } from "@/components/nav/NavMenu";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "研究の理解ログ（仮）",
+  title: "TAZUNA",
   description:
     "AIが黙って解決した問題を見逃さず、研究と実装の理解を取り戻す Web アプリ",
 };
@@ -34,7 +34,7 @@ export default function RootLayout({
               </div>
               <div className="mx-auto flex max-w-4xl items-center justify-between py-3 pr-4 pl-16 min-[1024px]:pl-4">
                 <Link href="/" className="font-bold">
-                  研究の理解ログ（仮）
+                  TAZUNA
                 </Link>
                 <DemoModeToggle />
               </div>
