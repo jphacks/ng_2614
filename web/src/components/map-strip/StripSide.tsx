@@ -12,9 +12,9 @@ import {
   focusTasks,
   phaseSummaries,
 } from "@/lib/map/summary";
-import { statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
+import { effectiveStatus, statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
 import type { MapStatus, WorkflowMap } from "@/lib/types";
-import { STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
+import { STATUS_BADGE, STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
 import { SideLane } from "./SideLane";
 import { SIDE_WIDTH } from "./sizes";
 
@@ -37,6 +37,7 @@ export function StripSide({
   const summaries = useMemo(() => phaseSummaries(map), [map]);
   const focus = useMemo(() => focusTasks(map), [map]);
   const focusIds = useMemo(() => new Set(focus.map((t) => t.id)), [focus]);
+  const phaseById = useMemo(() => new Map(map.phases.map((p) => [p.id, p])), [map]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
   const unconfirmed = unconfirmedCount(map);
   const parentsWithSubs = useMemo(
@@ -100,30 +101,53 @@ export function StripSide({
             </Link>
           </div>
 
+          {/* 今ここはいちばん上に囲みで出す。タスクの切れ目が分かるよう、1件ずつ区切ってレーンと状態を添える */}
+          {focus.length > 0 && (
+            <section
+              aria-label="今ここ"
+              className="mt-2 rounded-md border border-indigo-200 bg-indigo-50 p-1.5"
+            >
+              <h2 className="flex items-baseline justify-between text-xs font-semibold text-indigo-800">
+                今ここ
+                <span className="text-[10px] font-normal text-indigo-700">
+                  {focus.length} 件
+                </span>
+              </h2>
+              <ul className="mt-1 divide-y divide-indigo-100">
+                {focus.map((t) => {
+                  const phase = phaseById.get(t.phaseId);
+                  const status = effectiveStatus(map, t);
+                  return (
+                    <li key={t.id} className="min-w-0 py-1 first:pt-0 last:pb-0">
+                      <Link
+                        href={`${mapHref}?task=${encodeURIComponent(t.id)}`}
+                        className="group block"
+                      >
+                        <span className="flex flex-wrap items-center gap-1 text-[10px] leading-4 text-gray-600">
+                          {phase?.name}
+                          {phase && (
+                            <span
+                              className={`rounded px-1 font-medium ${STATUS_BADGE[status]}`}
+                            >
+                              {statusLabel(phase, status)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="block break-words text-xs font-medium leading-snug text-gray-900 group-hover:underline">
+                          {t.title}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
           {unconfirmed > 0 && (
             <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
               未確認 {unconfirmed} 件（AI が作ったままで、まだ確認していません）
             </p>
-          )}
-
-          {focus.length > 0 && (
-            <section aria-label="今ここ" className="mt-1.5">
-              <h2 className="text-[11px] font-semibold text-indigo-700">
-                今ここ
-              </h2>
-              <ul className="mt-0.5 space-y-0.5">
-                {focus.map((t) => (
-                  <li key={t.id} className="min-w-0 text-[11px] leading-snug">
-                    <Link
-                      href={`${mapHref}?task=${encodeURIComponent(t.id)}`}
-                      className="break-words text-gray-900 hover:underline"
-                    >
-                      {t.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
           )}
 
           {parentsWithSubs.length > 0 && (
@@ -177,7 +201,11 @@ export function StripSide({
                   key={s.phase.id}
                   title={`${s.phase.name}：${text}`}
                   aria-label={`${s.phase.name}：${text}`}
-                  className="flex flex-col items-center rounded bg-gray-100 px-0.5 py-1 text-gray-700"
+                  className={`flex flex-col items-center rounded px-0.5 py-1 ${
+                    hasFocus
+                      ? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-300"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
                 >
                   <span
                     aria-hidden="true"

@@ -60,7 +60,11 @@ function SideTaskRow({
   const href = `/themes/${encodeURIComponent(themeId)}/map?task=${encodeURIComponent(task.id)}`;
 
   return (
-    <li className="min-w-0 rounded border border-gray-200 bg-white px-1.5 py-1">
+    <li
+      className={`min-w-0 rounded border px-1.5 py-1 ${
+        isFocus ? "border-indigo-300 bg-indigo-50 ring-1 ring-indigo-200" : "border-gray-200 bg-white"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-0.5">
         <span
           className={`inline-block rounded px-1 text-[10px] font-medium leading-4 ${STATUS_BADGE[status]}`}
