@@ -205,7 +205,7 @@ function RepoLabel({ repo }: { repo: RepoSummary }) {
           </span>
         )}
       </p>
-      <p className="mt-0.5 text-xs text-gray-500">
+      <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
         {[
           repo.language,
           repo.pushedAt && `最後の push ${formatDate(repo.pushedAt)}`,
