@@ -3,10 +3,13 @@
 
 import type {
   Finding,
+  MapOp,
   ObservedError,
   QuestionLayer,
   ResearchPurpose,
+  Review,
   TeacherTurn,
+  WorkflowMap,
 } from "./types";
 
 // すべての API は失敗時にこの形で返す（HTTP ステータスは 4xx / 5xx）
@@ -129,3 +132,28 @@ export type HookChangesResponse = {
 
 // DELETE /api/hook/changes/[id]：受け取り箱から取り出す（中身を返して削除する）。無ければ 404
 export type HookChangeResponse = { change: HookChange };
+
+// ---- 作業フローマップ（F-15） ----
+// 今はデモモード（F-12）でだけ動く。画面は api-client.ts の関数を通して呼び、
+// デモモードでないときはまだ使えない旨のエラーになる（Route Handlers は未実装）
+
+// POST /api/map/generate：research-workspace と実装リポジトリを読んでマップを作る（場面1）
+export type MapGenerateRequest = {
+  themeId: string;
+  theme: ResearchPurpose;
+  repo: string; // 実装リポジトリ "owner/name"
+  workspaceRepo?: string;
+  workspaceProject?: string;
+};
+export type MapGenerateResponse = { map: WorkflowMap };
+
+// POST /api/map/update：取り込んだ変更と判定から、マップへの変更の一覧を返す（場面3）
+export type MapUpdateRequest = {
+  theme: ResearchPurpose;
+  map: WorkflowMap;
+  review: Review;
+};
+export type MapUpdateResponse = {
+  ops: MapOp[];
+  workspaceSha?: string; // 今回読んだワークスペースのコミット
+};
