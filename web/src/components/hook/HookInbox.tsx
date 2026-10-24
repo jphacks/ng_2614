@@ -12,7 +12,7 @@ import type { DiffResponse, HookChange } from "@/lib/api-types";
 import { buildHookReviewRequest, hookPurpose } from "@/lib/hook-review";
 import { findThemeByRepo, newId, nowIso, saveHookReview } from "@/lib/storage";
 import type { Review } from "@/lib/types";
-import { firstLine } from "@/components/review/labels";
+import { headline } from "@/components/review/labels";
 
 // Claude Code のフック（F-13）で届いた変更の知らせ。全画面のヘッダーの下に出す
 
@@ -40,7 +40,7 @@ type Notice =
     };
 
 function titleOf(prompt: string): string {
-  return firstLine(prompt) || "依頼文なし";
+  return headline(prompt) || "依頼文なし";
 }
 
 function errorMessage(e: unknown): string {

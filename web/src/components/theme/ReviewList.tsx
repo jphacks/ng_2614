@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { FindingType, Review } from "@/lib/types";
+import { headline } from "@/components/review/labels";
 import { firstLine, formatDate, shortSha } from "./format";
 
 const TYPE_LABELS: { type: FindingType; label: string; className: string }[] = [
@@ -40,7 +41,7 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
             >
               <p className="text-sm font-medium text-gray-900">
                 {isHook
-                  ? firstLine(review.purpose) || "（依頼文なし）"
+                  ? headline(review.purpose) || "（依頼文なし）"
                   : firstLine(review.commitMessage) ||
                     "(コミットメッセージなし)"}
               </p>

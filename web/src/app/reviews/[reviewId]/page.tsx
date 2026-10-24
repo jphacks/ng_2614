@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { getReview, updateFinding } from "@/lib/storage";
 import type { FindingType, Review } from "@/lib/types";
 import { FindingSection } from "@/components/review/FindingSection";
-import { firstLine, shortSha } from "@/components/review/labels";
+import { firstLine, headline, shortSha } from "@/components/review/labels";
 import { HookReviewInfo } from "@/components/hook/HookReviewInfo";
 import { RejudgePanel } from "@/components/hook/RejudgePanel";
 
@@ -66,7 +66,7 @@ export default function ReviewPage() {
         </Link>
         <h1 className="text-2xl font-bold">
           {isHook
-            ? firstLine(current.purpose) || "（依頼文なし）"
+            ? headline(current.purpose) || "（依頼文なし）"
             : firstLine(current.commitMessage) || "（メッセージなし）"}
         </h1>
         <p className="text-sm text-gray-500">
