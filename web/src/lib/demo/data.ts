@@ -482,7 +482,13 @@ function toViewpoints(q: DemoQuestion): Viewpoint[] {
 export function demoTeacherQuestions(
   req: TeacherQuestionsRequest,
 ): TeacherQuestion[] {
-  const list: { q: DemoQuestion; findingId?: string }[] = req.problems
+  // デモ用のプロジェクトで問題を1つも保存していないときは、題材の判定の隠れた問題を保存したものとして聞く
+  // （プロジェクト画面の「先生モード」から入っても、ピッチと同じ正規化の質問から始まるように）
+  const problems =
+    req.problems.length === 0 && req.theme.name === demoTheme.name
+      ? demoReviewFindings(MAIN_SHA).filter((f) => f.type === "hidden_problem")
+      : req.problems;
+  const list: { q: DemoQuestion; findingId?: string }[] = problems
     .slice(0, 2)
     .map((p) => ({ q: questionFor(p), findingId: p.id }));
   list.push({ q: evaluationQuestion(req.theme.evaluation) });
