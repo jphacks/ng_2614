@@ -79,7 +79,7 @@ export function ChatComposer({
       className="sticky bottom-0 z-10 border-t border-hair bg-sheet px-3 py-3"
     >
       {status && (
-        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
           {status}
         </div>
       )}

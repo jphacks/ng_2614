@@ -64,6 +64,7 @@ export type Review = {
   generatedFiles?: string[]; // 実行でできたファイル（実験の出力。中身は送らない）
   aiReport?: string; // AI の最終報告（3,000文字まで）
   headMoved?: boolean; // 作業中に pull やブランチの切り替えがあった
+  unopened?: boolean; // フックで届いて、まだ判定結果（S-3）で開いていない。無いときは開いた扱い
   createdAt: string; // ISO 8601
   findings: Finding[];
 };

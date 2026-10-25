@@ -373,10 +373,9 @@ export default function TeacherPage() {
               </span>
               <LayerBadge layer={current.layer} />
               <span>
-                ・ 言えた観点 {covered.length} / {current.viewpoints.length}
-                {" ・ "}
-                あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます
+                言えた観点 {covered.length} / {current.viewpoints.length}
               </span>
+              <span>あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます</span>
             </>
           }
         />

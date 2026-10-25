@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchDiff } from "@/lib/api-client";
 import type { DiffResponse } from "@/lib/api-types";
 import { getDiff, saveDiff } from "@/lib/diff-store";
-import { getReview, getTheme, updateFinding } from "@/lib/storage";
+import {
+  getReview,
+  getTheme,
+  markReviewOpened,
+  saveAllHiddenProblems,
+  updateFinding,
+} from "@/lib/storage";
 import type { FindingType, Review } from "@/lib/types";
 import { FileDiffList } from "@/components/review/DiffView";
-import { FindingSection } from "@/components/review/FindingSection";
+import { FindingSection, SECTION_ID } from "@/components/review/FindingSection";
 import { firstLine, headline, shortSha } from "@/components/review/labels";
 import { HookReviewInfo } from "@/components/hook/HookReviewInfo";
 import { MapUpdateNotice } from "@/components/review/MapUpdateNotice";
@@ -17,6 +23,7 @@ import { RejudgePanel } from "@/components/hook/RejudgePanel";
 
 export default function ReviewPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
+  const router = useRouter();
   // undefined: 読み込み中 / null: 見つからない
   const [review, setReview] = useState<Review | null | undefined>(undefined);
 
@@ -24,7 +31,8 @@ export default function ReviewPage() {
   const [diff, setDiff] = useState<DiffResponse | null | undefined>(undefined);
 
   useEffect(() => {
-    setReview(getReview(reviewId) ?? null);
+    // 開いたら、フックで届いた判定の「未確認」の印を消す
+    setReview(markReviewOpened(reviewId) ?? null);
   }, [reviewId]);
 
   useEffect(() => {
@@ -70,9 +78,16 @@ export default function ReviewPage() {
 
   const byType = (type: FindingType) =>
     current.findings.filter((f) => f.type === type);
-  const savedCount = current.findings.filter(
-    (f) => f.type === "hidden_problem" && f.saved,
-  ).length;
+  const hidden = byType("hidden_problem");
+  const savedCount = hidden.filter((f) => f.saved).length;
+  const impactCount = hidden.filter((f) => f.researchImpact?.exists).length;
+  const teacherHref = `/themes/${current.themeId}/teacher`;
+
+  // 保存していない隠れた問題をまとめて保存してから、先生モードへ（先生は保存した問題について聞く）
+  function saveAllAndAsk() {
+    saveAllHiddenProblems(current.id);
+    router.push(teacherHref);
+  }
 
 
   return (
@@ -99,6 +114,36 @@ export default function ReviewPage() {
             </>
           )}
         </p>
+        <nav
+          aria-label="判定の要約"
+          className="flex flex-wrap gap-x-5 gap-y-1 pt-1 text-sm"
+        >
+          <a
+            href={`#${SECTION_ID.hidden_problem}`}
+            className={`underline decoration-1 underline-offset-4 ${
+              impactCount > 0
+                ? "font-bold text-pen decoration-pen/40"
+                : hidden.length > 0
+                  ? "font-bold text-ink decoration-ink-3"
+                  : "text-ink-3 decoration-hair"
+            }`}
+          >
+            隠れた問題 {hidden.length}
+            {impactCount > 0 && `（研究への影響あり ${impactCount}）`}
+          </a>
+          <a
+            href={`#${SECTION_ID.extra_addition}`}
+            className="text-sky-ink underline decoration-sky/50 decoration-1 underline-offset-4"
+          >
+            余計な追加 {byType("extra_addition").length}
+          </a>
+          <a
+            href={`#${SECTION_ID.on_purpose}`}
+            className="text-mint-ink underline decoration-mint/50 decoration-1 underline-offset-4"
+          >
+            目的どおり {byType("on_purpose").length}
+          </a>
+        </nav>
         <div className="space-y-3 border-y border-ink py-3">
           <div>
             <h2 className="font-sans text-xs font-bold text-ink-2">作業の目的</h2>
@@ -142,6 +187,23 @@ export default function ReviewPage() {
         onChangeType={handleChangeType}
         onToggleSaved={handleToggleSaved}
       />
+      {hidden.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[4px] border border-hair bg-sheet px-4 py-3">
+          <p className="text-sm text-ink-2">
+            問題ログに保存：{savedCount} / {hidden.length} 件
+          </p>
+          {savedCount < hidden.length ? (
+            <button type="button" onClick={saveAllAndAsk} className="btn-primary">
+              まとめて保存して先生モードへ
+            </button>
+          ) : (
+            <Link href={teacherHref} className="btn-primary">
+              先生モードで理解を確かめる
+            </Link>
+          )}
+        </div>
+      )}
+
       <FindingSection
         type="extra_addition"
         findings={byType("extra_addition")}
@@ -191,8 +253,8 @@ export default function ReviewPage() {
           問題ログに保存した問題：{savedCount} 件
         </p>
         <Link
-          href={`/themes/${current.themeId}/teacher`}
-          className="btn-primary"
+          href={teacherHref}
+          className={hidden.length > 0 ? "btn" : "btn-primary"}
         >
           先生モードで理解を確かめる
         </Link>

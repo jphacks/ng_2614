@@ -175,6 +175,29 @@ export function updateFinding(
   return saveReview(updated);
 }
 
+// 判定結果（S-3）を開いたら、未確認の印を消す。変わったときだけ保存して知らせる
+export function markReviewOpened(reviewId: string): Review | undefined {
+  const review = getReview(reviewId);
+  if (!review?.unopened) return review;
+  const rest: Review = { ...review };
+  delete rest.unopened;
+  const saved = saveReview(rest);
+  notifyReviewsChanged();
+  return saved;
+}
+
+// 保存していない隠れた問題を、まとめて問題ログに保存する（S-3 の「まとめて保存して先生モードへ」）
+export function saveAllHiddenProblems(reviewId: string): Review | undefined {
+  const review = getReview(reviewId);
+  if (!review) return undefined;
+  return saveReview({
+    ...review,
+    findings: review.findings.map((f) =>
+      f.type === "hidden_problem" && !f.saved ? { ...f, saved: true } : f,
+    ),
+  });
+}
+
 // 問題ログ：保存した隠れた問題を、新しい順に返す
 export type SavedProblem = { review: Review; finding: Finding };
 
