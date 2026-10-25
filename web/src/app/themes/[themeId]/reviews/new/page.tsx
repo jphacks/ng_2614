@@ -40,6 +40,8 @@ export default function NewReviewPage() {
   const [purpose, setPurpose] = useState("");
   const [selectedSha, setSelectedSha] = useState<string | null>(null);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  // 「判定する」を押したのに足りないものがあったか（足りないものを知らせる）
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
   useEffect(() => {
     setTheme(getTheme(themeId) ?? null);
@@ -82,10 +84,19 @@ export default function NewReviewPage() {
       ? commits.commits.find((c) => c.sha === selectedSha)
       : undefined;
   const canSubmit = purpose.trim() !== "" && !!selectedCommit && !busy;
+  // ボタンは押せないようにせず、押したときに足りないものを出す（埋まったら消える）
+  const missing = [
+    ...(purpose.trim() === "" ? ["作業の目的を書いてください。"] : []),
+    ...(!selectedCommit ? ["取り込むコミットを選んでください。"] : []),
+  ];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!theme || !selectedCommit || !canSubmit) return;
+    if (!theme || !selectedCommit || !canSubmit) {
+      setTriedSubmit(true);
+      if (purpose.trim() === "") document.getElementById("purpose")?.focus();
+      return;
+    }
     try {
       setSubmit({ status: "fetching-diff" });
       const diff = await fetchDiff(theme.repo, selectedCommit.sha);
@@ -202,9 +213,17 @@ export default function NewReviewPage() {
             </div>
           )}
 
+          {triedSubmit && !busy && missing.length > 0 && (
+            <ul role="alert" className="space-y-0.5 text-sm text-pen">
+              {missing.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          )}
+
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={busy}
             className="btn-primary px-5"
           >
             {busy ? "判定中…" : submit.status === "error" ? "再試行する" : "判定する"}

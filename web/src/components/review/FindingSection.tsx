@@ -11,6 +11,13 @@ type Props = {
   onToggleSaved: (findingId: string, saved: boolean) => void;
 };
 
+// 判定の要約（S-3 の見出しの下）から飛ぶ先
+export const SECTION_ID: Record<FindingType, string> = {
+  hidden_problem: "hidden-problems",
+  extra_addition: "extra-additions",
+  on_purpose: "on-purpose",
+};
+
 const TITLE_STYLE: Record<FindingType, string> = {
   hidden_problem: "text-xl text-ink",
   extra_addition: "text-lg text-ink",
@@ -25,7 +32,7 @@ export function FindingSection({
   onToggleSaved,
 }: Props) {
   return (
-    <section>
+    <section id={SECTION_ID[type]} className="scroll-mt-16">
       <h2 className={`rule-head ${TITLE_STYLE[type]}`}>
         {FINDING_TYPE_LABEL[type]}（{findings.length}）
       </h2>

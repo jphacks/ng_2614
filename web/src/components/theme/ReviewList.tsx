@@ -41,6 +41,9 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
               className="block px-2 py-3 hover:bg-paper-2"
             >
               <p className="text-sm font-medium text-ink">
+                {review.unopened && (
+                  <span className="marker mr-2 text-xs">未確認</span>
+                )}
                 {isHook
                   ? headline(review.purpose) || "（依頼文なし）"
                   : firstLine(review.commitMessage) ||

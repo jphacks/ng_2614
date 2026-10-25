@@ -105,6 +105,7 @@ export function HookInbox() {
           generatedFiles: change.generatedFiles,
           headMoved: change.headMoved,
           aiReport: change.aiReport,
+          unopened: true, // 届いただけで、まだ開いていない
           createdAt: nowIso(),
           findings,
         };

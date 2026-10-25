@@ -14,6 +14,7 @@ import {
   listReviews,
   listSavedProblems,
   listThemes,
+  REVIEWS_CHANGED_EVENT,
   saveTheme,
 } from "@/lib/storage";
 
@@ -42,17 +43,23 @@ export default function Home() {
   }, [demoMode]);
 
   useEffect(() => {
-    setProjects(
-      listThemes().map((theme) => {
-        const reviews = listReviews(theme.id); // 新しい順
-        return {
-          theme,
-          reviewCount: reviews.length,
-          savedProblemCount: listSavedProblems(theme.id).length,
-          lastImportedAt: reviews[0]?.createdAt,
-        };
-      }),
-    );
+    const load = () =>
+      setProjects(
+        listThemes().map((theme) => {
+          const reviews = listReviews(theme.id); // 新しい順
+          return {
+            theme,
+            reviewCount: reviews.length,
+            unopenedCount: reviews.filter((r) => r.unopened).length,
+            savedProblemCount: listSavedProblems(theme.id).length,
+            lastImportedAt: reviews[0]?.createdAt,
+          };
+        }),
+      );
+    load();
+    // フックで判定が届いたら、未確認の数などを読み直す
+    window.addEventListener(REVIEWS_CHANGED_EVENT, load);
+    return () => window.removeEventListener(REVIEWS_CHANGED_EVENT, load);
   }, []);
 
   const handleCreateDemo = () => {

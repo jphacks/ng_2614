@@ -10,7 +10,10 @@ import {
   getWorkflowMap,
   listReviews,
   listTeacherSessions,
+  markReviewOpened,
+  saveAllHiddenProblems,
   saveHookReview,
+  saveReview,
   saveTeacherSession,
   saveTheme,
   saveWorkflowMap,
@@ -176,5 +179,58 @@ describe("deleteTheme（プロジェクトの削除）", () => {
     saveTheme(theme("a", "owner/a"));
     expect(deleteTheme("none")).toEqual([]);
     expect(getTheme("a")?.id).toBe("a");
+  });
+});
+
+describe("未確認の判定（S-3 で開いたら消す）", () => {
+  function review(overrides: Partial<Review> = {}): Review {
+    return {
+      id: "r1",
+      themeId: "t1",
+      purpose: "",
+      commitSha: "",
+      commitMessage: "",
+      createdAt: "2026-10-25T00:00:00.000Z",
+      findings: [],
+      ...overrides,
+    };
+  }
+
+  it("開いたら unopened を消す", () => {
+    saveReview(review({ unopened: true }));
+    expect(markReviewOpened("r1")?.unopened).toBeUndefined();
+    expect(getReview("r1")?.unopened).toBeUndefined();
+  });
+
+  it("もともと開いた扱いの判定は、そのまま返す", () => {
+    saveReview(review());
+    expect(markReviewOpened("r1")).toEqual(review());
+    expect(markReviewOpened("none")).toBeUndefined();
+  });
+});
+
+describe("隠れた問題をまとめて保存する", () => {
+  it("保存していない隠れた問題だけを保存し、ほかの種類は変えない", () => {
+    saveReview({
+      id: "r1",
+      themeId: "t1",
+      purpose: "",
+      commitSha: "",
+      commitMessage: "",
+      createdAt: "2026-10-25T00:00:00.000Z",
+      findings: [
+        { id: "a", type: "hidden_problem", summary: "", files: [], saved: false },
+        { id: "b", type: "hidden_problem", summary: "", files: [], saved: true },
+        { id: "c", type: "extra_addition", summary: "", files: [], saved: false },
+      ],
+    });
+    const saved = saveAllHiddenProblems("r1");
+    expect(saved?.findings.map((f) => [f.id, f.saved])).toEqual([
+      ["a", true],
+      ["b", true],
+      ["c", false],
+    ]);
+    expect(getReview("r1")?.findings[0].saved).toBe(true);
+    expect(saveAllHiddenProblems("none")).toBeUndefined();
   });
 });
