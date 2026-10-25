@@ -47,7 +47,7 @@ export function Segmented<T extends string>({
               <span className="block leading-tight">{o.label}</span>
               {o.sub && (
                 <span
-                  className={`block text-[11px] leading-tight ${selected ? "text-paper/80" : "text-ink-3"}`}
+                  className={`block text-[13px] leading-tight ${selected ? "text-paper/80" : "text-ink-3"}`}
                 >
                   {o.sub}
                 </span>

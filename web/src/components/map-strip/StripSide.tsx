@@ -29,10 +29,10 @@ import { SideLane } from "./SideLane";
 import { SIDE_WIDTH } from "./sizes";
 
 const BUTTON =
-  "border border-ink bg-paper px-1.5 py-0.5 text-[11px] leading-4 text-ink hover:bg-paper-2";
+  "border border-ink bg-paper px-1.5 py-0.5 text-[13px] leading-4 text-ink hover:bg-paper-2";
 
 const SMALL_BUTTON =
-  "w-full border border-ink bg-paper py-1 text-[10px] leading-tight text-ink hover:bg-paper-2";
+  "w-full border border-ink bg-paper py-1 text-[12px] leading-tight text-ink hover:bg-paper-2";
 
 export function StripSide({
   themeId,
@@ -137,9 +137,9 @@ export function StripSide({
 
           {others.length > 0 && (
             <section aria-label="ほかに進行中・待ち" className="mt-1.5 px-0.5">
-              <h2 className="flex items-baseline justify-between text-[11px] font-semibold text-ink-2">
+              <h2 className="flex items-baseline justify-between text-[13px] font-semibold text-ink-2">
                 ほかに進行中・待ち
-                <span className="text-[10px] font-normal text-ink-3">
+                <span className="text-[12px] font-normal text-ink-3">
                   {others.length} 件
                 </span>
               </h2>
@@ -159,7 +159,7 @@ export function StripSide({
           )}
 
           {unconfirmed > 0 && (
-            <p className="marker mt-1.5 w-fit text-[11px] leading-snug">
+            <p className="marker mt-1.5 w-fit text-[13px] leading-snug">
               未確認 {unconfirmed} 件
             </p>
           )}
@@ -225,14 +225,14 @@ export function StripSide({
                   {hasFocus && (
                     <span
                       aria-hidden="true"
-                      className="bg-accent px-1 text-[9px] font-semibold leading-3 text-paper"
+                      className="bg-accent px-1 text-[11px] font-semibold leading-3 text-paper"
                     >
                       今
                     </span>
                   )}
                   <span
                     aria-hidden="true"
-                    className="text-[11px] font-semibold leading-tight"
+                    className="text-[13px] font-semibold leading-tight"
                   >
                     {s.phase.name.slice(0, 1)}
                   </span>
@@ -240,7 +240,7 @@ export function StripSide({
                     <span
                       key={st}
                       aria-hidden="true"
-                      className="text-[10px] leading-tight"
+                      className="text-[12px] leading-tight"
                     >
                       <span className={STATUS_ICON[st].className}>
                         {STATUS_ICON[st].mark}
@@ -257,7 +257,7 @@ export function StripSide({
             <span
               title={`未確認 ${unconfirmed}件`}
               aria-label={`未確認 ${unconfirmed}件`}
-              className="marker text-[10px] font-medium leading-4"
+              className="marker text-[12px] font-medium leading-4"
             >
               <span aria-hidden="true">
                 未{unconfirmed > 99 ? "99+" : unconfirmed}
@@ -304,17 +304,17 @@ function FocusLink({
 }) {
   return (
     <Link href={href} className="group mt-0.5 block">
-      <span className="flex flex-wrap items-center gap-1 text-[10px] leading-4 text-ink-2">
+      <span className="flex flex-wrap items-center gap-1 text-[12px] leading-4 text-ink-2">
         {phase?.name}
         {phase && (
-          <span className={`tag px-1 text-[10px] leading-4 ${STATUS_BADGE[status]}`}>
+          <span className={`tag px-1 text-[12px] leading-4 ${STATUS_BADGE[status]}`}>
             {statusLabel(phase, status)}
           </span>
         )}
       </span>
       <span
         className={`block break-words leading-snug group-hover:underline ${
-          strong ? "text-xs font-medium text-ink" : "text-[11px] text-ink"
+          strong ? "text-xs font-medium text-ink" : "text-[13px] text-ink"
         }`}
       >
         {task.title}

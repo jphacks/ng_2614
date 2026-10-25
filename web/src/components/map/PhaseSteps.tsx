@@ -14,7 +14,7 @@ export function PhaseSteps({
   size?: "sm" | "md";
 }) {
   const phases = sortedPhases(map);
-  const text = size === "sm" ? "text-[10px] leading-4 px-1" : "text-xs leading-5 px-2";
+  const text = size === "sm" ? "text-[12px] leading-4 px-1" : "text-xs leading-5 px-2";
   return (
     <ol aria-label="研究の工程" className="flex flex-wrap items-center gap-0.5">
       {phases.map((phase, i) => {

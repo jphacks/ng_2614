@@ -21,7 +21,7 @@ import { StripLane } from "./StripLane";
 
 // display を含めない部分。hidden と組み合わせるボタンで display がぶつからないようにする
 const BUTTON_BASE =
-  "shrink-0 items-center whitespace-nowrap border border-ink bg-paper px-1.5 py-px text-[11px] leading-5 text-ink hover:bg-paper-2";
+  "shrink-0 items-center whitespace-nowrap border border-ink bg-paper px-1.5 py-px text-[13px] leading-5 text-ink hover:bg-paper-2";
 const BUTTON = `inline-flex ${BUTTON_BASE}`;
 
 export function StripBody({
@@ -100,7 +100,7 @@ export function StripBody({
                   key={s.phase.id}
                   aria-label={`${s.phase.name}：${label}`}
                   title={label}
-                  className={`shrink-0 border px-1.5 text-[11px] leading-5 ${
+                  className={`shrink-0 border px-1.5 text-[13px] leading-5 ${
                     isCurrent
                       ? "border-ink text-ink"
                       : "border-hair text-ink-2"
@@ -109,7 +109,7 @@ export function StripBody({
                   {isCurrent && (
                     <span
                       aria-hidden="true"
-                      className="mr-1 bg-accent px-1 text-[10px] font-semibold text-paper"
+                      className="mr-1 bg-accent px-1 text-[12px] font-semibold text-paper"
                     >
                       今
                     </span>
@@ -132,7 +132,7 @@ export function StripBody({
         )}
         {focusTitle && (
           <span
-            className="hidden min-w-0 max-w-[20rem] shrink items-center text-[11px] text-ink-2 md:flex"
+            className="hidden min-w-0 max-w-[20rem] shrink items-center text-[13px] text-ink-2 md:flex"
             title={othersTitle ? `${focusTitle}\n${othersTitle}` : focusTitle}
           >
             {/* 工程の札がはみ出しても今の段階が分かるよう、ここにも工程名を出す */}
@@ -151,7 +151,7 @@ export function StripBody({
         )}
         {unconfirmed > 0 && (
           <span
-            className="marker shrink-0 whitespace-nowrap px-1.5 text-[11px] font-medium leading-5"
+            className="marker shrink-0 whitespace-nowrap px-1.5 text-[13px] font-medium leading-5"
             title={`AI が作ったままで、まだ確認していないものが ${unconfirmed} 件あります`}
           >
             未確認 {unconfirmed}
