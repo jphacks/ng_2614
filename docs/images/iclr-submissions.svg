@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" role="img" aria-label="ICLR の投稿数の推移。2017 年の 490 件から 2026 年の 19,814 件へ増え、2027 年は登録された要旨が 62,288 件になった">
+<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#fbe9e7"/><line x1="0" y1="0" x2="0" y2="8" stroke="#d23f3a" stroke-width="3"/></pattern></defs>
+<rect width="800" height="440" fill="#ffffff"/>
+<line x1="72" y1="376.0" x2="776" y2="376.0" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="380.0" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">0</text>
+<line x1="72" y1="325.5" x2="776" y2="325.5" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="329.5" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">10,000</text>
+<line x1="72" y1="275.1" x2="776" y2="275.1" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="279.1" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">20,000</text>
+<line x1="72" y1="224.6" x2="776" y2="224.6" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="228.6" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">30,000</text>
+<line x1="72" y1="174.2" x2="776" y2="174.2" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="178.2" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">40,000</text>
+<line x1="72" y1="123.7" x2="776" y2="123.7" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="127.7" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">50,000</text>
+<line x1="72" y1="73.2" x2="776" y2="73.2" stroke="#dfe3ef" stroke-width="1"/>
+<text x="64" y="77.2" text-anchor="end" font-size="12" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">60,000</text>
+<rect x="84.2" y="373.5" width="39.7" height="2.5" fill="#4e67c8"/>
+<text x="104.0" y="367.5" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">490</text>
+<text x="104.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2017</text>
+<rect x="148.2" y="370.9" width="39.7" height="5.1" fill="#4e67c8"/>
+<text x="168.0" y="364.9" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">1,018</text>
+<text x="168.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2018</text>
+<rect x="212.2" y="368.0" width="39.7" height="8.0" fill="#4e67c8"/>
+<text x="232.0" y="362.0" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">1,579</text>
+<text x="232.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2019</text>
+<rect x="276.2" y="362.9" width="39.7" height="13.1" fill="#4e67c8"/>
+<text x="296.0" y="356.9" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2,594</text>
+<text x="296.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2020</text>
+<rect x="340.2" y="360.8" width="39.7" height="15.2" fill="#4e67c8"/>
+<text x="360.0" y="354.8" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">3,014</text>
+<text x="360.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2021</text>
+<rect x="404.2" y="358.7" width="39.7" height="17.3" fill="#4e67c8"/>
+<text x="424.0" y="352.7" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">3,422</text>
+<text x="424.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2022</text>
+<rect x="468.2" y="351.0" width="39.7" height="25.0" fill="#4e67c8"/>
+<text x="488.0" y="345.0" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">4,955</text>
+<text x="488.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2023</text>
+<rect x="532.2" y="338.6" width="39.7" height="37.4" fill="#4e67c8"/>
+<text x="552.0" y="332.6" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">7,404</text>
+<text x="552.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2024</text>
+<rect x="596.2" y="317.1" width="39.7" height="58.9" fill="#4e67c8"/>
+<text x="616.0" y="311.1" text-anchor="middle" font-size="12" font-weight="500" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">11,672</text>
+<text x="616.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2025</text>
+<rect x="660.2" y="276.0" width="39.7" height="100.0" fill="#4e67c8"/>
+<text x="680.0" y="270.0" text-anchor="middle" font-size="12" font-weight="700" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">19,814</text>
+<text x="680.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2026</text>
+<rect x="724.2" y="61.7" width="39.7" height="314.3" fill="url(#hatch)" stroke="#d23f3a" stroke-width="2"/>
+<text x="744.0" y="55.7" text-anchor="middle" font-size="12" font-weight="700" fill="#d23f3a" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">62,288</text>
+<text x="744.0" y="394.0" text-anchor="middle" font-size="13" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2027</text>
+<text x="716.2" y="88" text-anchor="end" font-size="13" font-weight="700" fill="#d23f3a" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">2027 は登録された要旨の数（速報）</text>
+<text x="716.2" y="106" text-anchor="end" font-size="12" fill="#535a75" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">前年の約 3 倍。最終的な論文数はこれより減る見込み</text>
+<text x="72" y="422" font-size="11" fill="#868ca4" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">出典：OpenReview の投稿数（2026 年 9 月 21 日時点、reviewer3.com の集計）。2027 は投稿 ID の最大値からの推定</text>
+<text x="72" y="28" font-size="15" font-weight="700" fill="#262b45" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">ICLR（機械学習の国際会議）の投稿数</text>
+</svg>

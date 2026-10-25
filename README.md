@@ -11,6 +11,17 @@
 
 ### 背景(製品開発のきっかけ、課題等）
 
+**AI を使った研究は、世界中で急に加速しています。** 機械学習の国際会議 ICLR の投稿数は、2017 年の 490 件から 2026 年の 19,814 件へと 40 倍に増えました。さらに ICLR 2027 では、登録された要旨が **62,288 件** と、前年の約 3 倍に跳ね上がりました（最終的な論文数はこれより減る見込みですが、それでも前年を大きく上回ります）。ICLR 2027 は、1 人が共著者になれる論文を 20 本までに制限し、論文に AI の使い方の記載（AI use statement）を求めるようになりました。AI で研究を速く回すことが当たり前になり、学会の側も対応を迫られています。
+
+![ICLR の投稿数の推移：2017 年の 490 件から 2026 年の 19,814 件へ増え、2027 年は登録された要旨が 62,288 件になった](docs/images/iclr-submissions.svg)
+
+出典：
+
+- 投稿数（2017〜2027 年）：[ICLR Went From 490 Submissions to 62,000 in Ten Years（reviewer3.com、2026 年 9 月 21 日）](https://reviewer3.com/evidence/iclr-submissions-2027)。OpenReview の投稿数を集計したもの。2027 年は投稿 ID の最大値から推定した、登録された要旨の数。同じ記事によると、2026 年に ICLR が発表した有効な投稿は 19,525 件
+- 投稿数（2018〜2026 年の照合）：[ICLR statistics（Paper Copilot）](https://papercopilot.com/statistics/iclr-statistics/)
+- 締め切り前の要旨の数：[AI conference ICLR is drowning in abstracts（The Decoder、2026 年 9 月 19 日）](https://the-decoder.com/ai-conference-iclr-is-drowning-in-abstracts-with-roughly-50000-submissions-before-the-deadline/)
+- 共著の上限（20 本）と AI の使い方の記載：[ICLR 2027 Author Guidelines](https://iclr.cc/Conferences/2027/AuthorGuidelines)
+
 情報系の研究室では、Claude Code や Codex などの生成 AI にコードを書かせながら研究を進めるのが当たり前になりました。私たち自身もそうしています。研究は速く進むようになりましたが、次のような困りごとが起きています。
 
 - **理解が追いつかない。** 研究の進み方が速すぎて、自分の理解がボトルネックになる。自分が意図していない実装になっていても気づかない。先生に「ここどうなっている？」と聞かれて、分かっていないことが露呈する
