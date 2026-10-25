@@ -16,6 +16,7 @@ export function ChatComposer({
   placeholder = DEFAULT_PLACEHOLDER,
   status,
   onHeightChange,
+  suggestion,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -27,6 +28,8 @@ export function ChatComposer({
   status?: React.ReactNode;
   // 入力欄全体の高さ（px）が変わるたびに知らせる。スレッドの下に取る余白の計算に使う
   onHeightChange?: (px: number) => void;
+  // デモモードのピッチ用：入力欄が空のときにマウスを合わせる（クリックする）と入れる回答
+  suggestion?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wasDisabled = useRef(disabled);
@@ -72,6 +75,9 @@ export function ChatComposer({
   }, [disabled]);
 
   const canSubmit = !disabled && value.trim() !== "";
+  const fillSuggestion = () => {
+    if (suggestion && !disabled && value === "") onChange(suggestion);
+  };
 
   return (
     <div
@@ -87,6 +93,8 @@ export function ChatComposer({
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onMouseEnter={fillSuggestion}
+        onPointerDown={fillSuggestion}
         onKeyDown={(e) => {
           // 日本語入力の変換を確定する Enter は無視する
           if (e.nativeEvent.isComposing) return;

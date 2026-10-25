@@ -7,6 +7,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { postTeacherQuestions, postTeacherTurn } from "@/lib/api-client";
 import type { TeacherQuestion } from "@/lib/api-types";
+import { demoAnswerSuggestion } from "@/lib/demo/data";
+import { useDemoMode } from "@/lib/demo/mode";
 import {
   DEFAULT_TEACHER_NAME,
   getTeacherPersona,
@@ -67,6 +69,7 @@ export default function TeacherPage() {
   const [composerHeight, setComposerHeight] = useState(160); // 下に固定した入力欄の高さ（px）
   const [pendingAnswer, setPendingAnswer] = useState<string | null>(null); // 送信中の回答（返事が来るまでスレッドに出す）
   const [error, setError] = useState<string | null>(null);
+  const demoMode = useDemoMode();
 
   // 全部の質問をつなげた1本のスレッド。早期 return より前に作る（フックの順序を保つため）
   const entries = buildThread({
@@ -109,6 +112,16 @@ export default function TeacherPage() {
     setPastSessions(listTeacherSessions(themeId));
     setPersona(getTeacherPersona(themeId));
   }, [themeId]);
+
+  // デモモード（ピッチ）では、開いたらすぐ質問を始める
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!demoMode || !theme || phase !== "idle" || autoStarted.current) return;
+    autoStarted.current = true;
+    void start();
+    // start は毎回作り直されるが、最初の1回だけ呼べばよい
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode, theme, phase]);
 
   function purposeOf(t: ResearchTheme) {
     return {
@@ -270,9 +283,12 @@ export default function TeacherPage() {
           onChange={setPersona}
         />
       </div>
-      <p className="mt-2 text-xs text-ink-2">
-        研究の目的・保存した問題・あなたの回答は AI（Claude）に送られます。
-      </p>
+      {/* デモモードでは AI を呼ばないので出さない */}
+      {!demoMode && (
+        <p className="mt-2 text-xs text-ink-2">
+          研究の目的・保存した問題・あなたの回答は AI（Claude）に送られます。
+        </p>
+      )}
 
       {error && phase === "idle" && errorAlert}
 
@@ -366,6 +382,11 @@ export default function TeacherPage() {
           onDontKnow={() => submitAnswer("分かりません")}
           disabled={submitting}
           onHeightChange={setComposerHeight}
+          suggestion={
+            demoMode
+              ? demoAnswerSuggestion(current.question, answeredCount)
+              : undefined
+          }
           status={
             <>
               <span>
