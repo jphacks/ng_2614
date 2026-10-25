@@ -94,7 +94,7 @@ function HiddenProblemCard({
                 <>
                   エラー内容
                   {finding.errorIsInferred && (
-                    <span className="marker text-[11px] font-medium">推測</span>
+                    <span className="marker text-[13px] font-medium">推測</span>
                   )}
                 </>
               }

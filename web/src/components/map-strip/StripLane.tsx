@@ -26,7 +26,7 @@ function Mark({
   return (
     <span
       title={title}
-      className={`tag px-1 text-[10px] leading-4 ${className}`}
+      className={`tag px-1 text-[12px] leading-4 ${className}`}
     >
       {children}
     </span>
@@ -67,7 +67,7 @@ function TaskRow({
     >
       <div className="flex flex-wrap items-center gap-1">
         <span
-          className={`tag px-1 text-[10px] leading-4 ${STATUS_BADGE[status]}`}
+          className={`tag px-1 text-[12px] leading-4 ${STATUS_BADGE[status]}`}
         >
           {statusLabel(summary.phase, status)}
         </span>
@@ -94,7 +94,7 @@ function TaskRow({
       </div>
       <Link
         href={href}
-        className="mt-0.5 block text-[11px] font-medium leading-snug text-ink hover:underline"
+        className="mt-0.5 block text-[13px] font-medium leading-snug text-ink hover:underline"
       >
         {task.title}
       </Link>
@@ -105,7 +105,7 @@ function TaskRow({
             onClick={onToggleSub}
             aria-expanded={subOpen}
             aria-controls={subId}
-            className="mt-0.5 text-[11px] leading-snug text-ink-2 hover:text-ink hover:underline"
+            className="mt-0.5 text-[13px] leading-snug text-ink-2 hover:text-ink hover:underline"
           >
             {subOpen ? "▾" : "▸"} サブタスク {subtasks.length}
           </button>
@@ -114,7 +114,7 @@ function TaskRow({
               {subtasks.map((s) => {
                 const icon = STATUS_ICON[s.status];
                 return (
-                  <li key={s.id} className="relative flex items-start gap-1 text-[11px] leading-snug">
+                  <li key={s.id} className="relative flex items-start gap-1 text-[13px] leading-snug">
                     <span
                       className={`shrink-0 ${icon.className}`}
                       title={statusLabel(summary.phase, s.status)}
@@ -171,11 +171,11 @@ export function StripLane({
         isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
-      <h3 className="rule-head mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[11px] font-semibold text-ink">
+      <h3 className="rule-head mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[13px] font-semibold text-ink">
         <span className="truncate">
           {summary.phase.name}
           {isCurrentPhase && (
-            <span className="ml-1 bg-accent px-1 text-[10px] font-semibold text-paper">
+            <span className="ml-1 bg-accent px-1 text-[12px] font-semibold text-paper">
               今の段階
             </span>
           )}
@@ -185,7 +185,7 @@ export function StripLane({
         </span>
       </h3>
       {tasks.length === 0 ? (
-        <p className="px-0.5 text-[11px] text-ink-3">タスクなし</p>
+        <p className="px-0.5 text-[13px] text-ink-3">タスクなし</p>
       ) : (
         <ul className="space-y-1">
           {tasks.map((t) => (

@@ -26,7 +26,7 @@ function Mark({
   return (
     <span
       title={title}
-      className={`tag px-1 text-[10px] leading-4 ${className}`}
+      className={`tag px-1 text-[12px] leading-4 ${className}`}
     >
       {children}
     </span>
@@ -67,7 +67,7 @@ function SideTaskRow({
     >
       <div className="flex flex-wrap items-center gap-0.5">
         <span
-          className={`tag px-1 text-[10px] leading-4 ${STATUS_BADGE[status]}`}
+          className={`tag px-1 text-[12px] leading-4 ${STATUS_BADGE[status]}`}
         >
           {statusLabel(summary.phase, status)}
         </span>
@@ -94,7 +94,7 @@ function SideTaskRow({
       </div>
       <Link
         href={href}
-        className="mt-0.5 block break-words text-[11px] font-medium leading-snug text-ink hover:underline"
+        className="mt-0.5 block break-words text-[13px] font-medium leading-snug text-ink hover:underline"
       >
         {task.title}
       </Link>
@@ -105,7 +105,7 @@ function SideTaskRow({
             onClick={onToggleSub}
             aria-expanded={subOpen}
             aria-controls={subId}
-            className="mt-0.5 text-[10px] leading-4 text-ink-2 hover:text-ink hover:underline"
+            className="mt-0.5 text-[12px] leading-4 text-ink-2 hover:text-ink hover:underline"
           >
             {subOpen ? "▾" : "▸"} サブタスク {subtasks.length}
           </button>
@@ -119,7 +119,7 @@ function SideTaskRow({
                 return (
                   <li
                     key={s.id}
-                    className="relative flex items-start gap-1 text-[11px] leading-snug"
+                    className="relative flex items-start gap-1 text-[13px] leading-snug"
                   >
                     <span
                       className={`shrink-0 ${icon.className}`}
@@ -177,11 +177,11 @@ export function SideLane({
         isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
-      <h3 className="rule-head mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[11px] font-semibold leading-tight text-ink">
+      <h3 className="rule-head mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[13px] font-semibold leading-tight text-ink">
         <span className="min-w-0 break-words">
           {summary.phase.name}
           {isCurrentPhase && (
-            <span className="ml-1 bg-accent px-1 text-[10px] font-semibold text-paper">
+            <span className="ml-1 bg-accent px-1 text-[12px] font-semibold text-paper">
               今の段階
             </span>
           )}
@@ -191,7 +191,7 @@ export function SideLane({
         </span>
       </h3>
       {tasks.length === 0 ? (
-        <p className="px-0.5 text-[10px] text-ink-3">タスクなし</p>
+        <p className="px-0.5 text-[12px] text-ink-3">タスクなし</p>
       ) : (
         <ul className="space-y-1">
           {tasks.map((t) => (

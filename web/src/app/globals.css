@@ -31,6 +31,15 @@
   --color-del: #fbe9e7; /* 差分の削除行 */
   --color-del-ink: #9a2a22;
 
+  /* 文字の大きさ：読みやすいよう、標準より大きくする（本文 18px・補助 16px・小さい文字 14px）。
+     本文が大きくなった分、見出しも1段ずつ大きくする */
+  --text-xs: 0.875rem;
+  --text-sm: 1rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.625rem;
+
   --font-serif: var(--font-noto-serif-jp), "Hiragino Mincho ProN", "Yu Mincho", serif;
   --font-hand: var(--font-klee-one), "Hiragino Maru Gothic ProN", var(--font-serif);
   --font-sans:
@@ -47,6 +56,7 @@
 
 body {
   font-family: var(--font-sans);
+  font-size: var(--text-base);
   font-feature-settings: "palt" 0;
 }
 
@@ -121,7 +131,7 @@ h3 {
   }
   /* 小さな文字のラベル（札の代わり）。枠だけの四角 */
   .tag {
-    @apply inline-block rounded-[2px] border border-current px-1.5 text-[11px] leading-[18px] font-medium whitespace-nowrap;
+    @apply inline-block rounded-[2px] border border-current px-1.5 text-[13px] leading-[18px] font-medium whitespace-nowrap;
   }
   /* 蛍光ペン：注意 */
   .marker {
