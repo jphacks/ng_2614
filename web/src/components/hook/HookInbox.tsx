@@ -9,6 +9,7 @@ import {
   takeHookChange,
 } from "@/lib/api-client";
 import type { DiffResponse, HookChange } from "@/lib/api-types";
+import { PITCH_HOOK_EVENT, PITCH_PROMPT, deliverPitchReview } from "@/lib/demo/pitch";
 import { buildHookReviewRequest, hookPurpose } from "@/lib/hook-review";
 import { saveDiff } from "@/lib/diff-store";
 import { startMapUpdate } from "@/lib/map/auto-update";
@@ -21,6 +22,9 @@ import { headline } from "@/components/review/labels";
 const POLL_MS = 3000;
 const MAX_VISIBLE = 3;
 const MAX_KEPT = 20;
+// ピッチ用の入口（/pitch）の演出：S-4 に移ってから知らせが出るまでと、判定中を見せる時間（ms）
+const PITCH_ARRIVE_MS = 1500;
+const PITCH_JUDGE_MS = 2500;
 
 type Notice =
   | { id: string; kind: "unregistered"; repo: string }
@@ -44,6 +48,21 @@ type Notice =
 
 function titleOf(prompt: string): string {
   return headline(prompt) || "依頼文なし";
+}
+
+function doneNotice(id: string, title: string, review: Review): Notice {
+  const { findings } = review;
+  return {
+    id,
+    kind: "done",
+    title,
+    reviewId: review.id,
+    hidden: findings.filter((f) => f.type === "hidden_problem").length,
+    impact: findings.filter(
+      (f) => f.type === "hidden_problem" && f.researchImpact?.exists,
+    ).length,
+    extra: findings.filter((f) => f.type === "extra_addition").length,
+  };
 }
 
 function errorMessage(e: unknown): string {
@@ -112,17 +131,7 @@ export function HookInbox() {
         saveHookReview(review);
         startMapUpdate(review); // 待たない
         await saveDiff(review.id, commit);
-        upsert({
-          id: change.id,
-          kind: "done",
-          title,
-          reviewId: review.id,
-          hidden: findings.filter((f) => f.type === "hidden_problem").length,
-          impact: findings.filter(
-            (f) => f.type === "hidden_problem" && f.researchImpact?.exists,
-          ).length,
-          extra: findings.filter((f) => f.type === "extra_addition").length,
-        });
+        upsert(doneNotice(change.id, title, review));
       } catch (e) {
         upsert({
           id: change.id,
@@ -215,6 +224,32 @@ export function HookInbox() {
       document.removeEventListener("visibilitychange", tick);
     };
   }, [poll]);
+
+  // ピッチ用の入口からの合図で、いまフックで作業が届いたように知らせを出す（判定中 → 結果）
+  useEffect(() => {
+    const timers: number[] = [];
+    const onPitch = () => {
+      const id = "pitch-hook";
+      const title = titleOf(PITCH_PROMPT);
+      timers.push(
+        window.setTimeout(() => {
+          upsert({ id, kind: "judging", title, startedAt: Date.now() });
+          timers.push(
+            window.setTimeout(() => {
+              void deliverPitchReview().then((review) =>
+                upsert(doneNotice(id, title, review)),
+              );
+            }, PITCH_JUDGE_MS),
+          );
+        }, PITCH_ARRIVE_MS),
+      );
+    };
+    window.addEventListener(PITCH_HOOK_EVENT, onPitch);
+    return () => {
+      window.removeEventListener(PITCH_HOOK_EVENT, onPitch);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, [upsert]);
 
   function dismiss(id: string) {
     dismissed.current.add(id);
