@@ -19,7 +19,7 @@ export function Conversation({
         t.role === "teacher" ? (
           <li key={i} className="flex items-start justify-start gap-2">
             <TeacherAvatar teacher={teacher} />
-            <div className="max-w-[85%] rounded-[6px] border border-hair bg-sheet px-3 py-2 font-hand text-[17px] leading-relaxed whitespace-pre-wrap text-pen">
+            <div className="max-w-[85%] rounded-[6px] border border-hair bg-sheet px-3 py-2 font-hand text-[17px] leading-relaxed whitespace-pre-wrap text-ink">
               <span className="mb-0.5 block font-sans text-xs text-ink-3">{teacher.name}</span>
               {t.text}
             </div>
