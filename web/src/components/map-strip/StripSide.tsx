@@ -1,42 +1,31 @@
 "use client";
 
 // 作業フローマップの帯（F-15）の縦の形：画面の右端に固定するサイドバー。
-// 畳むと48px（レーンの頭文字と進み具合だけ。レーンをクリックするとそのレーンの中身を左に重ねて出す）。
+// 畳むと48px（いちばん上の開くボタン「«」だけ）。
 // 開くと初期値208px（レーンの進み具合のステッププログレスバーだけ。幅は左端のつまみ SideResizeHandle で変えられる）。
 // 開いた状態では、レーンをクリックするとその下にタスクを開き、タスクをクリックするとサブタスクを左に重ねて出す。
 // 本文の右側を空けるのは親（MapStrip）がやる。
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import {
   setStripOpen,
   setStripOrientation,
   useSideWidth,
   useStripOpen,
 } from "@/lib/map/prefs";
-import {
-  changedParentIds,
-  currentFocus,
-  phaseSummaries,
-  progressText,
-} from "@/lib/map/summary";
-import { statusLabel } from "@/lib/map/view";
+import { currentFocus, phaseSummaries } from "@/lib/map/summary";
 import type { WorkflowMap } from "@/lib/types";
-import { STATUS_ORDER } from "@/components/map/labels";
 import { SIDE_WIDTH } from "./sizes";
 import { LaneStepper } from "./LaneStepper";
-import { StripLane } from "./StripLane";
 import { TaskPeek } from "./TaskPeek";
 import { useLanePeek } from "./use-lane-peek";
 
-// 帯の左に重ねて出す中身（畳んだ状態はレーン、開いた状態はタスクのサブタスク）の幅（px）
+// 開いた状態で、帯の左に重ねて出すタスクのサブタスクの幅（px）
 const PEEK_WIDTH = 288;
 
 const BUTTON =
   "border border-ink bg-paper px-1.5 py-0.5 text-[13px] leading-4 text-ink hover:bg-paper-2";
-
-const SMALL_BUTTON =
-  "w-full border border-ink bg-paper py-1 text-[12px] leading-tight text-ink hover:bg-paper-2";
 
 export function StripSide({
   themeId,
@@ -47,7 +36,6 @@ export function StripSide({
 }) {
   const open = useStripOpen();
   const openWidth = useSideWidth();
-  const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
   const rootRef = useRef<HTMLElement>(null);
   const peek = useLanePeek(rootRef);
 
@@ -60,22 +48,11 @@ export function StripSide({
   const summaries = useMemo(() => phaseSummaries(map), [map]);
   const { current } = useMemo(() => currentFocus(map), [map]);
   const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
-  const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
-  // 重ねて出すのは、畳んだ状態ではクリックしたレーン、開いた状態ではクリックしたタスク
-  const peekSummary = open ? undefined : summaries.find((s) => s.phase.id === peek.shown);
+  // 重ねて出すのは、開いた状態でクリックしたタスク
   const peekTask = open ? map.tasks.find((t) => t.id === peek.shown) : undefined;
   const peekTaskPhase = peekTask && map.phases.find((p) => p.id === peekTask.phaseId);
 
   const mapHref = `/themes/${encodeURIComponent(themeId)}/map`;
-
-  function toggleSub(taskId: string) {
-    setOpenSubs((prev) => {
-      const next = new Set(prev);
-      if (next.has(taskId)) next.delete(taskId);
-      else next.add(taskId);
-      return next;
-    });
-  }
 
   const width = open ? openWidth : SIDE_WIDTH.collapsed;
 
@@ -124,7 +101,8 @@ export function StripSide({
           />
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-1.5 px-1 py-2">
+        // 畳んだ状態は、開くボタンだけ
+        <div className="px-1 py-2">
           <button
             type="button"
             onClick={() => setStripOpen(true)}
@@ -135,89 +113,6 @@ export function StripSide({
           >
             «
           </button>
-
-          <ul
-            aria-label="レーンごとの進み具合"
-            className="w-full space-y-1"
-          >
-            {summaries.map((s) => {
-              const spoken = STATUS_ORDER.filter((st) => s.counts[st] > 0)
-                .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
-                .join("、");
-              const hasFocus = s.phase.id === current?.phaseId;
-              const isOpen = peek.shown === s.phase.id;
-              const progress = progressText(s);
-              return (
-                <li key={s.phase.id}>
-                  <button
-                    type="button"
-                    onClick={(e) => peek.toggle(s.phase.id, peekTop(e.currentTarget))}
-                    aria-expanded={isOpen}
-                    aria-controls="map-side-peek"
-                    aria-label={`${s.phase.name}：進み具合 ${progress}${hasFocus ? "（今の段階）" : ""}。${spoken || "タスクなし"}`}
-                    className={`flex w-full flex-col items-center border px-0.5 py-1 hover:bg-paper-2 ${
-                      isOpen
-                        ? "border-ink bg-paper-2 text-ink"
-                        : hasFocus
-                          ? "border-accent bg-accent-soft text-accent-deep ring-1 ring-accent"
-                          : "border-hair text-ink-2"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="text-[13px] font-semibold leading-tight"
-                    >
-                      {s.phase.name.slice(0, 1)}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="font-mono text-[11px] leading-tight tabular-nums"
-                    >
-                      {progress}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          <Link
-            href={mapHref}
-            aria-label="マップを開く"
-            title="マップを開く"
-            className={`${SMALL_BUTTON} text-center font-semibold`}
-          >
-            マップ
-          </Link>
-          <button
-            type="button"
-            onClick={() => setStripOrientation("horizontal")}
-            aria-label="作業フローマップを上の横の帯にする"
-            title="横の帯にする"
-            className={SMALL_BUTTON}
-          >
-            横へ
-          </button>
-        </div>
-      )}
-
-      {/* 畳んだ状態で、クリックしたレーンの中身を、帯の左に重ねて出す */}
-      {peekSummary && (
-        <div
-          id="map-side-peek"
-          style={{ top: peek.pos, right: width, width: PEEK_WIDTH }}
-          className="fixed z-40 max-h-[70vh] overflow-y-auto border border-ink bg-paper shadow-sm"
-        >
-          <StripLane
-            map={map}
-            themeId={themeId}
-            summary={peekSummary}
-            changedIds={changedIds}
-            focusIds={focusIds}
-            isCurrentPhase={peekSummary.phase.id === current?.phaseId}
-            openSubs={openSubs}
-            onToggleSub={toggleSub}
-          />
         </div>
       )}
 
