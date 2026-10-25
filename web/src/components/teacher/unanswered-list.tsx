@@ -1,5 +1,6 @@
 import type { TeacherItem, TeacherSession } from "@/lib/types";
 import { Conversation } from "./conversation";
+import type { TeacherLook } from "./teacher-avatar";
 import { LayerBadge } from "./layer-badge";
 import { ViewpointList } from "./viewpoint-list";
 
@@ -19,7 +20,13 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("ja-JP");
 }
 
-export function UnansweredList({ misses }: { misses: UnderstoodMiss[] }) {
+export function UnansweredList({
+  misses,
+  teacher,
+}: {
+  misses: UnderstoodMiss[];
+  teacher?: TeacherLook;
+}) {
   return (
     <section className="mt-10">
       <h2 className="text-lg font-bold">答えられなかった点</h2>
@@ -38,26 +45,19 @@ export function UnansweredList({ misses }: { misses: UnderstoodMiss[] }) {
                   {formatDate(createdAt)}
                 </span>
               </div>
-              {item.turns ? (
-                <div className="mt-3">
-                  {/* 最後の先生の発言は講評なので、下に分けて出す */}
-                  <Conversation turns={item.turns.slice(0, -1)} />
-                </div>
-              ) : (
-                <>
-                  <p className="mt-2 font-medium">{item.question}</p>
-                  <p className="mt-2 text-sm text-gray-700">
-                    <span className="font-medium">あなたの回答：</span>
-                    <span className="whitespace-pre-wrap">{item.answer}</span>
-                  </p>
-                </>
-              )}
-              <p className="mt-3 text-sm text-gray-700">
-                <span className="font-medium">
-                  {item.turns ? "講評：" : "先生のフィードバック："}
-                </span>
-                <span className="whitespace-pre-wrap">{item.feedback}</span>
-              </p>
+              {/* turns が無い古い記録も、質問・回答・フィードバックを同じ先生のやりとりとして出す。最後の先生の発言が講評 */}
+              <div className="mt-3">
+                <Conversation
+                  turns={
+                    item.turns ?? [
+                      { role: "teacher", text: item.question },
+                      { role: "student", text: item.answer },
+                      { role: "teacher", text: item.feedback },
+                    ]
+                  }
+                  teacher={teacher}
+                />
+              </div>
               {item.viewpoints && (
                 <div className="mt-3">
                   <ViewpointList

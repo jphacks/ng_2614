@@ -7,6 +7,7 @@ import type {
   ObservedError,
   ResearchTheme,
   Review,
+  TeacherPersona,
   TeacherSession,
   WorkflowMap,
 } from "./types";
@@ -17,6 +18,7 @@ const KEYS = {
   teacherSessions: "rc.teacherSessions",
   hookDiffs: "rc.hookDiffs",
   maps: "rc.maps",
+  teacherPersonas: "rc.teacherPersonas",
 } as const;
 
 // 判定の一覧が変わったことを、開いている画面に知らせるイベント
@@ -103,6 +105,7 @@ export function deleteTheme(id: string): string[] {
     );
   }
   deleteWorkflowMap(id);
+  deleteTeacherPersona(id);
   notifyReviewsChanged();
   return removed;
 }
@@ -228,4 +231,41 @@ export function deleteWorkflowMap(themeId: string): void {
     read<WorkflowMap>(KEYS.maps).filter((m) => m.themeId !== themeId),
   );
   notifyMapsChanged();
+}
+
+// 先生のキャラクター（F-20）
+
+export const DEFAULT_TEACHER_NAME = "先生";
+
+export function getTeacherPersona(themeId: string): TeacherPersona | undefined {
+  return read<TeacherPersona>(KEYS.teacherPersonas).find(
+    (p) => p.themeId === themeId,
+  );
+}
+
+// 保存できなかったとき（localStorage の容量が足りないなど）は Error を投げる
+export function saveTeacherPersona(
+  persona: Omit<TeacherPersona, "updatedAt">,
+): TeacherPersona {
+  const saved = { ...persona, updatedAt: nowIso() };
+  const others = read<TeacherPersona>(KEYS.teacherPersonas).filter(
+    (p) => p.themeId !== persona.themeId,
+  );
+  try {
+    write(KEYS.teacherPersonas, [...others, saved]);
+  } catch {
+    throw new Error(
+      "先生の設定を保存できませんでした。ブラウザの保存容量が足りない可能性があります。",
+    );
+  }
+  return saved;
+}
+
+export function deleteTeacherPersona(themeId: string): void {
+  const personas = read<TeacherPersona>(KEYS.teacherPersonas);
+  if (!personas.some((p) => p.themeId === themeId)) return;
+  write(
+    KEYS.teacherPersonas,
+    personas.filter((p) => p.themeId !== themeId),
+  );
 }

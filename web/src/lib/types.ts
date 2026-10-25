@@ -103,6 +103,14 @@ export type TeacherSession = {
   items: TeacherItem[];
 };
 
+// 先生のキャラクター（F-20）。プロジェクトごとに1つ。見た目だけに使い、AI には送らない
+export type TeacherPersona = {
+  themeId: string;
+  name: string; // 空なら「先生」と出す
+  image?: string; // 256×256 の JPEG の data URL
+  updatedAt: string; // ISO 8601
+};
+
 // ---- 作業フローマップ（F-15） ----
 
 // 状態。画面ではレーンに合わせた言葉で出す（例：調査の doing は「比較中」）
