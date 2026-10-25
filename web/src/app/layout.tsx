@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Klee_One, Noto_Serif_JP } from "next/font/google";
 import Link from "next/link";
 import {
-  DemoModeBanner,
   DemoModeToggle,
 } from "@/components/demo/DemoModeToggle";
 import { HookInbox } from "@/components/hook/HookInbox";
@@ -49,7 +48,6 @@ export default function RootLayout({
               <span className="bg-sky" />
               <span className="bg-mint" />
             </div>
-            <DemoModeBanner />
             {/* メニューのボタンはアプリ名の左に並べる。枠の左右の余白は本文（main）と合わせる */}
             <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3">

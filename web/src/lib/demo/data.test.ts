@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  demoAnswerSuggestion,
   demoCommits,
   demoDiff,
   demoReviewFindings,
@@ -37,7 +38,7 @@ describe("デモデータ", () => {
       (f) => f.type === "hidden_problem",
     );
     const questions = demoTeacherQuestions({ theme, problems });
-    expect(questions.length).toBeGreaterThan(1);
+    expect(questions).toHaveLength(2); // ピッチ向けに2つまで
     expect(questions.some((q) => q.layer === "research")).toBe(true);
     expect(questions.some((q) => q.layer === "implementation")).toBe(true);
   });
@@ -122,6 +123,38 @@ describe("デモデータ", () => {
         ],
       });
       expect(second).toMatchObject({ done: true, understood: true, covered: ["v2", "v3"] });
+    });
+
+    it("ピッチの回答（AIがやった → 一部だけ正しい）で、一部正解の講評をして終える", () => {
+      const first = demoAnswerSuggestion(q.question, 0);
+      const second = demoAnswerSuggestion(q.question, 1);
+      expect(first).toBe("AIがやったのでわかりません");
+      expect(second).toBeDefined();
+      expect(demoAnswerSuggestion(q.question, 2)).toBeUndefined();
+
+      const reply = demoTeacherTurn({
+        theme,
+        question: q,
+        covered: [],
+        turns: [...start, { role: "student", text: first! }],
+      });
+      expect(reply.done).toBe(false);
+      expect(reply.message).toContain("AIがやったかどうかは関係ありません");
+
+      const res = demoTeacherTurn({
+        theme,
+        question: q,
+        covered: reply.covered,
+        turns: [
+          ...start,
+          { role: "student", text: first! },
+          { role: "teacher", text: reply.message },
+          { role: "student", text: second! },
+        ],
+      });
+      expect(res).toMatchObject({ done: true, understood: false, covered: ["v1"] });
+      expect(res.message).toContain("分かっていますね");
+      expect(res.message).toContain("まだ分かっていない");
     });
   });
 
