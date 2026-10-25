@@ -7,11 +7,7 @@ import {
   statusLabel,
   subtasksOf,
 } from "@/lib/map/view";
-import {
-  milestoneStyle,
-  STATUS_ICON,
-  STATUS_ORDER,
-} from "./labels";
+import { milestoneStyle, STATUS_ICON } from "./labels";
 import { StatusBadge } from "./StatusBadge";
 
 type Chip = {
@@ -105,7 +101,6 @@ export function TaskCard({
   const status = effectiveStatus(map, task);
   const subtasks = subtasksOf(map, task.id);
   const chips = buildChips(map, task.id);
-  // 研究への影響（impact）は重要なので隠さない。つながり（flow）などはトグルで隠す
   const impactChips = chips.filter((c) => c.kind === "impact");
   const flowChips = chips.filter((c) => c.kind === "flow");
   const milestone = task.milestoneId
@@ -113,17 +108,11 @@ export function TaskCard({
     : undefined;
   const unrecorded = task.flag === "unrecorded";
   const selected = selectedId === task.id;
-
-  const hasHidden =
-    subtasks.length > 0 ||
-    flowChips.length > 0 ||
-    Boolean(task.statusRaw) ||
-    Boolean(task.result);
   const bodyId = `map-task-body-${task.id}`;
-  const subtaskCounts = STATUS_ORDER.map((st) => ({
-    status: st,
-    count: subtasks.filter((s) => s.status === st).length,
-  })).filter((c) => c.count > 0);
+  const icon = STATUS_ICON[status];
+  // サブタスクの進み具合（不採用は数えない）
+  const counted = subtasks.filter((s) => s.status !== "rejected");
+  const countedDone = counted.filter((s) => s.status === "done").length;
 
   const tone = unrecorded
     ? "border-dashed border-ink-3 bg-paper"
@@ -132,116 +121,69 @@ export function TaskCard({
   return (
     <li
       id={`map-task-${task.id}`}
-      className={`relative scroll-mt-4 rounded-[4px] border p-2.5 text-sm ${tone} ${
+      className={`relative scroll-mt-4 rounded-[4px] border text-sm ${tone} ${
         selected ? "ring-2 ring-accent" : ""
       } ${dimmed ? "opacity-40" : ""}`}
     >
-      <div className="flex flex-wrap items-center gap-1">
-        {milestone && (
-          <span
-            title={milestone.title}
-            className={`tag max-w-full truncate ${milestoneStyle(map, milestone.id)}`}
-          >
-            {milestone.title}
-          </span>
-        )}
-        {unrecorded && (
-          <span className="marker py-0.5 text-xs font-medium">
-            記録のない実装
-          </span>
-        )}
-        {updated && (
-          <span className="tag text-ink">
-            更新
-          </span>
-        )}
-        {/* 未確認は全部のカードに付きやすいので、文字ではなく小さな点で示す */}
-        {task.review === "unconfirmed" && (
-          <span
-            role="img"
-            aria-label="未確認"
-            title="未確認（AI が作ったまま）"
-            className="ml-auto h-2 w-2 rounded-full bg-marker ring-1 ring-ink-3"
-          />
-        )}
-      </div>
-
+      {/* カードはタイトルだけ。クリックで、サブタスクとそのほかの中身を下に開く */}
       <button
         type="button"
-        onClick={() => onSelect(task.id)}
-        aria-pressed={selected}
-        className="mt-1.5 block w-full text-left font-medium text-ink hover:underline focus-visible:outline-2 focus-visible:outline-ink"
+        onClick={() => onToggle(task.id)}
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        aria-label={`${task.title}（${statusLabel(phase, status)}${counted.length > 0 ? `、サブタスク ${countedDone}/${counted.length}` : ""}）`}
+        className="flex w-full items-start gap-1.5 p-2 text-left hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-ink"
       >
-        {task.title}
+        <span aria-hidden="true" className="mt-0.5 shrink-0 text-xs text-ink-3">
+          {expanded ? "▾" : "▸"}
+        </span>
+        <span aria-hidden="true" className={`shrink-0 ${icon.className}`}>
+          {icon.mark}
+        </span>
+        {/* 閉じたカードの高さをそろえるため、タイトルは2行分の高さにし、はみ出す分は省略する（開いたら全部出す） */}
+        <span
+          title={task.title}
+          className={`min-h-[2lh] min-w-0 flex-1 font-medium leading-snug text-ink ${expanded ? "" : "line-clamp-2"}`}
+        >
+          {task.title}
+        </span>
+        {counted.length > 0 && (
+          <span aria-hidden="true" className="shrink-0 font-mono text-xs tabular-nums text-ink-3">
+            {countedDone}/{counted.length}
+          </span>
+        )}
       </button>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <StatusBadge label={statusLabel(phase, status)} status={status} />
-      </div>
-
-      {task.purpose && (
-        <p
-          className="mt-1.5 line-clamp-1 text-xs text-ink-2"
-          title={task.purpose}
-        >
-          {task.purpose}
-        </p>
-      )}
-
-      {impactChips.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {impactChips.map((c) => (
-            <ChipButton key={c.key} chip={c} onSelect={onSelect} />
-          ))}
+      <div id={bodyId} hidden={!expanded} className="border-t border-hair px-2.5 pb-2.5 pt-1.5">
+        <div className="flex flex-wrap items-center gap-1">
+          <StatusBadge label={statusLabel(phase, status)} status={status} />
+          {milestone && (
+            <span
+              title={milestone.title}
+              className={`tag max-w-full truncate ${milestoneStyle(map, milestone.id)}`}
+            >
+              {milestone.title}
+            </span>
+          )}
+          {unrecorded && (
+            <span className="marker py-0.5 text-xs font-medium">記録のない実装</span>
+          )}
+          {updated && <span className="tag text-ink">更新</span>}
+          {task.review === "unconfirmed" && (
+            <span className="marker py-0.5 text-xs">未確認</span>
+          )}
         </div>
-      )}
 
-      {hasHidden && (
-        <button
-          type="button"
-          onClick={() => onToggle(task.id)}
-          aria-expanded={expanded}
-          aria-controls={bodyId}
-          className="mt-1.5 flex w-full items-start gap-1 px-1 py-0.5 text-left text-xs text-ink-2 hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-ink"
-        >
-          <span aria-hidden="true" className="shrink-0">
-            {expanded ? "▾" : "▸"}
-          </span>
-          <span className="min-w-0 flex-1">
-            {subtasks.length > 0 && (
-              <span>
-                サブタスク {subtasks.length}
-                <span className="text-ink-3">
-                  （
-                  {subtaskCounts.map((c, i) => (
-                    <span key={c.status}>
-                      {i > 0 && " "}
-                      <span
-                        aria-hidden="true"
-                        className={STATUS_ICON[c.status].className}
-                      >
-                        {STATUS_ICON[c.status].mark}
-                      </span>
-                      <span className="sr-only">
-                        {statusLabel(phase, c.status)}
-                      </span>
-                      {c.count}
-                    </span>
-                  ))}
-                  ）
-                </span>
-              </span>
-            )}
-            {subtasks.length > 0 && flowChips.length > 0 && "・"}
-            {flowChips.length > 0 && <span>つながり {flowChips.length}</span>}
-            {subtasks.length === 0 && flowChips.length === 0 && (
-              <span>詳細（結果・元の状態）</span>
-            )}
-          </span>
-        </button>
-      )}
+        {task.purpose && <p className="mt-1.5 text-xs text-ink-2">{task.purpose}</p>}
 
-      <div id={bodyId} hidden={!expanded}>
+        {impactChips.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {impactChips.map((c) => (
+              <ChipButton key={c.key} chip={c} onSelect={onSelect} />
+            ))}
+          </div>
+        )}
+
         {task.statusRaw && (
           <p className="mt-1.5 text-xs text-ink-3">
             元の状態：
@@ -253,9 +195,9 @@ export function TaskCard({
         )}
 
         {subtasks.length > 0 && (
-          <ul className="mt-2 space-y-0.5 border-t border-hair pt-1.5">
+          <ul aria-label="サブタスク" className="mt-2 space-y-0.5 border-t border-hair pt-1.5">
             {subtasks.map((s) => {
-              const icon = STATUS_ICON[s.status];
+              const sIcon = STATUS_ICON[s.status];
               const rejected = s.status === "rejected";
               const sSelected = selectedId === s.id;
               return (
@@ -270,9 +212,9 @@ export function TaskCard({
                   >
                     <span
                       aria-hidden="true"
-                      className={`mt-px shrink-0 ${icon.className}`}
+                      className={`mt-px shrink-0 ${sIcon.className}`}
                     >
-                      {icon.mark}
+                      {sIcon.mark}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
@@ -310,6 +252,15 @@ export function TaskCard({
             ))}
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => onSelect(task.id)}
+          aria-pressed={selected}
+          className="link mt-2 text-xs"
+        >
+          詳細を見る
+        </button>
       </div>
     </li>
   );

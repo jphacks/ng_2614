@@ -5,6 +5,7 @@ import { progressText, type PhaseSummary } from "@/lib/map/summary";
 import { effectiveStatus, statusLabel, subtasksOf, tasksInPhase } from "@/lib/map/view";
 import type { WorkflowMap } from "@/lib/types";
 import { STATUS_ICON } from "@/components/map/labels";
+import { StepMark } from "@/components/map/StepMark";
 
 // 縦の帯を開いたときの、レーンの進み具合のステッププログレスバー。
 // レーンを工程の順に縦の線でつなぎ、各レーンに印（済み ✓・番号。今の段階は番号の丸を藍にするだけで、行は他と同じ）と、サブタスクの済み/全体の数と目盛りを出す。
@@ -78,18 +79,7 @@ export function LaneStepper({
                 className={`absolute bottom-0 left-[11px] top-7 w-0.5 ${complete ? "bg-mint" : "bg-hair"}`}
               />
             )}
-            <span
-              aria-hidden="true"
-              className={`absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[12px] font-bold ${
-                complete
-                  ? "border-mint bg-mint text-paper"
-                  : isCurrent
-                    ? "border-accent bg-accent text-paper"
-                    : "border-hair bg-paper text-ink-3"
-              }`}
-            >
-              {complete ? "✓" : i + 1}
-            </span>
+            <StepMark index={i} complete={complete} current={isCurrent} className="absolute left-0 top-1" />
             <button
               type="button"
               onClick={() => toggleLane(s.phase.id)}

@@ -33,13 +33,20 @@ export function MapBoard({
   const summaries = phaseSummaries(map);
   const changedIds = new Set(map.lastUpdate?.changedTaskIds ?? []);
   const currentPhaseId = currentFocus(map).current?.phaseId;
-  // レーンは初め閉じておき、マウスを合わせたレーン・クリックで固定したレーン・選んでいるタスクのレーンだけを開く
-  const [hoveredLane, setHoveredLane] = useState<string | null>(null);
-  const [pinnedLanes, setPinnedLanes] = useState<Set<string>>(() => new Set());
+  // レーンは初め閉じておき、レーン名をクリックしたレーンだけを開く（マウスを合わせただけでは開かない）。
+  // タスクを選んだときは、そのタスクのレーンを開く
   const selectedLane = map.tasks.find((t) => t.id === selectedId)?.phaseId;
+  const [openLanes, setOpenLanes] = useState<Set<string>>(
+    () => new Set(selectedLane ? [selectedLane] : []),
+  );
+  const [openedForSelection, setOpenedForSelection] = useState(selectedLane);
+  if (selectedLane !== openedForSelection) {
+    setOpenedForSelection(selectedLane);
+    if (selectedLane) setOpenLanes((prev) => new Set(prev).add(selectedLane));
+  }
 
-  function togglePin(phaseId: string) {
-    setPinnedLanes((prev) => {
+  function toggleLane(phaseId: string) {
+    setOpenLanes((prev) => {
       const next = new Set(prev);
       if (next.has(phaseId)) next.delete(phaseId);
       else next.add(phaseId);
@@ -47,10 +54,9 @@ export function MapBoard({
     });
   }
 
-  // 「すべて開く／閉じる」は、カードのトグルとレーンの固定をまとめて開く／閉じる
+  // 「すべて開く／閉じる」は、レーンとカードのトグルをまとめて開く／閉じる
   function setAll(open: boolean) {
-    setPinnedLanes(open ? new Set(summaries.map((s) => s.phase.id)) : new Set());
-    if (!open) setHoveredLane(null);
+    setOpenLanes(open ? new Set(summaries.map((s) => s.phase.id)) : new Set());
     onSetAllExpanded(open);
   }
 
@@ -111,20 +117,16 @@ export function MapBoard({
       <div className="overflow-x-auto pb-2">
         {/* レーンは盤面の幅を等分する（最小 160px）。詳細パネルが開いて狭くなっても縮めて収め、入らないときだけこの部分を横にスクロールする */}
         <div className="flex items-start gap-3">
-          {summaries.map((s) => (
+          {summaries.map((s, i) => (
             <PhaseLane
               key={s.phase.id}
               map={map}
               phase={s.phase}
+              index={i}
+              complete={s.steps.total > 0 && s.steps.done === s.steps.total}
               progress={progressText(s)}
-              open={
-                hoveredLane === s.phase.id ||
-                pinnedLanes.has(s.phase.id) ||
-                selectedLane === s.phase.id
-              }
-              pinned={pinnedLanes.has(s.phase.id)}
-              onHover={setHoveredLane}
-              onTogglePin={togglePin}
+              open={openLanes.has(s.phase.id)}
+              onToggleOpen={toggleLane}
               filter={filter}
               selectedId={selectedId}
               changedIds={changedIds}
