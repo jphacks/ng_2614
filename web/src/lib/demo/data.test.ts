@@ -158,8 +158,18 @@ describe("デモデータ", () => {
     });
   });
 
-  it("問題が無くても研究の目的について質問する", () => {
+  it("デモ用のプロジェクトで問題を保存していなくても、正規化の質問から始める", () => {
     const questions = demoTeacherQuestions({ theme, problems: [] });
+    expect(questions).toHaveLength(2);
+    expect(questions[0].question).toContain("正規化");
+    expect(demoAnswerSuggestion(questions[0].question, 0)).toBe("AIがやったのでわかりません");
+  });
+
+  it("ほかのプロジェクトで問題が無ければ、研究の目的について質問する", () => {
+    const questions = demoTeacherQuestions({
+      theme: { ...theme, name: "別の研究" },
+      problems: [],
+    });
     expect(questions).toHaveLength(1);
     expect(questions[0].layer).toBe("research");
   });
