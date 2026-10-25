@@ -2,7 +2,9 @@
 
 **AI が研究のコードを書く時代に、AI が黙って解決した問題を見逃さず、研究と実装の理解を取り戻す Web アプリ。**
 
-[![TAZUNA のデモ動画（YouTube、5分35秒）](https://img.youtube.com/vi/3dEagmwuUeM/maxresdefault.jpg)](https://youtu.be/3dEagmwuUeM)
+[![クリックで TAZUNA のデモ動画を YouTube で再生（5分35秒）](docs/images/demo-video-thumbnail.png)](https://youtu.be/3dEagmwuUeM)
+
+▶ **[デモ動画を YouTube で見る（5分35秒）](https://youtu.be/3dEagmwuUeM)**
 
 ### デモ動画（5分35秒）
 
