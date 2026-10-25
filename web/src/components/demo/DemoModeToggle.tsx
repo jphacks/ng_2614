@@ -21,13 +21,3 @@ export function DemoModeToggle() {
   );
 }
 
-// デモモード中だけ、画面の上に常に出す帯
-export function DemoModeBanner() {
-  const on = useDemoMode();
-  if (!on) return null;
-  return (
-    <div className="border-b border-ink bg-marker px-4 py-1.5 text-center text-xs text-ink">
-      デモモード：GitHub と AI（Claude）は呼ばず、用意したデモデータで動いています
-    </div>
-  );
-}

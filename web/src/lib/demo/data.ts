@@ -320,6 +320,8 @@ type DemoQuestion = {
   viewpoints: DemoViewpoint[]; // 掘る順
   homework: string; // 届かなかったときの講評：ゼミまでに考えておくこと
   aiDidIt: string; // 「AIがやったので分かりません」への問い返し
+  partial?: string; // 一部だけ言えたときの講評（無ければ観点の文から作る）
+  answers?: string[]; // ピッチで回答欄にマウスを合わせたときに入れる回答（1回目、2回目…）
 };
 
 const NORMALIZE_QUESTION: DemoQuestion = {
@@ -358,6 +360,13 @@ const NORMALIZE_QUESTION: DemoQuestion = {
     "生成した点を元のスケールに戻して距離を測り直し、正規化したままの値と比べておいてください。",
   aiDidIt:
     "AIがやったかどうかは関係ありません。compare.py の normalize の行と、sliced_wasserstein に渡している値を見て、何をしているか説明してください。",
+  partial:
+    "学習が発散したから正規化した、というところは分かっていますね。\nでも、正規化したまま距離を測ると README の「元のスケールのまま測る」と違い、前の結果とそのまま比べられなくなる、というところはまだ分かっていないようです。",
+  // 2回目は一部だけ正しい回答（学習が発散した理由だけで、比べ方が変わることには触れない）
+  answers: [
+    "AIがやったのでわかりません",
+    "正規化しないと損失が nan になって学習が発散したので、平均0・分散1に正規化しました。",
+  ],
 };
 
 const CLIP_QUESTION: DemoQuestion = {
@@ -474,7 +483,8 @@ export function demoTeacherQuestions(
     .map((p) => ({ q: questionFor(p), findingId: p.id }));
   list.push({ q: evaluationQuestion(req.theme.evaluation) });
 
-  return list.map(({ q, findingId }) => {
+  // ピッチで短く見せるため、質問は2つまで（保存した問題を先に聞く）
+  return list.slice(0, 2).map(({ q, findingId }) => {
     asked.set(q.question, q);
     return {
       layer: q.layer,
@@ -509,6 +519,23 @@ export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
     });
 
   const { done, understood } = decideTurn(viewpoints, covered, req.turns);
+  // ピッチで短く見せるため、必須でない観点だけが言えた（必須はまだ1つも言えていない）ときは、ここで一部正解の講評をして終える
+  const requiredSaid = viewpoints.some((v) => v.required && covered.includes(v.id));
+  if (!done && covered.length > req.covered.length && !requiredSaid) {
+    const said = viewpoints.filter((v) => covered.includes(v.id));
+    const missing = viewpoints.filter(
+      (v) => v.required && !covered.includes(v.id),
+    );
+    const partial =
+      q?.partial ??
+      `「${said.map((v) => v.text).join("」「")}」は言えていますね。\nでも、「${missing.map((v) => v.text).join("」「")}」は、まだ分かっていないようです。`;
+    return {
+      done: true,
+      understood: false,
+      covered,
+      message: `${partial}\nゼミまでに：${q?.homework ?? "この変更が研究の結果にどう影響するか整理してください。"}`,
+    };
+  }
   if (done && understood) {
     return {
       done,
@@ -541,6 +568,14 @@ export function demoTeacherTurn(req: TeacherTurnRequest): TeacherTurnResponse {
     message = `それでは理由になっていません。${probe}`;
   else message = probe;
   return { done, understood, covered, message };
+}
+
+// ピッチで、回答欄にマウスを合わせたときに入れる回答。その質問で何回目の回答か（0 から）で決まる。無ければ undefined
+export function demoAnswerSuggestion(
+  question: string,
+  answered: number,
+): string | undefined {
+  return asked.get(question)?.answers?.[answered];
 }
 
 // 一問一答の API（POST /api/teacher/feedback）のデモ。今の先生モードの画面は使っていない

@@ -152,7 +152,7 @@ export function postTeacherQuestions(
   payload: TeacherQuestionsRequest,
 ): Promise<TeacherQuestionsResponse> {
   if (isDemoMode()) {
-    return demo(1800, () => ({ questions: demoTeacherQuestions(payload) }));
+    return demo(700, () => ({ questions: demoTeacherQuestions(payload) }));
   }
   return postJson<TeacherQuestionsResponse>(
     "/api/teacher/questions",
@@ -164,7 +164,7 @@ export function postTeacherQuestions(
 export function postTeacherTurn(
   payload: TeacherTurnRequest,
 ): Promise<TeacherTurnResponse> {
-  if (isDemoMode()) return demo(1500, () => demoTeacherTurn(payload));
+  if (isDemoMode()) return demo(900, () => demoTeacherTurn(payload));
   return postJson<TeacherTurnResponse>("/api/teacher/turn", payload, "teacher");
 }
 
