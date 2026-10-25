@@ -24,7 +24,13 @@ build/
 .next/
 out/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # OS / editor
 .DS_Store
 .vscode/
 .idea/
+
+# デモ用の先生のイラスト（公開しない。各自の手元にだけ置く）
+web/public/demo/teacher.jpg
