@@ -8,13 +8,16 @@ import {
   type ProjectCard,
 } from "@/components/project/ProjectList";
 import { fetchConnections } from "@/lib/api-client";
-import { demoTheme } from "@/lib/demo/data";
+import { DEMO_TEACHER_IMAGE, demoTheme } from "@/lib/demo/data";
 import { useDemoMode } from "@/lib/demo/mode";
 import {
   listReviews,
   listSavedProblems,
   listThemes,
+  DEFAULT_TEACHER_NAME,
   REVIEWS_CHANGED_EVENT,
+  getTeacherPersona,
+  saveTeacherPersona,
   saveTheme,
 } from "@/lib/storage";
 
@@ -64,6 +67,10 @@ export default function Home() {
 
   const handleCreateDemo = () => {
     saveTheme({ ...demoTheme, updatedAt: "" });
+    // 先生を自分で設定していなければ、デモ用の先生の画像にする
+    if (!getTeacherPersona(demoTheme.id)) {
+      saveTeacherPersona({ themeId: demoTheme.id, name: DEFAULT_TEACHER_NAME, image: DEMO_TEACHER_IMAGE });
+    }
     router.push(`/themes/${demoTheme.id}`);
   };
 

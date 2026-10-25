@@ -3,9 +3,24 @@
 
 import { deleteDiff, saveDiff } from "@/lib/diff-store";
 import { setStripOpen, setStripOrientation } from "@/lib/map/prefs";
-import { deleteTheme, nowIso, saveHookReview, saveTheme, saveWorkflowMap } from "@/lib/storage";
+import {
+  DEFAULT_TEACHER_NAME,
+  deleteTheme,
+  nowIso,
+  saveHookReview,
+  saveTeacherPersona,
+  saveTheme,
+  saveWorkflowMap,
+} from "@/lib/storage";
 import type { Review } from "@/lib/types";
-import { DEMO_THEME_ID, MAIN_SHA, demoDiff, demoReviewFindings, demoTheme } from "./data";
+import {
+  DEMO_TEACHER_IMAGE,
+  DEMO_THEME_ID,
+  MAIN_SHA,
+  demoDiff,
+  demoReviewFindings,
+  demoTheme,
+} from "./data";
 import { setDemoMode } from "./mode";
 import { demoWorkflowMap } from "./workflow-map";
 
@@ -51,6 +66,7 @@ export async function preparePitchDemo(): Promise<string> {
   const removed = deleteTheme(DEMO_THEME_ID);
   await Promise.all(removed.map((id) => deleteDiff(id)));
   const theme = saveTheme({ ...demoTheme, updatedAt: "" });
+  saveTeacherPersona({ themeId: DEMO_THEME_ID, name: DEFAULT_TEACHER_NAME, image: DEMO_TEACHER_IMAGE });
 
   // マップは取り込む前の状態のまま置く（更新まで当てはめると、判定結果の上に「マップに反映しました」が大きく出て、隠れた問題が下に押し出されるため）
   saveWorkflowMap(
