@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Klee_One, Noto_Serif_JP } from "next/font/google";
+import { Klee_One, Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import Link from "next/link";
 import {
   DemoModeToggle,
@@ -9,7 +9,15 @@ import { MapStrip } from "@/components/map-strip/MapStrip";
 import { NavMenu } from "@/components/nav/NavMenu";
 import "./globals.css";
 
-// 見出しの明朝体と、先生の言葉の手書き風の字（設計書「画面の見た目」）。globals.css の --font-serif / --font-hand から使う
+// 本文のゴシック体、見出しの明朝体、先生の言葉の手書き風の字（設計書「画面の見た目」）。
+// globals.css の --font-sans / --font-serif / --font-hand から使う
+const sans = Noto_Sans_JP({
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-noto-sans-jp",
+});
 const serif = Noto_Serif_JP({
   weight: ["500", "600"],
   subsets: ["latin"],
@@ -37,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${serif.variable} ${hand.variable}`}>
+    <html lang="ja" className={`${sans.variable} ${serif.variable} ${hand.variable}`}>
       <body className="min-h-screen bg-paper text-ink antialiased">
         {/* 作業フローマップの帯が縦（右のサイドバー）のときは、その幅だけ右側を空ける（MapStrip が変数を付ける） */}
         <div className="md:pr-[var(--map-side-w,0px)]">

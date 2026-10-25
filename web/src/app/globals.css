@@ -43,7 +43,7 @@
   --font-serif: var(--font-noto-serif-jp), "Hiragino Mincho ProN", "Yu Mincho", serif;
   --font-hand: var(--font-klee-one), "Hiragino Maru Gothic ProN", var(--font-serif);
   --font-sans:
-    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo,
+    var(--font-noto-sans-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo,
     sans-serif;
   --font-mono:
     ui-monospace, "SFMono-Regular", Menlo, Consolas, "Hiragino Sans", monospace;
@@ -56,6 +56,8 @@
 
 body {
   font-family: var(--font-sans);
+  /* 本文は少し太く（プロジェクターで映しても線が細くならないように） */
+  font-weight: 500;
   font-size: var(--text-base);
   font-feature-settings: "palt" 0;
 }
