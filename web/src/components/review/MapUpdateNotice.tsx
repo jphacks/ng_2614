@@ -41,7 +41,7 @@ export function MapUpdateNotice({ review }: { review: Review }) {
 
   return (
     <section
-      className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900"
+      className="border-y border-hair py-3 text-sm text-ink"
       aria-live="polite"
     >
       {status.state === "running" && (
@@ -50,7 +50,7 @@ export function MapUpdateNotice({ review }: { review: Review }) {
       {status.state === "done" && undone && (
         <p>
           作業フローマップへの反映を取り消しました。{" "}
-          <Link href={mapHref} className="underline">
+          <Link href={mapHref} className="link">
             マップを見る
           </Link>
         </p>
@@ -60,20 +60,20 @@ export function MapUpdateNotice({ review }: { review: Review }) {
           <p className="font-medium">
             作業フローマップに {status.summaries.length} 件反映しました
           </p>
-          <ul className="list-disc space-y-0.5 pl-5 text-xs text-blue-800">
+          <ul className="list-disc space-y-0.5 pl-5 text-xs text-ink-2">
             {status.summaries.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-3">
-            <Link href={mapHref} className="font-medium underline">
+            <Link href={mapHref} className="link font-medium">
               マップを見る
             </Link>
             {status.canUndo && (
               <button
                 type="button"
                 onClick={handleUndo}
-                className="text-blue-700 underline"
+                className="link-quiet"
               >
                 取り消す
               </button>
@@ -84,7 +84,7 @@ export function MapUpdateNotice({ review }: { review: Review }) {
       {status.state === "done" && !undone && status.summaries.length === 0 && (
         <p>
           作業フローマップに反映する変更はありませんでした。{" "}
-          <Link href={mapHref} className="underline">
+          <Link href={mapHref} className="link">
             マップを見る
           </Link>
         </p>
@@ -92,13 +92,13 @@ export function MapUpdateNotice({ review }: { review: Review }) {
       {status.state === "error" && (
         <div className="space-y-1">
           <p>作業フローマップを更新できませんでした：{status.message}</p>
-          <Link href={mapHref} className="underline">
+          <Link href={mapHref} className="link">
             マップを見る
           </Link>
         </div>
       )}
       {undoError && (
-        <p role="alert" className="mt-2 text-xs text-red-700">
+        <p role="alert" className="mt-2 text-xs text-pen">
           {undoError}
         </p>
       )}

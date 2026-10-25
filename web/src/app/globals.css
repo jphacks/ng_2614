@@ -1,14 +1,140 @@
 @import "tailwindcss";
 
-/* ライトテーマだけで作る（OS がダークモードでも白背景のまま表示する） */
+/* 画面の見た目（設計書「7. 画面・UX」の「画面の見た目」）。
+   全体は査読報告の書式（墨・紙・罫線・明朝体の見出し）に藍・空・若葉の3色、隠れた問題と先生の言葉だけ赤ペン。
+   色はここの名前（accent・sky・mint・ink・paper・pen・marker など）で使い、画面ごとに色を直接書かない */
+@theme {
+  /* 色の軸：藍（主な操作・今の位置）・空（情報・余計な追加）・若葉（できたこと・目的どおり）の3色。
+     文字と罫線は藍を含ませた墨、地は少し青みのある紙 */
+  --color-accent: #4e67c8; /* 藍：主なボタン・今の段階・今ここ・選んでいるもの */
+  --color-accent-deep: #3a4fa6; /* 藍の濃いほう：押したとき・藍の文字 */
+  --color-accent-soft: #e9edfa; /* 藍の薄い下地 */
+  --color-sky: #5dcdf3; /* 空：情報・待ち・余計な追加 */
+  --color-sky-ink: #1d7aa3; /* 空の文字（白地で読める濃さ） */
+  --color-sky-soft: #e3f6fd;
+  --color-mint: #5cceb0; /* 若葉：済んだこと・目的どおり・理解できた */
+  --color-mint-ink: #1d8467; /* 若葉の文字 */
+  --color-mint-soft: #e1f6ef;
+
+  --color-ink: #262b45; /* 墨（藍を含ませた墨）：文字・罫線 */
+  --color-ink-2: #535a75; /* 補助の文字 */
+  --color-ink-3: #868ca4; /* さらに控えめな文字（日時・件数など） */
+  --color-hair: #dfe3ef; /* 細い罫線 */
+  --color-paper: #f6f8fc; /* 紙（少し青みのある白）。画面の地 */
+  --color-sheet: #ffffff; /* 地の上に置いた一枚（カード・レーン・今の段階の囲み） */
+  --color-paper-2: #edf1f8; /* 紙の陰（コード・表の見出し・入力済みの欄） */
+  --color-pen: #d23f3a; /* 赤ペン：研究への影響あり・隠れた問題の印・先生の言葉・エラー */
+  --color-pen-soft: #fbe9e7; /* 赤ペンの薄い下地（差分の削除行など、ごく一部だけ） */
+  --color-marker: #fbf1a9; /* 蛍光ペン：注意（デモモード・未確認・推測・未登録） */
+  --color-add: #e1f6ef; /* 差分の追加行（若葉） */
+  --color-add-ink: #17684f;
+  --color-del: #fbe9e7; /* 差分の削除行 */
+  --color-del-ink: #9a2a22;
+
+  --font-serif: var(--font-noto-serif-jp), "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-hand: var(--font-klee-one), "Hiragino Maru Gothic ProN", var(--font-serif);
+  --font-sans:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo,
+    sans-serif;
+  --font-mono:
+    ui-monospace, "SFMono-Regular", Menlo, Consolas, "Hiragino Sans", monospace;
+}
+
+/* ライトテーマだけで作る（OS がダークモードでも紙の白で表示する） */
 :root {
   color-scheme: light;
 }
 
 body {
-  font-family:
-    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
-    Meiryo, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "palt" 0;
+}
+
+/* 見出しは明朝体 */
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* キーボードで動かしたときの位置を、どの部品でも藍の枠で見せる */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 判定結果（S-3）の隠れた問題の赤ペンの線を、開いたときに上から引く。画面全体でこの1つだけの動き */
+@keyframes pen-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.pen-stroke {
+  transform-origin: top;
+  animation: pen-draw 700ms cubic-bezier(0.3, 0.7, 0.2, 1) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pen-stroke {
+    animation: none;
+  }
+}
+
+/* 共通の部品。角はわずかに丸め（3px）、影は付けない */
+@layer components {
+  /* 主な操作：藍のベタ塗り（1画面に1つまで） */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[3px] border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:border-accent-deep hover:bg-accent-deep disabled:cursor-not-allowed disabled:border-ink-3 disabled:bg-ink-3;
+  }
+  /* ほかの操作：墨の枠 */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[3px] border border-ink bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-paper-2 disabled:cursor-not-allowed disabled:border-hair disabled:text-ink-3;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+  /* 赤ペンの操作（問題ログに保存など、隠れた問題についての操作） */
+  .btn-pen {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[3px] border border-pen bg-paper px-4 py-2 text-sm font-medium text-pen hover:bg-pen-soft;
+  }
+  /* 目立たない操作：下線の付いた文字 */
+  .link {
+    @apply text-accent-deep underline decoration-accent/40 underline-offset-4 hover:decoration-accent;
+  }
+  .link-quiet {
+    @apply text-ink-2 underline decoration-hair underline-offset-4 hover:text-ink hover:decoration-ink-2;
+  }
+  /* 入力欄 */
+  .field {
+    @apply w-full rounded-[3px] border border-ink-3 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-2 focus:outline-offset-0 focus:outline-accent/40 disabled:bg-paper-2;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink;
+  }
+  /* 見出しの下の罫線 */
+  .rule-head {
+    @apply border-b border-ink pb-1.5;
+  }
+  /* 小さな文字のラベル（札の代わり）。枠だけの四角 */
+  .tag {
+    @apply inline-block rounded-[2px] border border-current px-1.5 text-[11px] leading-[18px] font-medium whitespace-nowrap;
+  }
+  /* 蛍光ペン：注意 */
+  .marker {
+    @apply rounded-[2px] bg-marker px-1 text-ink;
+  }
+  /* 赤ペンの書き込み（手書き風の字） */
+  .pen-note {
+    @apply font-hand text-pen;
+  }
+  /* 画面の上に重ねるもの（トースト・メニュー）：墨の枠と小さな影 */
+  .float-sheet {
+    @apply rounded-[4px] border border-ink bg-paper shadow-[3px_3px_0_0_rgba(38,43,69,0.12)];
+  }
 }
 
 /* 先生モードの会話：新しい吹き出しがふわっと現れる */
@@ -46,7 +172,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 9999px;
-  background-color: #6b7280;
+  background-color: var(--color-ink-3);
   animation: typing-dot 1.1s ease-in-out infinite;
 }
 

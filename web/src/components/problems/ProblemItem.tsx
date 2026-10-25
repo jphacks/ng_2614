@@ -12,28 +12,29 @@ export function ProblemItem({ problem }: { problem: SavedProblem }) {
   const hasImpact = impact?.exists === true;
 
   return (
+    // 研究への影響ありの問題は、左の余白に赤ペンの縦線を引く
     <li
-      className={`rounded-md border p-4 ${
-        hasImpact ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+      className={`border-l-2 py-4 pl-3 ${
+        hasImpact ? "border-pen" : "border-transparent"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-gray-900">{finding.summary}</p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="font-medium text-ink">{finding.summary}</p>
+          <p className="mt-1 text-xs text-ink-3">
             {formatDate(review.createdAt)}
           </p>
         </div>
         {hasImpact && (
-          <span className="shrink-0 rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
+          <span className="shrink-0 text-xs font-bold text-pen">
             研究への影響あり
           </span>
         )}
       </div>
 
       {hasImpact && (
-        <p className="mt-3 rounded border border-red-300 bg-white p-3 text-sm text-red-900">
-          <span className="font-bold">⚠ 研究への影響: </span>
+        <p className="mt-3 text-sm text-ink">
+          <span className="font-bold text-pen">⚠ 研究への影響: </span>
           {impact.description}
         </p>
       )}
@@ -42,7 +43,7 @@ export function ProblemItem({ problem }: { problem: SavedProblem }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="mt-3 text-sm text-blue-700 hover:underline"
+        className="link mt-3 text-sm"
       >
         {open ? "詳細を閉じる" : "詳細を見る"}
       </button>
@@ -52,7 +53,7 @@ export function ProblemItem({ problem }: { problem: SavedProblem }) {
           <Detail label="エラー内容">
             {finding.error ?? "(記録なし)"}
             {finding.errorIsInferred && (
-              <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-700">
+              <span className="marker ml-2 text-xs">
                 推測
               </span>
             )}
@@ -76,7 +77,7 @@ export function ProblemItem({ problem }: { problem: SavedProblem }) {
           )}
           <Link
             href={`/reviews/${review.id}`}
-            className="inline-block text-blue-700 hover:underline"
+            className="link inline-block"
           >
             この判定結果を見る →
           </Link>
@@ -95,8 +96,8 @@ function Detail({
 }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <div className="mt-0.5 whitespace-pre-wrap text-gray-900">{children}</div>
+      <p className="text-xs font-medium text-ink-3">{label}</p>
+      <div className="mt-0.5 whitespace-pre-wrap text-ink">{children}</div>
     </div>
   );
 }

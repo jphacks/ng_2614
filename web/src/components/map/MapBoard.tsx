@@ -47,23 +47,23 @@ export function MapBoard({
         aria-label="マイルストーンで絞り込む"
         className="flex flex-wrap items-center gap-1.5"
       >
-        <span className="text-xs text-gray-500">マイルストーン：</span>
+        <span className="text-xs text-ink-3">マイルストーン：</span>
         {options.map((o) => {
           const active = filter === o.value;
           const color =
             o.value !== "all" && o.value !== "none"
               ? milestoneStyle(map, o.value)
-              : "bg-gray-100 text-gray-700";
+              : "text-ink-2";
           return (
             <button
               key={o.value}
               type="button"
               aria-pressed={active}
               onClick={() => onFilterChange(o.value)}
-              className={`rounded px-2 py-1 text-xs ${color} ${
+              className={`border px-2 py-1 text-xs ${
                 active
-                  ? "font-bold ring-2 ring-blue-500"
-                  : "opacity-80 hover:opacity-100"
+                  ? "border-accent bg-accent font-bold text-paper"
+                  : `${color} hover:bg-paper-2`
               }`}
             >
               {o.label}
@@ -74,14 +74,14 @@ export function MapBoard({
           <button
             type="button"
             onClick={() => onSetAllExpanded(true)}
-            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+            className="btn btn-sm"
           >
             すべて開く
           </button>
           <button
             type="button"
             onClick={() => onSetAllExpanded(false)}
-            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+            className="btn btn-sm"
           >
             すべて閉じる
           </button>

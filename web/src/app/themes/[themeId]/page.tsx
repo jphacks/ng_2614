@@ -60,15 +60,15 @@ export default function ThemeDetailPage() {
   }, [themeId]);
 
   if (state.status === "loading") {
-    return <p className="text-sm text-gray-500">読み込み中...</p>;
+    return <p className="text-sm text-ink-3">読み込み中...</p>;
   }
   if (state.status === "notFound") {
     return (
       <div>
-        <p className="text-gray-700">プロジェクトが見つかりません。</p>
+        <p className="text-ink-2">プロジェクトが見つかりません。</p>
         <Link
           href="/"
-          className="mt-2 inline-block text-blue-700 hover:underline"
+          className="link mt-2 inline-block"
         >
           プロジェクト一覧へ戻る
         </Link>
@@ -87,24 +87,24 @@ export default function ThemeDetailPage() {
   return (
     <div className="space-y-10">
       <div>
-        <Link href="/" className="text-sm text-blue-700 hover:underline">
+        <Link href="/" className="link-quiet text-sm">
           ← プロジェクト一覧
         </Link>
         <h1 className="mt-2 text-xl font-bold">{theme.name}</h1>
-        <p className="mt-1 font-mono text-xs text-gray-500">{theme.repo}</p>
+        <p className="mt-1 font-mono text-xs text-ink-3">{theme.repo}</p>
         <div className="mt-4">
           <HookIntake themeId={theme.id} />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link
             href={`/themes/${theme.id}/teacher`}
-            className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+            className="btn"
           >
             先生モード
           </Link>
           <Link
             href={`/themes/${theme.id}/map`}
-            className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+            className="btn"
           >
             作業フローマップ
           </Link>
@@ -113,7 +113,7 @@ export default function ThemeDetailPage() {
           {!demo && (
             <Link
               href={`/themes/${theme.id}/reviews/new`}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+              className="btn btn-sm"
             >
               コミットから取り込む
             </Link>
@@ -125,19 +125,19 @@ export default function ThemeDetailPage() {
       <div className="space-y-10 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start xl:gap-10 xl:space-y-0">
         <div className="space-y-10">
           <section>
-            <div className="flex items-center justify-between">
+            <div className="rule-head flex items-center justify-between">
               <h2 className="text-lg font-bold">研究の目的</h2>
               {!editing && (
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="text-sm text-blue-700 hover:underline"
+                  className="link text-sm"
                 >
                   編集する
                 </button>
               )}
             </div>
-            <div className="mt-3 rounded-md border border-gray-200 p-4">
+            <div className="mt-3">
               {editing ? (
                 <ThemeForm
                   initial={{
@@ -158,14 +158,14 @@ export default function ThemeDetailPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold">問題ログ</h2>
+            <h2 className="rule-head text-lg font-bold">問題ログ</h2>
             <div className="mt-3">
               <ProblemLog problems={problems} />
             </div>
           </section>
         </div>
         <section>
-          <h2 className="text-lg font-bold">取り込んだ変更</h2>
+          <h2 className="rule-head text-lg font-bold">取り込んだ変更</h2>
           <div className="mt-3">
             <ReviewList reviews={reviews} />
           </div>

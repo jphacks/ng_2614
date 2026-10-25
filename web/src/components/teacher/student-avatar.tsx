@@ -5,7 +5,7 @@ export function StudentAvatar({ size = 32 }: { size?: number }) {
     <span
       aria-hidden="true"
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700"
+      className="flex shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-deep"
     >
       <svg
         viewBox="0 0 24 24"

@@ -76,7 +76,7 @@ export function TeacherPersonaEditor({
         <button
           type="button"
           onClick={startEditing}
-          className="text-sm text-blue-700 underline"
+          className="link text-sm"
         >
           先生を設定する
         </button>
@@ -87,9 +87,9 @@ export function TeacherPersonaEditor({
   const previewName = name.trim() || DEFAULT_TEACHER_NAME;
 
   return (
-    <div className="rounded-lg border border-gray-200 p-4">
+    <div className="rounded-[4px] border border-hair bg-sheet p-4">
       <p className="font-bold">先生の設定</p>
-      <p className="mt-1 text-xs text-gray-600">
+      <p className="mt-1 text-xs text-ink-2">
         このプロジェクトの先生モードに出る先生です。画像はこのブラウザにだけ保存し、AI には送りません。
       </p>
 
@@ -105,12 +105,12 @@ export function TeacherPersonaEditor({
             setDragging(false);
             takeFile(e.dataTransfer.files[0]);
           }}
-          className={`flex w-40 cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-3 text-center text-xs ${
-            dragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-50"
+          className={`flex w-40 cursor-pointer flex-col items-center gap-2 rounded-[4px] border-2 border-dashed p-3 text-center text-xs ${
+            dragging ? "border-accent bg-accent-soft" : "border-hair hover:bg-paper-2"
           }`}
         >
           <TeacherAvatar teacher={{ name: previewName, image }} size={80} />
-          <span className="text-gray-600">
+          <span className="text-ink-2">
             {busy ? "読み込み中…" : "画像を選ぶか、ここにドロップ"}
           </span>
           <input
@@ -134,14 +134,14 @@ export function TeacherPersonaEditor({
               maxLength={MAX_NAME_LENGTH}
               onChange={(e) => setName(e.target.value)}
               placeholder={`例：山田先生（空なら「${DEFAULT_TEACHER_NAME}」）`}
-              className="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+              className="field mt-1"
             />
           </label>
           {image && (
             <button
               type="button"
               onClick={() => setImage(undefined)}
-              className="text-sm text-gray-600 underline"
+              className="link-quiet text-sm"
             >
               画像を外す
             </button>
@@ -150,7 +150,7 @@ export function TeacherPersonaEditor({
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="mt-3 text-sm text-pen">
           {error}
         </p>
       )}
@@ -160,14 +160,14 @@ export function TeacherPersonaEditor({
           type="button"
           onClick={save}
           disabled={busy}
-          className="rounded bg-blue-700 px-4 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-50"
+          className="btn-primary"
         >
           保存する
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+          className="btn"
         >
           やめる
         </button>

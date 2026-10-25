@@ -18,7 +18,7 @@ export function TeacherAvatar({
         src={teacher.image}
         alt={teacher.name}
         style={style}
-        className="shrink-0 rounded-full border border-gray-200 object-cover"
+        className="shrink-0 rounded-full border border-hair object-cover"
       />
     );
   }
@@ -26,7 +26,7 @@ export function TeacherAvatar({
     <span
       aria-hidden="true"
       style={{ ...style, fontSize: size * 0.45 }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-gray-200 font-bold text-gray-600"
+      className="flex shrink-0 items-center justify-center rounded-full bg-paper-2 font-bold text-ink-2"
     >
       {Array.from(teacher.name)[0] ?? "先"}
     </span>

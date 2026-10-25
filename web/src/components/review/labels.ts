@@ -12,6 +12,14 @@ export const FINDING_TYPES: FindingType[] = [
   "extra_addition",
 ];
 
+// 指摘の番号を丸数字にする（①〜⑳）。21 以上は (21) のようにする
+export function circled(n: number): string {
+  if (Number.isInteger(n) && n >= 1 && n <= 20) {
+    return String.fromCharCode(0x2460 + n - 1);
+  }
+  return `(${n})`;
+}
+
 export function firstLine(text: string): string {
   return text.split("\n")[0].trim();
 }

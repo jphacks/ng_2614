@@ -12,36 +12,36 @@ export function RejectedList({
   onRestore: (index: number) => void;
 }) {
   return (
-    <details className="rounded-md border border-gray-200 p-3 text-sm">
-      <summary className="cursor-pointer text-gray-700">
+    <details className="border-t border-hair pt-3 text-sm">
+      <summary className="cursor-pointer text-ink-2">
         却下したもの（{rejected.length}件）
       </summary>
       {rejected.length === 0 ? (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-ink-3">
           消したタスクはありません。消したものは、ここに残ります。
         </p>
       ) : (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 divide-y divide-hair border-y border-hair">
           {rejected.map((r, i) => (
             <li
               key={`${r.at}-${i}`}
-              className="flex flex-wrap items-start justify-between gap-2 rounded border border-gray-200 p-2"
+              className="flex flex-wrap items-start justify-between gap-2 py-2"
             >
               <div className="min-w-0">
-                <p className="font-medium text-gray-800">{r.title}</p>
-                <p className="text-xs text-gray-500">
+                <p className="font-medium text-ink">{r.title}</p>
+                <p className="text-xs text-ink-3">
                   {formatDate(r.at)}
                   {r.tasks.length > 1 &&
                     `・サブタスク ${r.tasks.length - 1}件を含む`}
                 </p>
                 {r.reason && (
-                  <p className="text-xs text-gray-600">理由：{r.reason}</p>
+                  <p className="text-xs text-ink-2">理由：{r.reason}</p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => onRestore(i)}
-                className="shrink-0 rounded-md border border-blue-600 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                className="btn btn-sm shrink-0"
               >
                 戻す
               </button>

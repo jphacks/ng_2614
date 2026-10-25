@@ -110,15 +110,15 @@ export default function GuidePage() {
   return (
     <div className="space-y-14 pb-16">
       <header>
-        <p className="text-sm text-gray-500">使い方</p>
+        <p className="text-sm text-ink-3">使い方</p>
         <h1 className="mt-1 text-2xl font-bold">TAZUNA の使い方</h1>
-        <p className="mt-3 leading-relaxed text-gray-700">
+        <p className="mt-3 leading-relaxed text-ink-2">
           Claude Code などの AI
           に研究のコードを書かせると、頼んだこと以外に、エラーを黙って避けるための変更が混ざることがあります。データを正規化した、値に上限を付けた――動くようにはなっても、研究の前提が変わっているかもしれません。TAZUNA
           は、AI
           の変更を研究の目的と照らし合わせてそうした「隠れた問題」を見つけ、あなたが自分の言葉で説明できるかを確かめます。
         </p>
-        <p className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-500">
+        <p className="mt-3 border-l-2 border-hair px-3 py-1 text-xs text-ink-3">
           画面は {CAPTURED_AT} に、サンプルのプロジェクト（DDPM
           のノイズスケジュールの比較）で、本物の Claude API
           を使って撮ったものです。今の画面とは少し違うことがあります。
@@ -126,19 +126,19 @@ export default function GuidePage() {
       </header>
 
       <section>
-        <h2 className="text-lg font-bold">全体の流れ</h2>
+        <h2 className="rule-head text-lg font-bold">全体の流れ</h2>
         <ol className="mt-4 grid gap-3 sm:grid-cols-5">
           {STEPS.map((s, i) => (
             <li key={s.href}>
               <a
                 href={s.href}
-                className="block h-full rounded-xl border border-gray-200 p-3 hover:border-blue-300 hover:bg-blue-50/40"
+                className="block h-full border-t-2 border-ink p-3 hover:bg-paper-2"
               >
-                <span className="text-xs font-bold text-blue-700">{i + 1}</span>
-                <p className="mt-1 text-sm font-medium text-gray-900">
+                <span className="font-serif text-sm font-bold text-ink">{i + 1}</span>
+                <p className="mt-1 text-sm font-medium text-ink">
                   {s.title}
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                <p className="mt-1 text-xs leading-relaxed text-ink-2">
                   {s.text}
                 </p>
               </a>
@@ -191,7 +191,7 @@ export default function GuidePage() {
           の最終報告が手元の TAZUNA
           に届き、自動で判定が始まります。コミットしなくても届きます。
         </p>
-        <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-gray-100">
+        <pre className="overflow-x-auto border border-hair bg-paper-2 p-4 font-mono text-xs leading-relaxed text-ink">
           {HOOK_SETTINGS}
         </pre>
         <p className="text-sm">
@@ -288,9 +288,9 @@ export default function GuidePage() {
         />
       </GuideSection>
 
-      <p className="border-t border-gray-200 pt-6 text-sm text-gray-500">
+      <p className="border-t border-hair pt-6 text-sm text-ink-3">
         さっそく始めるなら{" "}
-        <Link href="/projects/new" className="text-blue-700 hover:underline">
+        <Link href="/projects/new" className="link">
           新しいプロジェクトを作る
         </Link>
         。
@@ -310,8 +310,8 @@ function GuideSection({
 }) {
   return (
     <section id={id} className="scroll-mt-20 space-y-4">
-      <h2 className="text-lg font-bold">{title}</h2>
-      <div className="space-y-4 leading-relaxed text-gray-700">{children}</div>
+      <h2 className="rule-head text-lg font-bold">{title}</h2>
+      <div className="space-y-4 leading-relaxed text-ink-2">{children}</div>
     </section>
   );
 }
@@ -326,10 +326,10 @@ function Figure({ shot, caption }: { shot: Shot; caption: string }) {
           width={shot.width}
           height={shot.height}
           sizes="(min-width: 768px) 768px, 100vw"
-          className="w-full rounded-lg border border-gray-200 shadow-sm"
+          className="w-full border border-hair"
         />
       </a>
-      <figcaption className="mt-2 text-xs text-gray-500">{caption}</figcaption>
+      <figcaption className="mt-2 text-xs text-ink-3">{caption}</figcaption>
     </figure>
   );
 }

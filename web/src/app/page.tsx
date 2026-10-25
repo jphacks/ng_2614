@@ -68,28 +68,28 @@ export default function Home() {
           {/* 使い方（S-9）への入り口 */}
           <Link
             href="/guide"
-            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+            className="link-quiet text-xs"
           >
             ？ 使い方を見る
           </Link>
         </div>
         <Link
           href="/projects/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="btn-primary"
         >
           ＋ 新しいプロジェクト
         </Link>
       </div>
 
       {missingKey && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
-          <p className="text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-ink bg-marker p-4 text-sm">
+          <p className="text-ink">
             Claude API
             キーがまだ設定されていません。判定や先生モードを使うには、設定画面の「接続」で入れてください。
           </p>
           <Link
             href="/settings"
-            className="rounded-md bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700"
+            className="btn"
           >
             接続を設定する
           </Link>
@@ -97,11 +97,11 @@ export default function Home() {
       )}
 
       {demoMode && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
+        <div className="flex flex-wrap items-center gap-3 border-l-2 border-ink bg-marker p-4 text-sm">
           <button
             type="button"
             onClick={handleCreateDemo}
-            className="rounded-md bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-700"
+            className="btn"
           >
             デモ用のプロジェクトを作る
           </button>
@@ -109,15 +109,15 @@ export default function Home() {
       )}
 
       {projects === null ? (
-        <p className="text-sm text-gray-500">読み込み中...</p>
+        <p className="text-sm text-ink-3">読み込み中...</p>
       ) : projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-          <p className="font-medium text-gray-900">
+        <div className="border border-dashed border-ink-3 p-8 text-center">
+          <p className="font-serif font-medium text-ink">
             最初のプロジェクトを作りましょう
           </p>
           <Link
             href="/projects/new"
-            className="mt-4 inline-block rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="btn mt-4"
           >
             新しいプロジェクトを作る
           </Link>

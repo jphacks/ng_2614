@@ -38,12 +38,12 @@ export function DeleteProject({
   };
 
   return (
-    <section className="border-t border-gray-200 pt-6">
+    <section className="border-t border-hair pt-6">
       {!confirming ? (
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="text-sm text-red-600 hover:underline"
+          className="text-sm text-pen underline decoration-pen/40 underline-offset-4 hover:decoration-pen"
         >
           プロジェクトを削除
         </button>
@@ -51,21 +51,21 @@ export function DeleteProject({
         <div
           role="alertdialog"
           aria-labelledby="delete-project-title"
-          className="rounded-lg border border-red-300 bg-red-50 p-4"
+          className="border border-pen border-l-4 p-4"
         >
-          <p id="delete-project-title" className="font-medium text-red-900">
+          <p id="delete-project-title" className="font-medium text-pen">
             「{theme.name}」を削除しますか？
           </p>
-          <p className="mt-1 text-sm text-red-900">
+          <p className="mt-1 text-sm text-ink">
             次のものもまとめて消えます。元に戻せません。
           </p>
-          <ul className="mt-2 list-disc pl-5 text-sm text-red-900">
+          <ul className="mt-2 list-disc pl-5 text-sm text-ink">
             <li>取り込んだ変更（判定とコードの差分）：{reviewCount} 件</li>
             <li>問題ログに保存した問題：{problemCount} 件</li>
             <li>先生モードの記録：{teacherCount} 件</li>
             <li>作業フローマップ：{hasMap ? "あり" : "なし"}</li>
           </ul>
-          <p className="mt-2 text-xs text-red-800">
+          <p className="mt-2 text-xs text-ink-2">
             GitHub のリポジトリと、研究のリポジトリのファイルは消えません。
           </p>
           <div className="mt-4 flex gap-2">
@@ -73,7 +73,7 @@ export function DeleteProject({
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              className="btn-pen disabled:cursor-not-allowed disabled:opacity-50"
             >
               {deleting ? "削除しています…" : "削除する"}
             </button>
@@ -81,7 +81,7 @@ export function DeleteProject({
               type="button"
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="rounded-md px-4 py-2 text-sm text-gray-700 hover:bg-white"
+              className="btn"
             >
               やめる
             </button>

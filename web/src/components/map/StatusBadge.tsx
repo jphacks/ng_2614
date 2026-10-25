@@ -10,7 +10,7 @@ export function StatusBadge({
 }) {
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[status]}`}
+      className={`tag ${STATUS_BADGE[status]}`}
     >
       {label}
     </span>

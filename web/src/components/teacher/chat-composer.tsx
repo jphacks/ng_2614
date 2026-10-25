@@ -76,10 +76,10 @@ export function ChatComposer({
   return (
     <div
       ref={rootRef}
-      className="sticky bottom-0 z-10 border-t border-gray-200 bg-white px-3 py-3 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]"
+      className="sticky bottom-0 z-10 border-t border-hair bg-sheet px-3 py-3"
     >
       {status && (
-        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
           {status}
         </div>
       )}
@@ -98,14 +98,14 @@ export function ChatComposer({
         disabled={disabled}
         rows={2}
         placeholder={placeholder}
-        className="block w-full resize-none rounded border border-gray-300 p-2 text-sm disabled:bg-gray-50"
+        className="field block resize-none"
       />
       <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="rounded bg-blue-700 px-4 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-50"
+          className="btn-primary"
         >
           答える
         </button>
@@ -113,11 +113,11 @@ export function ChatComposer({
           type="button"
           onClick={onDontKnow}
           disabled={disabled}
-          className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="btn"
         >
           分かりません
         </button>
-        <span className="ml-auto hidden text-xs text-gray-500 sm:inline">
+        <span className="ml-auto hidden text-xs text-ink-3 sm:inline">
           Ctrl + Enter で送れます
         </span>
       </div>

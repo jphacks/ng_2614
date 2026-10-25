@@ -9,7 +9,7 @@ export function TypingBubble({ teacher }: { teacher: TeacherLook }) {
       className="chat-appear flex items-start justify-start gap-2"
     >
       <TeacherAvatar teacher={teacher} />
-      <div className="max-w-[85%] rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900">
+      <div className="max-w-[85%] rounded-[6px] border border-hair bg-sheet px-3 py-2 text-sm text-ink">
         <span className="mb-0.5 block text-xs opacity-70">{teacher.name}</span>
         <span aria-hidden="true" className="flex h-5 items-center gap-1">
           <span className="typing-dot" />

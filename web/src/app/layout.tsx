@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Klee_One, Noto_Serif_JP } from "next/font/google";
 import Link from "next/link";
 import {
   DemoModeBanner,
@@ -8,6 +9,22 @@ import { HookInbox } from "@/components/hook/HookInbox";
 import { MapStrip } from "@/components/map-strip/MapStrip";
 import { NavMenu } from "@/components/nav/NavMenu";
 import "./globals.css";
+
+// 見出しの明朝体と、先生の言葉の手書き風の字（設計書「画面の見た目」）。globals.css の --font-serif / --font-hand から使う
+const serif = Noto_Serif_JP({
+  weight: ["500", "600"],
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-noto-serif-jp",
+});
+const hand = Klee_One({
+  weight: ["600"],
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-klee-one",
+});
 
 export const metadata: Metadata = {
   title: "TAZUNA",
@@ -21,18 +38,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
+    <html lang="ja" className={`${serif.variable} ${hand.variable}`}>
+      <body className="min-h-screen bg-paper text-ink antialiased">
         {/* 作業フローマップの帯が縦（右のサイドバー）のときは、その幅だけ右側を空ける（MapStrip が変数を付ける） */}
         <div className="md:pr-[var(--map-side-w,0px)]">
-          <header className="border-b border-gray-200">
+          <header className="border-b border-hair bg-sheet">
+            {/* 上端の3色の帯（藍・空・若葉） */}
+            <div aria-hidden="true" className="grid h-1 grid-cols-3">
+              <span className="bg-accent" />
+              <span className="bg-sky" />
+              <span className="bg-mint" />
+            </div>
             <DemoModeBanner />
             {/* メニューのボタンはアプリ名の左に並べる。枠の左右の余白は本文（main）と合わせる */}
             <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3">
                 <NavMenu />
-                <Link href="/" className="font-bold">
-                  TAZUNA
+                <Link href="/" className="flex items-baseline gap-2">
+                  <span className="font-serif text-lg font-semibold tracking-[0.2em]">TAZUNA</span>
+                  {/* 名前の由来（手綱）を、先生の言葉と同じ手書き風の字で添える */}
+                  <span className="font-hand text-sm text-ink-3">手綱</span>
                 </Link>
               </div>
               <DemoModeToggle />

@@ -59,13 +59,13 @@ export function ThreadView({
           return (
             <li
               key={e.key}
-              className={`${appear}flex items-center gap-3 py-2 text-xs text-gray-500`}
+              className={`${appear}flex items-center gap-3 py-2 text-xs text-ink-3`}
             >
-              <span aria-hidden="true" className="h-px flex-1 bg-gray-200" />
+              <span aria-hidden="true" className="h-px flex-1 bg-hair" />
               <span>
                 質問 {e.questionNumber} / {e.total}・{layerLabel(e.layer)}
               </span>
-              <span aria-hidden="true" className="h-px flex-1 bg-gray-200" />
+              <span aria-hidden="true" className="h-px flex-1 bg-hair" />
             </li>
           );
         }
@@ -76,7 +76,7 @@ export function ThreadView({
               key={e.key}
               className={`${appear}flex items-start justify-end gap-2`}
             >
-              <div className="max-w-[85%] rounded-lg bg-blue-600 px-3 py-2 text-sm whitespace-pre-wrap text-white">
+              <div className="max-w-[85%] rounded-[6px] bg-accent px-3 py-2 text-sm whitespace-pre-wrap text-white">
                 <span className="mb-0.5 block text-xs opacity-70">あなた</span>
                 {e.text}
               </div>
@@ -92,7 +92,7 @@ export function ThreadView({
               className={`${appear}flex items-start justify-start gap-2`}
             >
               <TeacherAvatar teacher={teacher} />
-              <div className="max-w-[85%] rounded-lg bg-gray-100 px-3 py-2 text-sm whitespace-pre-wrap text-gray-900">
+              <div className="max-w-[85%] rounded-[6px] border border-hair bg-sheet px-3 py-2 font-hand text-[15px] leading-relaxed whitespace-pre-wrap text-pen">
                 <span className="mb-0.5 block text-xs opacity-70">
                   {teacher.name}
                 </span>
@@ -110,25 +110,19 @@ export function ThreadView({
           >
             <TeacherAvatar teacher={teacher} />
             <div
-              className={`max-w-[85%] rounded-lg border px-3 py-2 text-sm text-gray-900 ${
-                e.understood
-                  ? "border-green-200 bg-green-50"
-                  : "border-amber-200 bg-amber-50"
+              className={`max-w-[85%] rounded-[6px] border bg-sheet px-3 py-2 text-sm text-ink ${
+                e.understood ? "border-mint" : "border-pen/50"
               }`}
             >
               <div className="mb-0.5 flex flex-wrap items-center gap-2 text-xs">
-                <span className="opacity-70">{teacher.name}</span>
+                <span className="text-ink-3">{teacher.name}</span>
                 <span
-                  className={`rounded px-1.5 py-0.5 font-medium ${
-                    e.understood
-                      ? "bg-green-100 text-green-800"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
+                  className={`tag ${e.understood ? "text-mint-ink" : "text-pen"}`}
                 >
                   {e.understood ? "✓ 理解できた" : "まだ理解できていない"}
                 </span>
               </div>
-              <p className="whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap font-hand text-[15px] leading-relaxed text-pen">
                 <TypewriterText
                   text={e.text}
                   animate={animate}
@@ -136,7 +130,7 @@ export function ThreadView({
                 />
               </p>
               {(!animate || typedKeys.has(e.key)) && (
-                <div className="mt-3 border-t border-black/10 pt-3">
+                <div className="mt-3 border-t border-hair pt-3">
                   <ViewpointList viewpoints={e.viewpoints} covered={e.covered} />
                 </div>
               )}

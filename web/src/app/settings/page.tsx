@@ -85,7 +85,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-xl font-bold">設定</h1>
         {demoMode && (
-          <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mt-3 border-l-2 border-ink bg-marker p-3 text-sm text-ink">
             デモモード中は AI
             を呼ばないので、この設定は使われず、使用量も増えません。
           </p>
@@ -95,37 +95,37 @@ export default function SettingsPage() {
       <ConnectionsSection />
 
       <section>
-        <div className="flex items-center justify-between gap-3">
+        <div className="rule-head flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold">使う AI</h2>
           {anyChanged && (
             <button
               type="button"
               onClick={resetLlmSettings}
-              className="text-sm text-blue-700 hover:underline"
+              className="link text-sm"
             >
               すべて標準に戻す
             </button>
           )}
         </div>
-        <div className="mt-3 space-y-3">
+        <div className="mt-1 divide-y divide-hair">
           {LLM_FEATURES.map((f) => {
             const s = settings[f.id];
             const avg = averageCost(f.id, s.model);
             return (
-              <div key={f.id} className="rounded-xl border border-gray-200 p-4">
+              <div key={f.id} className="py-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-ink">
                       {f.label}
                       {!isDefault(f.id) && (
-                        <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-normal text-blue-700">
+                        <span className="tag ml-2 text-ink-2">
                           変更中
                         </span>
                       )}
                     </p>
                   </div>
                   {avg !== undefined && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-ink-3">
                       これまでの 1 回あたり {formatUsd(avg)}
                     </p>
                   )}
@@ -151,7 +151,7 @@ export default function SettingsPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-bold">使用量</h2>
+        <h2 className="rule-head text-lg font-bold">使用量</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <Stat
             label="今日の料金の目安"
@@ -168,7 +168,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-gray-800">
+          <h3 className="text-sm font-medium text-ink">
             機能・モデルごとの内訳
           </h3>
           <div className="w-56">
@@ -186,16 +186,16 @@ export default function SettingsPage() {
         </div>
 
         {shown.rows.length === 0 ? (
-          <p className="mt-3 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+          <p className="mt-3 border border-dashed border-ink-3 p-6 text-center text-sm text-ink-3">
             {range === "today"
               ? "今日はまだ AI を呼んでいません。"
               : "まだ記録がありません。"}
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200">
+          <div className="mt-3 overflow-x-auto border-y border-ink">
             <table className="w-full min-w-[560px] text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-xs text-gray-500">
+              <thead className="bg-paper-2">
+                <tr className="text-left text-xs text-ink-2">
                   <th className="px-3 py-2 font-medium">機能</th>
                   <th className="px-3 py-2 font-medium">モデル</th>
                   <th className="px-3 py-2 text-right font-medium">回数</th>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-3">
           <p>
             このブラウザでアプリが AI
             を呼んだ分です。料金は単価表から計算した目安で、正確な請求額は
@@ -243,7 +243,7 @@ export default function SettingsPage() {
               )
                 resetUsage();
             }}
-            className="shrink-0 text-red-600 hover:underline"
+            className="shrink-0 text-pen underline decoration-pen/40 underline-offset-4 hover:decoration-pen"
           >
             使用量の記録を消す
           </button>
@@ -262,9 +262,9 @@ function formatUsd(n: number): string {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-gray-50 p-4">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-gray-900">
+    <div className="border-t border-ink pt-3 pb-1">
+      <p className="text-xs text-ink-3">{label}</p>
+      <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-ink">
         {value}
       </p>
     </div>
@@ -283,12 +283,12 @@ function UsageLine({
   strong?: boolean;
 }) {
   const cls = strong
-    ? "border-t border-gray-300 bg-gray-50 font-medium"
-    : "border-t border-gray-100";
+    ? "border-t border-ink bg-paper-2 font-medium"
+    : "border-t border-hair";
   return (
     <tr className={cls}>
       <td className="px-3 py-2">{feature}</td>
-      <td className="px-3 py-2 text-gray-600">{model}</td>
+      <td className="px-3 py-2 text-ink-2">{model}</td>
       <td className="px-3 py-2 text-right tabular-nums">{fmt(t.calls)}</td>
       <td className="px-3 py-2 text-right tabular-nums">
         {fmt(t.inputTokens)}

@@ -21,7 +21,7 @@ import { StripLane } from "./StripLane";
 
 // display を含めない部分。hidden と組み合わせるボタンで display がぶつからないようにする
 const BUTTON_BASE =
-  "shrink-0 items-center whitespace-nowrap rounded border border-gray-300 px-1.5 py-px text-[11px] leading-5 text-gray-700 hover:bg-gray-50";
+  "shrink-0 items-center whitespace-nowrap border border-ink bg-paper px-1.5 py-px text-[11px] leading-5 text-ink hover:bg-paper-2";
 const BUTTON = `inline-flex ${BUTTON_BASE}`;
 
 export function StripBody({
@@ -78,8 +78,8 @@ export function StripBody({
       }`}
     >
       {/* 見出しの行。開いて中身をスクロールしても見えるよう、帯の中で固定する */}
-      <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-white px-4 sm:px-6 lg:px-8">
-        <span className="shrink-0 text-xs font-semibold text-gray-800">
+      <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-paper px-4 sm:px-6 lg:px-8">
+        <span className="shrink-0 font-serif text-xs font-semibold text-ink">
           <span className="hidden sm:inline">作業フローマップ</span>
           <span className="sm:hidden">マップ</span>
         </span>
@@ -100,16 +100,16 @@ export function StripBody({
                   key={s.phase.id}
                   aria-label={`${s.phase.name}：${label}`}
                   title={label}
-                  className={`shrink-0 rounded-full px-1.5 text-[11px] leading-5 ${
+                  className={`shrink-0 border px-1.5 text-[11px] leading-5 ${
                     isCurrent
-                      ? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-400"
-                      : "bg-gray-100 text-gray-700"
+                      ? "border-ink text-ink"
+                      : "border-hair text-ink-2"
                   }`}
                 >
                   {isCurrent && (
                     <span
                       aria-hidden="true"
-                      className="mr-1 rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white"
+                      className="mr-1 bg-accent px-1 text-[10px] font-semibold text-paper"
                     >
                       今
                     </span>
@@ -132,26 +132,26 @@ export function StripBody({
         )}
         {focusTitle && (
           <span
-            className="hidden min-w-0 max-w-[20rem] shrink items-center text-[11px] text-gray-600 md:flex"
+            className="hidden min-w-0 max-w-[20rem] shrink items-center text-[11px] text-ink-2 md:flex"
             title={othersTitle ? `${focusTitle}\n${othersTitle}` : focusTitle}
           >
             {/* 工程の札がはみ出しても今の段階が分かるよう、ここにも工程名を出す */}
             {currentPhaseName && (
-              <span className="mr-1 shrink-0 rounded-full bg-indigo-600 px-1.5 font-semibold leading-5 text-white">
+              <span className="mr-1 shrink-0 bg-accent px-1.5 font-semibold leading-5 text-paper">
                 今は{currentPhaseName}
               </span>
             )}
-            <span className="shrink-0 font-medium text-indigo-700">今ここ：</span>
+            <span className="shrink-0 font-semibold text-ink">今ここ：</span>
             <span className="min-w-0 truncate">{focusTitle}</span>
             {/* 件数はタイトルが省略されても見えるよう、外に出す */}
             {others.length > 0 && (
-              <span className="ml-1 shrink-0 text-gray-500">ほか {others.length} 件</span>
+              <span className="ml-1 shrink-0 text-ink-3">ほか {others.length} 件</span>
             )}
           </span>
         )}
         {unconfirmed > 0 && (
           <span
-            className="shrink-0 whitespace-nowrap rounded bg-amber-100 px-1.5 text-[11px] font-medium leading-5 text-amber-800"
+            className="marker shrink-0 whitespace-nowrap px-1.5 text-[11px] font-medium leading-5"
             title={`AI が作ったままで、まだ確認していないものが ${unconfirmed} 件あります`}
           >
             未確認 {unconfirmed}
@@ -190,7 +190,7 @@ export function StripBody({
           <Link
             href={mapHref}
             aria-label="作業フローマップの画面を開く"
-            className={`${BUTTON} text-blue-700`}
+            className={`${BUTTON} font-semibold`}
           >
             <span className="hidden sm:inline">マップを開く</span>
             <span className="sm:hidden">詳細</span>

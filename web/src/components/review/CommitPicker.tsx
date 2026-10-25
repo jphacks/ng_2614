@@ -16,26 +16,28 @@ export function CommitPicker({
 }: Props) {
   if (commits.length === 0) {
     return (
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-ink-2">
         このリポジトリにコミットが見つかりませんでした。
       </p>
     );
   }
   return (
-    <ul className="max-h-80 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200">
+    <ul className="max-h-80 divide-y divide-hair overflow-y-auto border-y border-ink">
       {commits.map((c) => {
         const selected = c.sha === selectedSha;
         return (
           <li key={c.sha}>
             <label
-              className={`flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm ${
-                selected ? "bg-blue-50" : "hover:bg-gray-50"
+              className={`flex cursor-pointer items-start gap-3 border-l-2 px-3 py-2.5 text-sm ${
+                selected
+                  ? "border-ink bg-paper-2"
+                  : "border-transparent hover:bg-paper-2"
               }`}
             >
               <input
                 type="radio"
                 name="commit"
-                className="mt-1"
+                className="mt-1 accent-accent"
                 checked={selected}
                 disabled={disabled}
                 onChange={() => onSelect(c.sha)}
@@ -44,12 +46,10 @@ export function CommitPicker({
                 <span className="block break-words font-medium">
                   {firstLine(c.message) || "（メッセージなし）"}
                 </span>
-                <span className="mt-0.5 block text-xs text-gray-500">
+                <span className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-ink-3">
                   <code className="font-mono">{shortSha(c.sha)}</code>
-                  {" ・ "}
-                  {c.author}
-                  {" ・ "}
-                  {formatDate(c.date)}
+                  <span>{c.author}</span>
+                  <span>{formatDate(c.date)}</span>
                 </span>
               </span>
             </label>

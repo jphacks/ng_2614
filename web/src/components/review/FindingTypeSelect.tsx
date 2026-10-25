@@ -9,12 +9,12 @@ type Props = {
 // AI の判定が間違っているときに、ユーザーが分類を直すための小さなセレクト
 export function FindingTypeSelect({ value, onChange }: Props) {
   return (
-    <label className="flex items-center gap-1.5 text-xs text-gray-500">
+    <label className="flex items-center gap-1.5 text-xs text-ink-3">
       判定を修正
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as FindingType)}
-        className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-700"
+        className="border border-ink-3 bg-paper px-1.5 py-0.5 text-xs text-ink"
       >
         {FINDING_TYPES.map((t) => (
           <option key={t} value={t}>

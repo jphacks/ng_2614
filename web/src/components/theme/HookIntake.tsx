@@ -14,14 +14,14 @@ export function HookIntake({ themeId }: { themeId: string }) {
     return (
       <section
         aria-label="変更の届き方"
-        className="rounded-md border border-amber-200 bg-amber-50 p-4"
+        className="border-l-2 border-ink bg-marker p-4"
       >
-        <p className="font-semibold text-amber-900">
+        <p className="font-semibold text-ink">
           デモモードでは、Claude Code のフックは使いません
         </p>
         <Link
           href={importHref}
-          className="mt-3 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="btn mt-3"
         >
           コミットから取り込む
         </Link>
@@ -32,14 +32,14 @@ export function HookIntake({ themeId }: { themeId: string }) {
   return (
     <section
       aria-label="変更の届き方"
-      className="rounded-md border border-blue-200 bg-blue-50 p-4"
+      className="border-l-2 border-ink py-1 pl-4"
     >
-      <p className="font-semibold text-blue-900">
+      <p className="font-semibold text-ink">
         Claude Code に頼むと、作業が終わるたびに変更が自動で届きます
       </p>
-      <p className="mt-1 text-sm text-blue-900">
+      <p className="mt-1 text-sm text-ink-2">
         研究のリポジトリにフックを入れておくと、届いたときに画面の右下に知らせが出ます。
-        <Link href="/guide#hook" className="ml-1 text-blue-700 hover:underline">
+        <Link href="/guide#hook" className="link ml-1">
           フックの入れ方
         </Link>
       </p>

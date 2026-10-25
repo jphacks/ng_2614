@@ -67,56 +67,56 @@ export function DetailPanel({
   return (
     <aside
       aria-label="詳細"
-      className="space-y-5 rounded-md border border-gray-300 bg-white p-4 text-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
+      className="space-y-5 border border-ink bg-paper p-4 text-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
     >
       <div>
         <div className="flex items-start justify-between gap-2">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-3">
             {phase?.name ?? "（レーンなし）"}
             {parent ? `　サブタスク（親：${parent.title}）` : ""}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
+            className="btn btn-sm shrink-0"
           >
             閉じる
           </button>
         </div>
-        <h2 className="mt-1 text-base font-bold text-gray-900">{task.title}</h2>
+        <h2 className="mt-1 text-base font-bold text-ink">{task.title}</h2>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <StatusBadge label={statusLabel(phase, status)} status={status} />
           <span
-            className="text-xs text-gray-500"
+            className="text-xs text-ink-3"
             title={STATUS_SOURCE_HINT[task.statusSource]}
           >
             {STATUS_SOURCE_LABEL[task.statusSource]}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-ink-3">
             ・{REVIEW_LABEL[task.review]}
           </span>
           {milestone && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-ink-3">
               ・マイルストーン：{milestone.title}
             </span>
           )}
         </div>
         {task.flag === "unrecorded" && (
-          <p className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="marker mt-2 p-2 text-xs">
             記録のない実装です。どのドキュメントにも出てこないので、目的を確かめてください。
           </p>
         )}
         {/* 元の文言は、状態の言葉と違って情報が増えるときだけ出す */}
         {task.statusRaw && task.statusRaw !== statusLabel(phase, status) && (
-          <p className="mt-1 font-mono text-xs text-gray-400">
+          <p className="mt-1 font-mono text-xs text-ink-3">
             元の文言：{task.statusRaw}
           </p>
         )}
         {task.result && (
-          <p className="mt-1 text-xs text-gray-600">結果：{task.result}</p>
+          <p className="mt-1 text-xs text-ink-2">結果：{task.result}</p>
         )}
         {task.status === "rejected" && task.rejectReason && (
-          <p className="mt-1 text-xs text-gray-600">
+          <p className="mt-1 text-xs text-ink-2">
             不採用の理由：{task.rejectReason}
           </p>
         )}
@@ -124,9 +124,9 @@ export function DetailPanel({
 
       <Section title="目的のつながり">
         <ol className="space-y-1">
-          <li className="rounded bg-gray-50 px-2 py-1 text-xs text-gray-700">
+          <li className="bg-paper-2 px-2 py-1 text-xs text-ink">
             <span className="font-medium">研究の問い</span>
-            <span className="block whitespace-pre-wrap text-gray-600">
+            <span className="block whitespace-pre-wrap text-ink-2">
               {question}
             </span>
           </li>
@@ -139,16 +139,16 @@ export function DetailPanel({
                   disabled={selected}
                   onClick={() => onSelect(t.id)}
                   aria-current={selected ? "true" : undefined}
-                  className={`w-full rounded px-2 py-1 text-left text-xs ${
+                  className={`w-full px-2 py-1 text-left text-xs ${
                     selected
-                      ? "border border-blue-400 bg-blue-50 font-bold text-blue-900"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "border border-ink bg-paper font-bold text-ink"
+                      : "text-ink-2 hover:bg-paper-2"
                   }`}
                 >
                   {"└ "}
                   {t.title}
                   {t.purpose && (
-                    <span className="block font-normal text-gray-500">
+                    <span className="block font-normal text-ink-3">
                       {t.purpose}
                     </span>
                   )}
@@ -161,14 +161,14 @@ export function DetailPanel({
 
       <Section title="出典">
         {task.sources.length === 0 ? (
-          <p className="text-xs text-gray-500">出典はありません。</p>
+          <p className="text-xs text-ink-3">出典はありません。</p>
         ) : (
           <ul className="space-y-1">
             {task.sources.map((s, i) => {
               const text = s.label || s.path;
               return (
                 <li key={`${s.path}-${i}`} className="text-xs">
-                  <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
+                  <span className="tag mr-1.5 text-ink-2">
                     {SOURCE_KIND_LABEL[s.kind]}
                   </span>
                   {s.url ? (
@@ -176,12 +176,12 @@ export function DetailPanel({
                       href={s.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="break-all text-blue-700 hover:underline"
+                      className="link break-all"
                     >
                       {text}
                     </a>
                   ) : (
-                    <span className="break-all text-gray-700">{text}</span>
+                    <span className="break-all text-ink-2">{text}</span>
                   )}
                 </li>
               );
@@ -197,7 +197,7 @@ export function DetailPanel({
               {task.commitShas.map((sha) => (
                 <span
                   key={sha}
-                  className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700"
+                  className="border border-hair bg-paper-2 px-1.5 py-0.5 font-mono text-ink-2"
                 >
                   {shortSha(sha)}
                 </span>
@@ -210,7 +210,7 @@ export function DetailPanel({
                 <li key={id}>
                   <Link
                     href={`/reviews/${id}`}
-                    className="text-xs text-blue-700 hover:underline"
+                    className="link text-xs"
                   >
                     判定を見る（{i + 1}）
                   </Link>
@@ -244,7 +244,7 @@ export function DetailPanel({
           <button
             type="button"
             onClick={() => onEdit((m, now) => confirmTask(m, task.id, now))}
-            className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="btn-primary"
           >
             確認済みにする
           </button>
@@ -276,7 +276,7 @@ function Section({
 }) {
   return (
     <section>
-      <h3 className="mb-1.5 text-xs font-bold text-gray-500">{title}</h3>
+      <h3 className="rule-head mb-1.5 text-xs font-bold text-ink">{title}</h3>
       {children}
     </section>
   );
@@ -318,10 +318,10 @@ function StatusSection({
                   onSet(s, undefined);
                 }
               }}
-              className={`rounded border px-2 py-1 text-xs ${
+              className={`border px-2 py-1 text-xs ${
                 current || (choosingReject && s === "rejected")
-                  ? "border-blue-600 bg-blue-50 font-bold text-blue-900"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  ? "border-accent bg-accent font-bold text-paper"
+                  : "border-ink-3 text-ink hover:bg-paper-2"
               }`}
             >
               {phaseLabel(s)}
@@ -331,13 +331,13 @@ function StatusSection({
       </div>
       {choosingReject && (
         <div className="mt-2 space-y-2">
-          <label className="block text-xs text-gray-700">
+          <label className="block text-xs text-ink">
             {phaseLabel("rejected")}にする理由（必須）
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="field mt-0.5 px-2 py-1"
             />
           </label>
           <div className="flex gap-2">
@@ -347,14 +347,14 @@ function StatusSection({
               onClick={() => {
                 if (onSet("rejected", reason.trim())) setChoosingReject(false);
               }}
-              className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="btn btn-sm"
             >
               この理由で決める
             </button>
             <button
               type="button"
               onClick={() => setChoosingReject(false)}
-              className="rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              className="btn btn-sm"
             >
               やめる
             </button>
@@ -366,11 +366,11 @@ function StatusSection({
           <button
             type="button"
             onClick={onClear}
-            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+            className="btn btn-sm"
           >
             手動の固定を外す
           </button>
-          <span className="ml-2 text-xs text-gray-500">
+          <span className="ml-2 text-xs text-ink-3">
             記録からの自動更新に戻します
           </span>
         </div>
@@ -401,28 +401,28 @@ function TextSection({
           onSave({ title: title.trim(), purpose: purpose.trim() });
         }}
       >
-        <label className="block text-xs text-gray-700">
+        <label className="block text-xs text-ink">
           タイトル
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field mt-0.5 px-2 py-1"
           />
         </label>
-        <label className="block text-xs text-gray-700">
+        <label className="block text-xs text-ink">
           目的
           <textarea
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
             rows={3}
-            className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field mt-0.5 px-2 py-1"
           />
         </label>
         <button
           type="submit"
           disabled={!changed || title.trim() === ""}
-          className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="btn btn-sm"
         >
           直した内容を保存する
         </button>
@@ -449,7 +449,7 @@ function SubtaskSection({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+          className="btn btn-sm"
         >
           ＋ サブタスクを足す
         </button>
@@ -471,31 +471,31 @@ function DeleteSection({
     <Section title="消す">
       {open ? (
         <div className="space-y-2">
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-ink-2">
             消したものは「却下したもの」に残り、あとで戻せます。AI も同じものを再び提案しません。
             {hasSubtasks && "サブタスクもいっしょに消えます。"}
           </p>
-          <label className="block text-xs text-gray-700">
+          <label className="block text-xs text-ink">
             理由（なくてもよい）
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="field mt-0.5 px-2 py-1"
             />
           </label>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onDelete(reason.trim() || undefined)}
-              className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+              className="btn btn-sm"
             >
               消す
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              className="btn btn-sm"
             >
               やめる
             </button>
@@ -505,7 +505,7 @@ function DeleteSection({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+          className="link-quiet text-xs"
         >
           このタスクを消す
         </button>

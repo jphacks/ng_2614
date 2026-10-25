@@ -36,22 +36,22 @@ export function PhaseLane({
   return (
     <section
       aria-label={`レーン：${phase.name}`}
-      className={`min-w-40 max-w-md flex-1 basis-0 rounded-md p-2 ${
-        isCurrentPhase ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50"
+      className={`min-w-40 max-w-md flex-1 basis-0 rounded-[4px] border bg-paper-2/60 p-2 ${
+        isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
       <header className="mb-2 px-1">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+        <h3 className="rule-head flex items-center gap-1.5 text-sm font-bold text-ink">
           {phase.name}
           {isCurrentPhase && (
-            <span className="rounded bg-indigo-600 px-1.5 text-xs font-semibold leading-5 text-white">
+            <span className="bg-accent px-1.5 text-xs font-semibold leading-5 text-paper">
               今の段階
             </span>
           )}
         </h3>
       </header>
       {tasks.length === 0 && !adding && (
-        <p className="px-1 py-2 text-xs text-gray-400">タスクはありません</p>
+        <p className="px-1 py-2 text-xs text-ink-3">タスクはありません</p>
       )}
       <ul className="space-y-2">
         {tasks.map((task) => (
@@ -86,7 +86,7 @@ export function PhaseLane({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="w-full rounded-md border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-700"
+            className="w-full border border-dashed border-ink-3 px-2 py-1 text-xs text-ink-2 hover:border-ink hover:text-ink"
           >
             ＋ タスクを足す
           </button>

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  SIDE_OPEN_WIDTH,
   useMediaQuery,
   useSideWidth,
   useStripOpen,
@@ -63,8 +62,8 @@ export function MapStrip() {
   useEffect(() => {
     const root = document.documentElement;
     if (vertical) {
-      // 帯の幅を広げても本文は動かさない（広げた分は本文の上に重ねる）。空けるのは初期の幅まで
-      const width = open ? SIDE_OPEN_WIDTH.initial : SIDE_WIDTH.collapsed;
+      // 本文は帯の今の幅だけ右側を空ける。幅を変えると、ドラッグ中も本文の幅が追従する
+      const width = open ? sideWidth : SIDE_WIDTH.collapsed;
       root.style.setProperty(SIDE_WIDTH_VAR, `${width}px`);
     } else {
       root.style.removeProperty(SIDE_WIDTH_VAR);
@@ -72,7 +71,7 @@ export function MapStrip() {
     return () => {
       root.style.removeProperty(SIDE_WIDTH_VAR);
     };
-  }, [vertical, open]);
+  }, [vertical, open, sideWidth]);
 
   if (!loaded) return null;
   if (vertical && loaded.map) {
@@ -87,16 +86,16 @@ export function MapStrip() {
   return (
     <nav
       aria-label="作業フローマップ"
-      className="sticky top-0 z-30 border-b border-gray-200 bg-white"
+      className="sticky top-0 z-30 border-b border-hair bg-paper"
     >
       {loaded.map ? (
         <StripBody themeId={loaded.themeId} map={loaded.map} />
       ) : (
-        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-x-3 px-4 py-1 text-xs text-gray-600 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-x-3 px-4 py-1 text-xs text-ink-2 sm:px-6 lg:px-8">
           <span>このプロジェクトの作業フローマップはまだありません</span>
           <Link
             href={`/themes/${encodeURIComponent(loaded.themeId)}/map`}
-            className="font-medium text-blue-700 hover:underline"
+            className="link font-medium"
           >
             作る
           </Link>

@@ -29,19 +29,19 @@ export function UnansweredList({
 }) {
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-bold">答えられなかった点</h2>
+      <h2 className="rule-head text-lg">答えられなかった点</h2>
       {misses.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">まだ記録はありません。</p>
+        <p className="mt-3 text-sm text-ink-3">まだ記録はありません。</p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="divide-y divide-hair">
           {misses.map(({ sessionId, createdAt, item }, i) => (
             <li
               key={`${sessionId}-${i}`}
-              className="rounded border border-amber-200 bg-amber-50 p-4"
+              className="py-4"
             >
               <div className="flex items-center gap-2">
                 <LayerBadge layer={item.layer} />
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-ink-3">
                   {formatDate(createdAt)}
                 </span>
               </div>

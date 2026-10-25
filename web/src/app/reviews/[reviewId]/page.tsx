@@ -39,13 +39,13 @@ export default function ReviewPage() {
   }, [reviewId]);
 
   if (review === undefined) {
-    return <p className="text-sm text-gray-500">読み込み中…</p>;
+    return <p className="text-sm text-ink-3">読み込み中…</p>;
   }
   if (review === null) {
     return (
       <div className="space-y-3">
         <p>判定結果が見つかりませんでした。</p>
-        <Link href="/" className="text-blue-700 underline">
+        <Link href="/" className="link">
           プロジェクト一覧に戻る
         </Link>
       </div>
@@ -74,21 +74,22 @@ export default function ReviewPage() {
     (f) => f.type === "hidden_problem" && f.saved,
   ).length;
 
+
   return (
-    <div className="space-y-8 rounded-xl bg-white p-4 text-gray-900 sm:p-6">
+    <div className="space-y-10">
       <header className="space-y-2">
         <Link
           href={`/themes/${current.themeId}`}
-          className="text-sm text-blue-700 underline"
+          className="link-quiet text-sm"
         >
           ← プロジェクトに戻る
         </Link>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl leading-snug">
           {isHook
             ? headline(current.purpose) || "（依頼文なし）"
             : firstLine(current.commitMessage) || "（メッセージなし）"}
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-3">
           {isHook ? (
             "Claude Code の作業（未コミット）"
           ) : (
@@ -98,19 +99,19 @@ export default function ReviewPage() {
             </>
           )}
         </p>
-        <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="space-y-3 border-y border-ink py-3">
           <div>
-            <h2 className="text-xs font-bold text-gray-600">作業の目的</h2>
-            <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-800">
+            <h2 className="font-sans text-xs font-bold text-ink-2">作業の目的</h2>
+            <p className="mt-0.5 whitespace-pre-wrap text-sm text-ink">
               {current.purpose}
             </p>
           </div>
           {isHook && earlierPrompts.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-gray-600">
+              <h3 className="font-sans text-xs font-bold text-ink-2">
                 それまでの依頼
               </h3>
-              <ol className="mt-0.5 list-decimal space-y-1 pl-5 text-sm text-gray-700">
+              <ol className="mt-0.5 list-decimal space-y-1 pl-5 text-sm text-ink-2">
                 {earlierPrompts.map((p, i) => (
                   <li key={i} className="whitespace-pre-wrap">
                     {p}
@@ -157,25 +158,27 @@ export default function ReviewPage() {
       />
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold text-gray-800">
+        <h2 className="rule-head text-base text-ink-2">
           変更の全体
           {diff && `（${diff.files.length} ファイル）`}
         </h2>
         {diff === undefined && (
-          <p className="text-sm text-gray-500" role="status">
+          <p className="text-sm text-ink-3" role="status">
             差分を読み込み中…
           </p>
         )}
         {diff === null && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-3">
             この判定の差分は保存されていません。
           </p>
         )}
         {diff && (
           <>
             {diff.truncated && (
-              <p className="rounded-md border border-yellow-300 bg-yellow-50 p-2 text-xs text-yellow-900">
-                差分が大きすぎたため、一部のファイルや行を省いています（判定も省いた状態で行っています）。
+              <p className="text-xs">
+                <span className="marker">
+                  差分が大きすぎたため、一部のファイルや行を省いています（判定も省いた状態で行っています）。
+                </span>
               </p>
             )}
             <FileDiffList files={diff.files} />
@@ -183,19 +186,19 @@ export default function ReviewPage() {
         )}
       </section>
 
-      <footer className="flex flex-wrap items-center gap-4 border-t border-gray-200 pt-4">
-        <p className="text-sm text-gray-600">
+      <footer className="flex flex-wrap items-center gap-4 border-t border-ink pt-4">
+        <p className="text-sm text-ink-2">
           問題ログに保存した問題：{savedCount} 件
         </p>
         <Link
           href={`/themes/${current.themeId}/teacher`}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="btn-primary"
         >
           先生モードで理解を確かめる
         </Link>
         <Link
           href={`/themes/${current.themeId}`}
-          className="text-sm text-blue-700 underline"
+          className="link text-sm"
         >
           問題ログを見る
         </Link>

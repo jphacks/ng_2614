@@ -23,11 +23,11 @@ export function Segmented<T extends string>({
 }) {
   return (
     <div>
-      {!hideLabel && <p className="mb-1 text-xs text-gray-500">{label}</p>}
+      {!hideLabel && <p className="mb-1 text-xs text-ink-3">{label}</p>}
       <div
         role="radiogroup"
         aria-label={label}
-        className="flex w-full rounded-lg bg-gray-100 p-1"
+        className="flex w-full border border-ink"
       >
         {options.map((o) => {
           const selected = o.value === value;
@@ -38,16 +38,16 @@ export function Segmented<T extends string>({
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(o.value)}
-              className={`flex-1 rounded-md px-2 py-1.5 text-center text-sm transition-colors ${
+              className={`flex-1 border-l border-ink px-2 py-1.5 text-center text-sm transition-colors first:border-l-0 ${
                 selected
-                  ? "bg-white font-medium text-blue-700 shadow-sm ring-1 ring-blue-200"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-accent font-medium text-paper"
+                  : "bg-paper text-ink-2 hover:bg-paper-2 hover:text-ink"
               }`}
             >
               <span className="block leading-tight">{o.label}</span>
               {o.sub && (
                 <span
-                  className={`block text-[11px] leading-tight ${selected ? "text-blue-600" : "text-gray-400"}`}
+                  className={`block text-[11px] leading-tight ${selected ? "text-paper/80" : "text-ink-3"}`}
                 >
                   {o.sub}
                 </span>
