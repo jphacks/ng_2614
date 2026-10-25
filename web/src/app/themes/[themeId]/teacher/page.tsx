@@ -4,10 +4,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { postTeacherQuestions, postTeacherTurn } from "@/lib/api-client";
 import type { TeacherQuestion } from "@/lib/api-types";
 import {
+  DEFAULT_TEACHER_NAME,
+  getTeacherPersona,
   getTheme,
   listSavedProblems,
   listTeacherSessions,
@@ -16,16 +18,20 @@ import {
   saveTeacherSession,
 } from "@/lib/storage";
 import { MAX_STUDENT_TURNS, countStudentTurns } from "@/lib/teacher-rules";
+import { buildThread } from "@/lib/teacher-thread";
+import { useScrollToEnd } from "@/lib/use-scroll-to-end";
 import type {
   Finding,
   ResearchTheme,
   TeacherItem,
+  TeacherPersona,
   TeacherSession,
   TeacherTurn,
 } from "@/lib/types";
-import { Conversation } from "@/components/teacher/conversation";
+import { ChatComposer } from "@/components/teacher/chat-composer";
 import { LayerBadge } from "@/components/teacher/layer-badge";
-import { ViewpointList } from "@/components/teacher/viewpoint-list";
+import { TeacherPersonaEditor } from "@/components/teacher/teacher-persona-editor";
+import { ThreadView } from "@/components/teacher/thread-view";
 import {
   UnansweredList,
   collectMisses,
@@ -45,6 +51,7 @@ export default function TeacherPage() {
   );
   const [problems, setProblems] = useState<Finding[]>([]);
   const [pastSessions, setPastSessions] = useState<TeacherSession[]>([]);
+  const [persona, setPersona] = useState<TeacherPersona | undefined>(undefined);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [sessionId, setSessionId] = useState("");
@@ -57,12 +64,50 @@ export default function TeacherPage() {
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [composerHeight, setComposerHeight] = useState(160); // 下に固定した入力欄の高さ（px）
+  const [pendingAnswer, setPendingAnswer] = useState<string | null>(null); // 送信中の回答（返事が来るまでスレッドに出す）
   const [error, setError] = useState<string | null>(null);
+
+  // 全部の質問をつなげた1本のスレッド。早期 return より前に作る（フックの順序を保つため）
+  const entries = buildThread({
+    questions,
+    items,
+    currentIndex: index,
+    currentTurns: turns,
+    currentResult: result,
+    currentCovered: covered,
+  });
+  // 返事を待っている間も、送った回答をスレッドに出す。key は返事が来たあとの学生の発言と同じにして、演出をやり直さない
+  if (pendingAnswer !== null) {
+    entries.push({
+      kind: "message",
+      key: `q${index}-t${turns.length}`,
+      role: "student",
+      text: pendingAnswer,
+    });
+  }
+  const thinking = phase === "loadingQuestions" || submitting;
+  const composerShown = phase === "answering" && result === null;
+  // 新しい発言が来たら、スレッドの末尾までスクロールする
+  // 失敗したときはエラー文がスレッドの末尾に出るので、そこまで動かす
+  const endRef = useScrollToEnd<HTMLDivElement>([
+    entries.length,
+    thinking,
+    phase,
+    error,
+  ]);
+  // 講評が出たら「次の質問へ」にフォーカスを移す
+  const nextButtonRef = useRef<HTMLButtonElement>(null);
+  const showNext = phase === "answering" && result !== null;
+  useEffect(() => {
+    if (showNext) nextButtonRef.current?.focus({ preventScroll: true });
+  }, [showNext, index]);
 
   useEffect(() => {
     setTheme(getTheme(themeId) ?? null);
     setProblems(listSavedProblems(themeId).map((p) => p.finding));
     setPastSessions(listTeacherSessions(themeId));
+    setPersona(getTeacherPersona(themeId));
   }, [themeId]);
 
   function purposeOf(t: ResearchTheme) {
@@ -112,8 +157,12 @@ export default function TeacherPage() {
       ...turns,
       { role: "student", text: text.trim() },
     ];
+    // 入力欄の文面を送るときだけ、入力欄を空にする（「分かりません」ボタンでは書きかけを残す）
+    const fromComposer = text === answer;
     setError(null);
     setSubmitting(true);
+    setPendingAnswer(text.trim());
+    if (fromComposer) setAnswer("");
     try {
       const res = await postTeacherTurn({
         theme: purposeOf(theme),
@@ -155,9 +204,11 @@ export default function TeacherPage() {
       });
       setPastSessions(listTeacherSessions(themeId));
     } catch (e) {
-      // 送れなかった回答は入力欄に残したまま
+      // 送れなかった回答は入力欄に戻す
+      if (fromComposer) setAnswer(text);
       setError(e instanceof Error ? e.message : "先生の返事を受け取れませんでした。");
     } finally {
+      setPendingAnswer(null);
       setSubmitting(false);
     }
   }
@@ -190,6 +241,18 @@ export default function TeacherPage() {
   const misses = collectMisses(pastSessions);
   const understoodCount = items.filter((i) => i.understood).length;
   const answeredCount = countStudentTurns(turns);
+  const teacher = {
+    name: persona?.name || DEFAULT_TEACHER_NAME,
+    image: persona?.image,
+  };
+  const errorAlert = (
+    <p
+      role="alert"
+      className="mt-4 border-l-2 border-pen pl-3 text-sm text-pen"
+    >
+      {error}
+    </p>
+  );
 
   return (
     <div>
@@ -199,21 +262,21 @@ export default function TeacherPage() {
       >
         ← {theme.name} に戻る
       </Link>
-      <h1 className="mt-2 text-2xl font-bold">先生モード</h1>
-      <p className="mt-2 text-xs text-ink-3">
+      <h1 className="mt-2 text-2xl">先生モード</h1>
+      <div className="mt-3">
+        <TeacherPersonaEditor
+          themeId={themeId}
+          persona={persona}
+          onChange={setPersona}
+        />
+      </div>
+      <p className="mt-2 text-xs text-ink-2">
         研究の目的・保存した問題・あなたの回答は AI（Claude）に送られます。
       </p>
 
-      {error && (
-        <p
-          role="alert"
-          className="mt-4 border-l-2 border-pen pl-3 text-sm text-pen"
-        >
-          {error}
-        </p>
-      )}
+      {error && phase === "idle" && errorAlert}
 
-      {(phase === "idle" || phase === "loadingQuestions") && (
+      {phase === "idle" && (
         <section className="mt-6">
           <p className="text-sm text-ink-2">
             保存した問題：{problems.length} 件
@@ -223,103 +286,40 @@ export default function TeacherPage() {
           <button
             type="button"
             onClick={start}
-            disabled={phase === "loadingQuestions"}
             className="btn-primary mt-3"
           >
-            {phase === "loadingQuestions"
-              ? "先生が質問を考えています…"
-              : error
-                ? "もう一度質問してもらう"
-                : "先生に質問してもらう"}
+            {error ? "もう一度質問してもらう" : "先生に質問してもらう"}
           </button>
         </section>
       )}
 
-      {phase === "answering" && current && (
-        <section className="mt-6 border-t border-ink pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-2">
-              質問 {index + 1} / {questions.length}
-            </span>
-            <LayerBadge layer={current.layer} />
-            {result === null && (
-              <span className="flex gap-x-3 text-xs text-ink-3">
-                <span>
-                  言えた観点 {covered.length} / {current.viewpoints.length}
-                </span>
-                <span>あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます</span>
-              </span>
-            )}
-          </div>
-
-          <div className="mt-4">
-            <Conversation turns={result ? turns.slice(0, -1) : turns} />
-          </div>
-
-          {result === null ? (
-            <div className="mt-4">
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitAnswer();
-                }}
-                disabled={submitting}
-                rows={4}
-                placeholder="あなたの回答（分からないときは「分かりません」ボタン）"
-                className="field"
-              />
-              <div className="mt-2 flex items-center gap-3">
+      {phase !== "idle" && (
+        <section className="mt-6">
+          <ThreadView
+            entries={entries}
+            teacher={teacher}
+            thinking={thinking}
+            action={
+              showNext ? (
                 <button
+                  ref={nextButtonRef}
                   type="button"
-                  onClick={() => submitAnswer()}
-                  disabled={submitting || answer.trim() === ""}
+                  onClick={next}
                   className="btn-primary"
                 >
-                  {submitting ? "先生が考えています…" : "答える"}
+                  {index + 1 >= questions.length ? "結果を見る" : "次の質問へ"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => submitAnswer("分かりません")}
-                  disabled={submitting}
-                  className="btn"
-                >
-                  分かりません
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4">
-              {/* 講評は先生の赤ペンの書き込み。左の余白に赤ペンの縦線を引く */}
-              <div className="border-l-2 border-pen pl-4">
-                <p className="pen-note text-base font-bold">
-                  <span aria-hidden="true" className="mr-1">
-                    {result.understood ? "◎" : "△"}
-                  </span>
-                  講評：{result.understood ? "理解できた" : "まだ理解できていない"}
-                </p>
-                <p className="pen-note mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">
-                  {result.feedback}
-                </p>
-                <div className="mt-3 border-t border-hair pt-3">
-                  <ViewpointList viewpoints={current.viewpoints} covered={covered} />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={next}
-                className="btn-primary mt-3"
-              >
-                {index + 1 >= questions.length ? "結果を見る" : "次の質問へ"}
-              </button>
-            </div>
-          )}
+              ) : undefined
+            }
+          />
+          {/* 会話の途中で失敗したときは、スクロールした先（スレッドの末尾）に出す */}
+          {error && errorAlert}
         </section>
       )}
 
       {phase === "done" && (
-        <section className="mt-6 border-t border-ink pt-4">
-          <h2 className="font-bold">おつかれさまでした</h2>
+        <section className="mt-6 rounded-[4px] border border-hair bg-sheet p-4">
+          <h2>おつかれさまでした</h2>
           <p className="mt-2 text-sm">
             {items.length} 問中 {understoodCount} 問を理解できていました。
             {items.length - understoodCount > 0 &&
@@ -347,7 +347,40 @@ export default function TeacherPage() {
         </section>
       )}
 
-      <UnansweredList misses={misses} />
+      {/* スレッドの末尾の目印。入力欄が下に固定されているあいだは、最後の吹き出しが隠れないように余白を取る */}
+      <div
+        ref={endRef}
+        aria-hidden="true"
+        style={{ height: composerShown ? composerHeight + 16 : 0 }}
+      />
+
+      {(phase === "idle" || phase === "done") && (
+        <UnansweredList misses={misses} teacher={teacher} />
+      )}
+
+      {composerShown && current && (
+        <ChatComposer
+          value={answer}
+          onChange={setAnswer}
+          onSubmit={() => submitAnswer()}
+          onDontKnow={() => submitAnswer("分かりません")}
+          disabled={submitting}
+          onHeightChange={setComposerHeight}
+          status={
+            <>
+              <span>
+                質問 {index + 1} / {questions.length}
+              </span>
+              <LayerBadge layer={current.layer} />
+              <span>
+                ・ 言えた観点 {covered.length} / {current.viewpoints.length}
+                {" ・ "}
+                あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます
+              </span>
+            </>
+          }
+        />
+      )}
     </div>
   );
 }
