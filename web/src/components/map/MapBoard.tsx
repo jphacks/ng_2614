@@ -1,13 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import type { WorkflowMap } from "@/lib/types";
-import { currentFocus } from "@/lib/map/summary";
-import { sortedPhases } from "@/lib/map/view";
+import { currentFocus, phaseSummaries, progressText } from "@/lib/map/summary";
 import type { AddTaskValues } from "./AddTaskForm";
 import { milestoneStyle, type MilestoneFilter } from "./labels";
 import { PhaseLane } from "./PhaseLane";
 
-// マイルストーンの絞り込みと、レーンを横に並べたマップ。
+// マイルストーンの絞り込みと、レーンを横に並べたマップ。レーンは初め、レーン名と進み具合だけを出す。
 // はみ出したときは、マップの部分だけが横にスクロールする
 export function MapBoard({
   map,
@@ -30,9 +30,29 @@ export function MapBoard({
   onSelect: (id: string) => void;
   onAddTask: (phaseId: string, values: AddTaskValues) => boolean;
 }) {
-  const phases = sortedPhases(map);
+  const summaries = phaseSummaries(map);
   const changedIds = new Set(map.lastUpdate?.changedTaskIds ?? []);
   const currentPhaseId = currentFocus(map).current?.phaseId;
+  // レーンは初め閉じておき、マウスを合わせたレーン・クリックで固定したレーン・選んでいるタスクのレーンだけを開く
+  const [hoveredLane, setHoveredLane] = useState<string | null>(null);
+  const [pinnedLanes, setPinnedLanes] = useState<Set<string>>(() => new Set());
+  const selectedLane = map.tasks.find((t) => t.id === selectedId)?.phaseId;
+
+  function togglePin(phaseId: string) {
+    setPinnedLanes((prev) => {
+      const next = new Set(prev);
+      if (next.has(phaseId)) next.delete(phaseId);
+      else next.add(phaseId);
+      return next;
+    });
+  }
+
+  // 「すべて開く／閉じる」は、カードのトグルとレーンの固定をまとめて開く／閉じる
+  function setAll(open: boolean) {
+    setPinnedLanes(open ? new Set(summaries.map((s) => s.phase.id)) : new Set());
+    if (!open) setHoveredLane(null);
+    onSetAllExpanded(open);
+  }
 
   const options: { value: MilestoneFilter; label: string }[] = [
     { value: "all", label: "すべて" },
@@ -73,14 +93,14 @@ export function MapBoard({
         <span className="ml-auto flex gap-1.5">
           <button
             type="button"
-            onClick={() => onSetAllExpanded(true)}
+            onClick={() => setAll(true)}
             className="btn btn-sm"
           >
             すべて開く
           </button>
           <button
             type="button"
-            onClick={() => onSetAllExpanded(false)}
+            onClick={() => setAll(false)}
             className="btn btn-sm"
           >
             すべて閉じる
@@ -91,16 +111,25 @@ export function MapBoard({
       <div className="overflow-x-auto pb-2">
         {/* レーンは盤面の幅を等分する（最小 160px）。詳細パネルが開いて狭くなっても縮めて収め、入らないときだけこの部分を横にスクロールする */}
         <div className="flex items-start gap-3">
-          {phases.map((phase) => (
+          {summaries.map((s) => (
             <PhaseLane
-              key={phase.id}
+              key={s.phase.id}
               map={map}
-              phase={phase}
+              phase={s.phase}
+              progress={progressText(s)}
+              open={
+                hoveredLane === s.phase.id ||
+                pinnedLanes.has(s.phase.id) ||
+                selectedLane === s.phase.id
+              }
+              pinned={pinnedLanes.has(s.phase.id)}
+              onHover={setHoveredLane}
+              onTogglePin={togglePin}
               filter={filter}
               selectedId={selectedId}
               changedIds={changedIds}
               expandedIds={expandedIds}
-              isCurrentPhase={phase.id === currentPhaseId}
+              isCurrentPhase={s.phase.id === currentPhaseId}
               onToggle={onToggle}
               onSelect={onSelect}
               onAddTask={onAddTask}

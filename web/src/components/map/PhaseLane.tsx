@@ -7,90 +7,125 @@ import { AddTaskForm, type AddTaskValues } from "./AddTaskForm";
 import { matchesFilter, type MilestoneFilter } from "./labels";
 import { TaskCard } from "./TaskCard";
 
+// レーンは初め、レーン名と進み具合（サブタスクの済み/全体）だけを出す。マウスを合わせると（キーボードではレーン名を選ぶと）
+// カードを出し、レーン名をクリックすると出したまま固定する。開くかどうかは親（MapBoard）が決める
 export function PhaseLane({
   map,
   phase,
+  progress,
+  open,
+  pinned,
   filter,
   selectedId,
   changedIds,
   expandedIds,
   isCurrentPhase = false,
+  onHover,
+  onTogglePin,
   onToggle,
   onSelect,
   onAddTask,
 }: {
   map: WorkflowMap;
   phase: MapPhase;
+  progress: string; // 進み具合「済み/全体」（サブタスクの数。数えるものが無ければ「—」）
+  open: boolean; // カードを出しているか
+  pinned: boolean; // クリックで出したまま固定しているか
   filter: MilestoneFilter;
   selectedId: string | undefined;
   changedIds: Set<string>;
   expandedIds: Set<string>;
   isCurrentPhase?: boolean; // 今ここのタスクがある工程（今の段階）
+  onHover: (phaseId: string | null) => void;
+  onTogglePin: (phaseId: string) => void;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onAddTask: (phaseId: string, values: AddTaskValues) => boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const tasks = tasksInPhase(map, phase.id);
+  const bodyId = `lane-body-${phase.id}`;
 
   return (
     <section
       aria-label={`レーン：${phase.name}`}
+      onMouseEnter={() => onHover(phase.id)}
+      onMouseLeave={() => onHover(null)}
       className={`min-w-40 max-w-md flex-1 basis-0 rounded-[4px] border bg-paper-2/60 p-2 ${
         isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
-      <header className="mb-2 px-1">
-        <h3 className="rule-head flex items-center gap-1.5 text-sm font-bold text-ink">
-          {phase.name}
-          {isCurrentPhase && (
-            <span className="bg-accent px-1.5 text-xs font-semibold leading-5 text-paper">
-              今の段階
-            </span>
-          )}
-        </h3>
-      </header>
-      {tasks.length === 0 && !adding && (
-        <p className="px-1 py-2 text-xs text-ink-3">タスクはありません</p>
-      )}
-      <ul className="space-y-2">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            map={map}
-            task={task}
-            phase={phase}
-            selectedId={selectedId}
-            dimmed={!matchesFilter(filter, task.milestoneId)}
-            updated={
-              changedIds.has(task.id) ||
-              map.tasks.some(
-                (t) => t.parentId === task.id && changedIds.has(t.id),
-              )
-            }
-            expanded={expandedIds.has(task.id)}
-            onToggle={onToggle}
-            onSelect={onSelect}
-          />
-        ))}
-      </ul>
-      <div className="mt-2">
-        {adding ? (
-          <AddTaskForm
-            milestones={map.milestones}
-            submitLabel="足す"
-            onSubmit={(values) => onAddTask(phase.id, values)}
-            onCancel={() => setAdding(false)}
-          />
-        ) : (
+      <header className={`px-1 ${open ? "mb-2" : ""}`}>
+        <h3 className="rule-head text-sm font-bold text-ink">
           <button
             type="button"
-            onClick={() => setAdding(true)}
-            className="w-full border border-dashed border-ink-3 px-2 py-1 text-xs text-ink-2 hover:border-ink hover:text-ink"
+            onClick={() => onTogglePin(phase.id)}
+            onFocus={() => onHover(phase.id)}
+            onBlur={() => onHover(null)}
+            aria-expanded={open}
+            aria-pressed={pinned}
+            aria-controls={bodyId}
+            aria-label={`${phase.name}：サブタスクの進み具合 ${progress}${isCurrentPhase ? "（今の段階）" : ""}。${pinned ? "クリックで固定を外す" : "クリックで開いたままにする"}`}
+            className="flex w-full items-center gap-1.5 text-left hover:underline focus-visible:outline-2 focus-visible:outline-ink"
           >
-            ＋ タスクを足す
+            <span aria-hidden="true" className="text-xs font-normal text-ink-3">
+              {pinned ? "▾" : "▸"}
+            </span>
+            {phase.name}
+            {isCurrentPhase && (
+              <span className="bg-accent px-1.5 text-xs font-semibold leading-5 text-paper">
+                今の段階
+              </span>
+            )}
+            <span aria-hidden="true" className="ml-auto font-mono text-sm font-normal tabular-nums text-ink-2">
+              {progress}
+            </span>
           </button>
+        </h3>
+      </header>
+      <div id={bodyId} hidden={!open}>
+        {tasks.length === 0 && !adding && (
+          <p className="px-1 py-2 text-xs text-ink-3">タスクはありません</p>
         )}
+        <ul className="space-y-2">
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              map={map}
+              task={task}
+              phase={phase}
+              selectedId={selectedId}
+              dimmed={!matchesFilter(filter, task.milestoneId)}
+              updated={
+                changedIds.has(task.id) ||
+                map.tasks.some(
+                  (t) => t.parentId === task.id && changedIds.has(t.id),
+                )
+              }
+              expanded={expandedIds.has(task.id)}
+              onToggle={onToggle}
+              onSelect={onSelect}
+            />
+          ))}
+        </ul>
+        <div className="mt-2">
+          {adding ? (
+            <AddTaskForm
+              milestones={map.milestones}
+              submitLabel="足す"
+              onSubmit={(values) => onAddTask(phase.id, values)}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="w-full border border-dashed border-ink-3 px-2 py-1 text-xs text-ink-2 hover:border-ink hover:text-ink"
+            >
+              ＋ タスクを足す
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

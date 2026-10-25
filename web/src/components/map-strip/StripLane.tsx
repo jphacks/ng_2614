@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { PhaseSummary } from "@/lib/map/summary";
+import { progressText, type PhaseSummary } from "@/lib/map/summary";
 import {
   effectiveStatus,
   linksOf,
@@ -180,8 +180,11 @@ export function StripLane({
             </span>
           )}
         </span>
-        <span className="shrink-0 font-normal text-ink-3">
-          {summary.counts.done}/{summary.total}
+        <span
+          className="shrink-0 font-mono font-normal tabular-nums text-ink-3"
+          title={`サブタスク ${summary.steps.total} 件のうち ${summary.steps.done} 件が済み`}
+        >
+          {progressText(summary)}
         </span>
       </h3>
       {tasks.length === 0 ? (

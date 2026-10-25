@@ -1,11 +1,13 @@
 "use client";
 
 // 作業フローマップの帯（F-15）の縦の形：画面の右端に固定するサイドバー。
-// 畳むと48px（レーンの頭文字と件数だけ）、開くと初期値208px（小さなマップ。幅は左端のつまみ SideResizeHandle で変えられる）。
+// 畳むと48px（レーンの頭文字と進み具合だけ。レーンをクリックするとそのレーンの中身を左に重ねて出す）。
+// 開くと初期値208px（レーンの進み具合のステッププログレスバーだけ。幅は左端のつまみ SideResizeHandle で変えられる）。
+// 開いた状態では、レーンをクリックするとその下にタスクを開き、タスクをクリックするとサブタスクを左に重ねて出す。
 // 本文の右側を空けるのは親（MapStrip）がやる。
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   setStripOpen,
   setStripOrientation,
@@ -16,17 +18,19 @@ import {
   changedParentIds,
   currentFocus,
   phaseSummaries,
+  progressText,
 } from "@/lib/map/summary";
-import { effectiveStatus, statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
-import type { MapPhase, MapStatus, MapTask, WorkflowMap } from "@/lib/types";
-import {
-  STATUS_BADGE,
-  STATUS_ICON,
-  STATUS_ORDER,
-} from "@/components/map/labels";
-import { PhaseSteps } from "@/components/map/PhaseSteps";
-import { SideLane } from "./SideLane";
+import { statusLabel } from "@/lib/map/view";
+import type { WorkflowMap } from "@/lib/types";
+import { STATUS_ORDER } from "@/components/map/labels";
 import { SIDE_WIDTH } from "./sizes";
+import { LaneStepper } from "./LaneStepper";
+import { StripLane } from "./StripLane";
+import { TaskPeek } from "./TaskPeek";
+import { useLanePeek } from "./use-lane-peek";
+
+// 帯の左に重ねて出す中身（畳んだ状態はレーン、開いた状態はタスクのサブタスク）の幅（px）
+const PEEK_WIDTH = 288;
 
 const BUTTON =
   "border border-ink bg-paper px-1.5 py-0.5 text-[13px] leading-4 text-ink hover:bg-paper-2";
@@ -44,22 +48,23 @@ export function StripSide({
   const open = useStripOpen();
   const openWidth = useSideWidth();
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
+  const rootRef = useRef<HTMLElement>(null);
+  const peek = useLanePeek(rootRef);
+
+  // 重ねる中身は、札の上端にそろえる（画面の下からはみ出しにくいよう、下の方では上にずらす）
+  function peekTop(chip: HTMLElement): number {
+    const top = chip.getBoundingClientRect().top;
+    return Math.max(8, Math.min(top, window.innerHeight * 0.3));
+  }
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
-  const { current, others } = useMemo(() => currentFocus(map), [map]);
+  const { current } = useMemo(() => currentFocus(map), [map]);
   const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
-  const phaseById = useMemo(() => new Map(map.phases.map((p) => [p.id, p])), [map]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
-  const unconfirmed = unconfirmedCount(map);
-  const parentsWithSubs = useMemo(
-    () =>
-      map.tasks
-        .filter((t) => !t.parentId && subtasksOf(map, t.id).length > 0)
-        .map((t) => t.id),
-    [map],
-  );
-  const allSubsOpen =
-    parentsWithSubs.length > 0 && parentsWithSubs.every((id) => openSubs.has(id));
+  // 重ねて出すのは、畳んだ状態ではクリックしたレーン、開いた状態ではクリックしたタスク
+  const peekSummary = open ? undefined : summaries.find((s) => s.phase.id === peek.shown);
+  const peekTask = open ? map.tasks.find((t) => t.id === peek.shown) : undefined;
+  const peekTaskPhase = peekTask && map.phases.find((p) => p.id === peekTask.phaseId);
 
   const mapHref = `/themes/${encodeURIComponent(themeId)}/map`;
 
@@ -72,14 +77,11 @@ export function StripSide({
     });
   }
 
-  function toggleAllSubs() {
-    setOpenSubs(allSubsOpen ? new Set() : new Set(parentsWithSubs));
-  }
-
   const width = open ? openWidth : SIDE_WIDTH.collapsed;
 
   return (
     <aside
+      ref={rootRef}
       aria-label="作業フローマップ"
       style={{ width }}
       className="fixed inset-y-0 right-0 z-30 overflow-y-auto overflow-x-hidden border-l border-hair bg-paper"
@@ -112,83 +114,14 @@ export function StripSide({
             </Link>
           </div>
 
-          {/* 今の段階と今ここ（1件）を、いちばん上に囲みで出す。ほかの進行中・待ちはその下に区切って並べる */}
-          {current && (
-            <section
-              aria-label="今の段階と今ここ"
-              className="mt-2 border-2 border-accent bg-paper p-1.5"
-            >
-              <p className="font-serif text-sm font-bold leading-snug text-ink">
-                今は「{phaseById.get(current.phaseId)?.name}」の段階
-              </p>
-              <div className="mt-1">
-                <PhaseSteps map={map} currentPhaseId={current.phaseId} size="sm" />
-              </div>
-              <h2 className="mt-1.5 inline-block bg-accent px-1 text-xs font-semibold text-paper">今ここ</h2>
-              <FocusLink
-                href={`${mapHref}?task=${encodeURIComponent(current.id)}`}
-                task={current}
-                phase={phaseById.get(current.phaseId)}
-                status={effectiveStatus(map, current)}
-                strong
-              />
-            </section>
-          )}
-
-          {others.length > 0 && (
-            <section aria-label="ほかに進行中・待ち" className="mt-1.5 px-0.5">
-              <h2 className="flex items-baseline justify-between text-[13px] font-semibold text-ink-2">
-                ほかに進行中・待ち
-                <span className="text-[12px] font-normal text-ink-3">
-                  {others.length} 件
-                </span>
-              </h2>
-              <ul className="mt-0.5 divide-y divide-hair">
-                {others.map((t) => (
-                  <li key={t.id} className="min-w-0 py-1 last:pb-0">
-                    <FocusLink
-                      href={`${mapHref}?task=${encodeURIComponent(t.id)}`}
-                      task={t}
-                      phase={phaseById.get(t.phaseId)}
-                      status={effectiveStatus(map, t)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {unconfirmed > 0 && (
-            <p className="marker mt-1.5 w-fit text-[13px] leading-snug">
-              未確認 {unconfirmed} 件
-            </p>
-          )}
-
-          {parentsWithSubs.length > 0 && (
-            <button
-              type="button"
-              onClick={toggleAllSubs}
-              className={`${BUTTON} mt-2 w-full`}
-            >
-              サブタスクをすべて{allSubsOpen ? "閉じる" : "開く"}
-            </button>
-          )}
-
-          <div className="mt-2 space-y-1.5 pb-2">
-            {summaries.map((s) => (
-              <SideLane
-                key={s.phase.id}
-                map={map}
-                themeId={themeId}
-                summary={s}
-                changedIds={changedIds}
-                focusIds={focusIds}
-                isCurrentPhase={s.phase.id === current?.phaseId}
-                openSubs={openSubs}
-                onToggleSub={toggleSub}
-              />
-            ))}
-          </div>
+          <LaneStepper
+            map={map}
+            summaries={summaries}
+            currentPhaseId={current?.phaseId}
+            focusIds={focusIds}
+            shownTaskId={peekTask ? peekTask.id : null}
+            onTaskClick={(id, el) => peek.toggle(id, peekTop(el))}
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center gap-1.5 px-1 py-2">
@@ -203,67 +136,50 @@ export function StripSide({
             «
           </button>
 
-          <ul aria-label="レーンごとの状態の件数" className="w-full space-y-1">
+          <ul
+            aria-label="レーンごとの進み具合"
+            className="w-full space-y-1"
+          >
             {summaries.map((s) => {
-              const parts = STATUS_ORDER.filter((st) => s.counts[st] > 0);
-              const spoken = parts
+              const spoken = STATUS_ORDER.filter((st) => s.counts[st] > 0)
                 .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
                 .join("、");
               const hasFocus = s.phase.id === current?.phaseId;
-              const text = `${spoken || "タスクなし"}${hasFocus ? "（今の段階）" : ""}`;
+              const isOpen = peek.shown === s.phase.id;
+              const progress = progressText(s);
               return (
-                <li
-                  key={s.phase.id}
-                  title={`${s.phase.name}：${text}`}
-                  aria-label={`${s.phase.name}：${text}`}
-                  className={`flex flex-col items-center border px-0.5 py-1 ${
-                    hasFocus
-                      ? "border-accent text-ink ring-1 ring-accent"
-                      : "border-hair text-ink-2"
-                  }`}
-                >
-                  {hasFocus && (
-                    <span
-                      aria-hidden="true"
-                      className="bg-accent px-1 text-[11px] font-semibold leading-3 text-paper"
-                    >
-                      今
-                    </span>
-                  )}
-                  <span
-                    aria-hidden="true"
-                    className="text-[13px] font-semibold leading-tight"
+                <li key={s.phase.id}>
+                  <button
+                    type="button"
+                    onClick={(e) => peek.toggle(s.phase.id, peekTop(e.currentTarget))}
+                    aria-expanded={isOpen}
+                    aria-controls="map-side-peek"
+                    aria-label={`${s.phase.name}：進み具合 ${progress}${hasFocus ? "（今の段階）" : ""}。${spoken || "タスクなし"}`}
+                    className={`flex w-full flex-col items-center border px-0.5 py-1 hover:bg-paper-2 ${
+                      isOpen
+                        ? "border-ink bg-paper-2 text-ink"
+                        : hasFocus
+                          ? "border-accent bg-accent-soft text-accent-deep ring-1 ring-accent"
+                          : "border-hair text-ink-2"
+                    }`}
                   >
-                    {s.phase.name.slice(0, 1)}
-                  </span>
-                  {parts.map((st: MapStatus) => (
                     <span
-                      key={st}
                       aria-hidden="true"
-                      className="text-[12px] leading-tight"
+                      className="text-[13px] font-semibold leading-tight"
                     >
-                      <span className={STATUS_ICON[st].className}>
-                        {STATUS_ICON[st].mark}
-                      </span>
-                      {s.counts[st]}
+                      {s.phase.name.slice(0, 1)}
                     </span>
-                  ))}
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-[11px] leading-tight tabular-nums"
+                    >
+                      {progress}
+                    </span>
+                  </button>
                 </li>
               );
             })}
           </ul>
-
-          {unconfirmed > 0 && (
-            <span
-              title={`未確認 ${unconfirmed}件`}
-              aria-label={`未確認 ${unconfirmed}件`}
-              className="marker text-[12px] font-medium leading-4"
-            >
-              <span aria-hidden="true">
-                未{unconfirmed > 99 ? "99+" : unconfirmed}
-              </span>
-            </span>
-          )}
 
           <Link
             href={mapHref}
@@ -284,41 +200,38 @@ export function StripSide({
           </button>
         </div>
       )}
+
+      {/* 畳んだ状態で、クリックしたレーンの中身を、帯の左に重ねて出す */}
+      {peekSummary && (
+        <div
+          id="map-side-peek"
+          style={{ top: peek.pos, right: width, width: PEEK_WIDTH }}
+          className="fixed z-40 max-h-[70vh] overflow-y-auto border border-ink bg-paper shadow-sm"
+        >
+          <StripLane
+            map={map}
+            themeId={themeId}
+            summary={peekSummary}
+            changedIds={changedIds}
+            focusIds={focusIds}
+            isCurrentPhase={peekSummary.phase.id === current?.phaseId}
+            openSubs={openSubs}
+            onToggleSub={toggleSub}
+          />
+        </div>
+      )}
+
+      {/* 開いた状態で、クリックしたタスクのサブタスクを、帯の左に重ねて出す */}
+      {peekTask && peekTaskPhase && (
+        <div
+          id="map-side-peek"
+          style={{ top: peek.pos, right: width, width: PEEK_WIDTH }}
+          className="fixed z-40 max-h-[70vh] overflow-y-auto border border-ink bg-paper shadow-sm"
+        >
+          <TaskPeek map={map} themeId={themeId} task={peekTask} phase={peekTaskPhase} />
+        </div>
+      )}
     </aside>
   );
 }
 
-// 今ここ・ほかに進行中・待ちの1件。レーン名と状態を添え、S-7 のそのタスクへ飛ぶ
-function FocusLink({
-  href,
-  task,
-  phase,
-  status,
-  strong = false,
-}: {
-  href: string;
-  task: MapTask;
-  phase: MapPhase | undefined;
-  status: MapStatus;
-  strong?: boolean;
-}) {
-  return (
-    <Link href={href} className="group mt-0.5 block">
-      <span className="flex flex-wrap items-center gap-1 text-[12px] leading-4 text-ink-2">
-        {phase?.name}
-        {phase && (
-          <span className={`tag px-1 text-[12px] leading-4 ${STATUS_BADGE[status]}`}>
-            {statusLabel(phase, status)}
-          </span>
-        )}
-      </span>
-      <span
-        className={`block break-words leading-snug group-hover:underline ${
-          strong ? "text-xs font-medium text-ink" : "text-[13px] text-ink"
-        }`}
-      >
-        {task.title}
-      </span>
-    </Link>
-  );
-}

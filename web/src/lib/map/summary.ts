@@ -9,6 +9,8 @@ export type PhaseSummary = {
   total: number; // レーンのタスク（親を持たないもの）の数
   counts: Record<MapStatus, number>; // effectiveStatus で数える。0 のものも入れる
   focus: MapTask[]; // そのレーンの「今ここ」（focusTasks のうち、このレーンのもの）
+  // 進み具合の分母と分子。サブタスクを数え、サブタスクの無いタスクはそのタスクを1件として数える。不採用は数えない
+  steps: { done: number; total: number };
 };
 
 // 今ここ（進行中か待ち）にあたる状態
@@ -28,13 +30,29 @@ export function phaseSummaries(map: WorkflowMap): PhaseSummary[] {
       rejected: 0,
     };
     const focus: MapTask[] = [];
+    const steps = { done: 0, total: 0 };
     for (const task of tasks) {
       const status = effectiveStatus(map, task);
       counts[status] += 1;
       if (isFocusStatus(status)) focus.push(task);
+      // 不採用のタスクは、そのサブタスクごと数えない
+      if (status === "rejected") continue;
+      const subtasks = map.tasks.filter((t) => t.parentId === task.id);
+      const leaves = subtasks.length > 0 ? subtasks.map((s) => s.status) : [status];
+      for (const leaf of leaves) {
+        if (leaf === "rejected") continue;
+        steps.total += 1;
+        if (leaf === "done") steps.done += 1;
+      }
     }
-    return { phase, total: tasks.length, counts, focus };
+    return { phase, total: tasks.length, counts, focus, steps };
   });
+}
+
+// 画面に出す進み具合「済み/全体」（サブタスクの数）。数えるものが無ければ「—」
+export function progressText(summary: PhaseSummary): string {
+  const { done, total } = summary.steps;
+  return total > 0 ? `${done}/${total}` : "—";
 }
 
 // 「今ここ」：親を持たないタスクのうち、effectiveStatus が doing か waiting のもの。
