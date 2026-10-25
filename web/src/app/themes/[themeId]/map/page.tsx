@@ -394,7 +394,7 @@ export default function WorkflowMapPage() {
               {actionError}
             </p>
           )}
-          <CurrentPhase map={map} onSelect={select} />
+          <CurrentPhase map={map} />
           <UpdateNotice map={map} onUndo={handleUndo} />
 
           <div className="space-y-1">

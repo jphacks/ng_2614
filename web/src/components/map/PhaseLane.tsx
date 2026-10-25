@@ -5,39 +5,40 @@ import type { MapPhase, WorkflowMap } from "@/lib/types";
 import { tasksInPhase } from "@/lib/map/view";
 import { AddTaskForm, type AddTaskValues } from "./AddTaskForm";
 import { matchesFilter, type MilestoneFilter } from "./labels";
+import { StepMark } from "./StepMark";
 import { TaskCard } from "./TaskCard";
 
-// レーンは初め、レーン名と進み具合（サブタスクの済み/全体）だけを出す。マウスを合わせると（キーボードではレーン名を選ぶと）
-// カードを出し、レーン名をクリックすると出したまま固定する。開くかどうかは親（MapBoard）が決める
+// レーンは初め、番号の丸とレーン名、進み具合（サブタスクの済み/全体）だけを出す（今の段階は番号の丸の色だけで示す）。マウスを合わせると（キーボードではレーン名を選ぶと）
+// レーン名をクリックするとカードを開き、もう一度クリックで閉じる（マウスを合わせただけでは開かない）。開くかどうかは親（MapBoard）が持つ
 export function PhaseLane({
   map,
   phase,
+  index,
+  complete,
   progress,
   open,
-  pinned,
   filter,
   selectedId,
   changedIds,
   expandedIds,
   isCurrentPhase = false,
-  onHover,
-  onTogglePin,
+  onToggleOpen,
   onToggle,
   onSelect,
   onAddTask,
 }: {
   map: WorkflowMap;
   phase: MapPhase;
+  index: number; // 0 から数えた工程の順（番号の丸に出す）
+  complete: boolean; // サブタスクが全部済んだ（番号の丸を ✓ にする）
   progress: string; // 進み具合「済み/全体」（サブタスクの数。数えるものが無ければ「—」）
   open: boolean; // カードを出しているか
-  pinned: boolean; // クリックで出したまま固定しているか
   filter: MilestoneFilter;
   selectedId: string | undefined;
   changedIds: Set<string>;
   expandedIds: Set<string>;
   isCurrentPhase?: boolean; // 今ここのタスクがある工程（今の段階）
-  onHover: (phaseId: string | null) => void;
-  onTogglePin: (phaseId: string) => void;
+  onToggleOpen: (phaseId: string) => void;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onAddTask: (phaseId: string, values: AddTaskValues) => boolean;
@@ -49,34 +50,23 @@ export function PhaseLane({
   return (
     <section
       aria-label={`レーン：${phase.name}`}
-      onMouseEnter={() => onHover(phase.id)}
-      onMouseLeave={() => onHover(null)}
-      className={`min-w-40 max-w-md flex-1 basis-0 rounded-[4px] border bg-paper-2/60 p-2 ${
-        isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
-      }`}
+      className="min-w-40 max-w-md flex-1 basis-0 rounded-[4px] border border-hair bg-paper-2/60 p-2"
     >
       <header className={`px-1 ${open ? "mb-2" : ""}`}>
         <h3 className="rule-head text-sm font-bold text-ink">
           <button
             type="button"
-            onClick={() => onTogglePin(phase.id)}
-            onFocus={() => onHover(phase.id)}
-            onBlur={() => onHover(null)}
+            onClick={() => onToggleOpen(phase.id)}
             aria-expanded={open}
-            aria-pressed={pinned}
             aria-controls={bodyId}
-            aria-label={`${phase.name}：サブタスクの進み具合 ${progress}${isCurrentPhase ? "（今の段階）" : ""}。${pinned ? "クリックで固定を外す" : "クリックで開いたままにする"}`}
+            aria-label={`${phase.name}：サブタスクの進み具合 ${progress}${isCurrentPhase ? "（今の段階）" : ""}。${open ? "クリックで閉じる" : "クリックで開く"}`}
             className="flex w-full items-center gap-1.5 text-left hover:underline focus-visible:outline-2 focus-visible:outline-ink"
           >
             <span aria-hidden="true" className="text-xs font-normal text-ink-3">
-              {pinned ? "▾" : "▸"}
+              {open ? "▾" : "▸"}
             </span>
+            <StepMark index={index} complete={complete} current={isCurrentPhase} />
             {phase.name}
-            {isCurrentPhase && (
-              <span className="bg-accent px-1.5 text-xs font-semibold leading-5 text-paper">
-                今の段階
-              </span>
-            )}
             <span aria-hidden="true" className="ml-auto font-mono text-sm font-normal tabular-nums text-ink-2">
               {progress}
             </span>
