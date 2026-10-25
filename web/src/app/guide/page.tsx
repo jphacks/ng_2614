@@ -8,7 +8,7 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "使い方 | TAZUNA" };
 
 // 撮った日（撮り直したら変える）
-const CAPTURED_AT = "2026年10月24日";
+const CAPTURED_AT = "2026年10月25日";
 
 type Shot = { src: string; alt: string; width: number; height: number };
 
@@ -26,45 +26,40 @@ const shot = (
 });
 
 const SHOTS = {
-  home: shot("home", "プロジェクト一覧", 2560, 1600),
+  home: shot("home", "プロジェクト一覧", 3024, 1712),
   newProject: shot(
     "new-project",
     "新しいプロジェクトで研究の目的を書く画面",
-    2560,
-    1600,
+    3024, 1712,
   ),
   settingsConnections: shot(
     "settings-connections",
     "設定画面の接続の欄",
-    1808,
-    804,
+    1890, 690,
   ),
   hookToast: shot(
     "hook-toast",
     "右下に出たフックの知らせ（判定中）",
-    2560,
-    1600,
+    3024, 1712,
   ),
-  review: shot("review", "判定結果の画面", 2560, 1600),
-  reviewHidden: shot("review-hidden", "隠れた問題の項目", 1712, 1192),
-  reviewDiff: shot("review-diff", "関係するファイルの差分", 1608, 768),
-  themeDetail: shot("theme-detail", "プロジェクトの詳細と問題ログ", 2560, 2206),
-  teacher: shot("teacher", "先生モードの問い返し", 1888, 1640),
+  review: shot("review", "判定結果の画面", 3024, 1712),
+  reviewHidden: shot("review-hidden", "隠れた問題の項目", 2250, 980),
+  reviewDiff: shot("review-diff", "関係するファイルの差分", 2180, 1060),
+  themeDetail: shot("theme-detail", "プロジェクトの詳細と問題ログ", 3024, 1712),
+  teacher: shot("teacher", "先生モードの問い返し", 1860, 1550),
   teacherPoint: shot(
     "teacher-point",
     "先生モードの1問ごとの講評と観点",
-    1888,
-    2062,
+    1660, 1670,
   ),
   teacherResult: shot(
     "teacher-result",
     "先生モードの結果と答えられなかった点",
-    1888,
-    2272,
+    1860, 1580,
   ),
-  map: shot("map", "作業フローマップ", 2880, 1800),
-  settingsAi: shot("settings-ai", "使う AI の設定", 1808, 1198),
-  settingsUsage: shot("settings-usage", "AI の使用量", 1808, 876),
+  map: shot("map", "作業フローマップ", 3024, 1712),
+  settingsAi: shot("settings-ai", "使う AI の設定", 1890, 940),
+  settingsUsage: shot("settings-usage", "AI の使用量", 1890, 1065),
 };
 
 const HOOK_SETTINGS = `{
@@ -224,7 +219,7 @@ export default function GuidePage() {
         />
         <Figure
           shot={SHOTS.reviewHidden}
-          caption="隠れた問題の例。この回の Claude Code はコードを変えずに相談してきたが、「今の数字はスケジュールの良し悪しではなく発散の大きさを測っている」ことを、研究への影響として拾っている。気になるものは「問題ログに保存」しておくと、先生モードで問われる"
+          caption="隠れた問題の例。サンプリングで点が範囲の外に飛ぶ警告が出ていたのに、Claude Code は対処しないまま比べていた。外れた点が距離を押し上げ、比べ方が崩れることを、研究への影響として拾っている。気になるものは「問題ログに保存」しておくと、先生モードで問われる"
         />
         <Figure
           shot={SHOTS.reviewDiff}
@@ -238,7 +233,7 @@ export default function GuidePage() {
         </p>
         <Figure
           shot={SHOTS.themeDetail}
-          caption="プロジェクトの詳細。研究の目的、問題ログ、取り込んだ変更の履歴"
+          caption="プロジェクトの詳細。研究の目的、取り込んだ変更の履歴、問題ログ"
         />
       </GuideSection>
 
@@ -249,7 +244,7 @@ export default function GuidePage() {
         </p>
         <Figure
           shot={SHOTS.teacher}
-          caption="答えが的外れだと、先生は答えを言わずに問い返す"
+          caption="「AIがやったのでわかりません」と答えても、先生は答えを言わずに問い返す"
         />
         <Figure
           shot={SHOTS.teacherPoint}
@@ -269,7 +264,7 @@ export default function GuidePage() {
         </p>
         <Figure
           shot={SHOTS.map}
-          caption="作業フローマップ（デモ用のデータ）。研究テーマの画面の上部にも、帯として小さく出る"
+          caption="作業フローマップ。変更を取り込むと自動で更新され、何が変わったかが上に出る。プロジェクトの画面の右側にも、帯として小さく出る"
         />
       </GuideSection>
 
@@ -280,11 +275,11 @@ export default function GuidePage() {
         </p>
         <Figure
           shot={SHOTS.settingsAi}
-          caption="設定 → 使う AI。標準は速くて安い Haiku。料金の倍率と、これまでの 1 回あたりの料金も出る"
+          caption="設定 → 使う AI。標準は速くて安い Haiku（この画面では Sonnet に変えている）。料金の倍率と、これまでの 1 回あたりの料金も出る"
         />
         <Figure
           shot={SHOTS.settingsUsage}
-          caption="設定 → 使用量。この案内を作るために実際に使った分（判定と先生モード）"
+          caption="設定 → 使用量。この案内を作るために実際に使った分（判定・先生モード・作業フローマップ）"
         />
       </GuideSection>
 
