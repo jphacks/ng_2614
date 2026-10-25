@@ -108,7 +108,7 @@ export type TeacherSession = {
 export type TeacherPersona = {
   themeId: string;
   name: string; // 空なら「先生」と出す
-  image?: string; // 256×256 の JPEG の data URL
+  image?: string; // 256×256 の JPEG の data URL（デモ用のプロジェクトでは web/public/demo/ の画像のパス）
   updatedAt: string; // ISO 8601
 };
 

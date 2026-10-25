@@ -16,6 +16,10 @@ import type { Finding, ResearchTheme, Viewpoint } from "@/lib/types";
 
 export const DEMO_THEME_ID = "demo-theme";
 
+// デモ用のプロジェクトの先生の画像。名前は既定の「先生」のまま。
+// イラストは公開しないのでリポジトリに入れていない（.gitignore 済み）。デモをする人が web/public/demo/teacher.jpg に置く。無ければ頭文字を出す
+export const DEMO_TEACHER_IMAGE = "/demo/teacher.jpg";
+
 export const demoTheme: Omit<ResearchTheme, "updatedAt"> = {
   id: DEMO_THEME_ID,
   name: "【デモ】DDPM のノイズスケジュール：cosine は linear より生成の質が上がるか",

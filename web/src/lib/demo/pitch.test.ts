@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getStripOpen, getStripOrientation } from "@/lib/map/prefs";
-import { getReview, getWorkflowMap, listReviews, saveReview, saveTheme } from "@/lib/storage";
-import { DEMO_THEME_ID, demoTheme } from "./data";
+import { getReview, getTeacherPersona, getWorkflowMap, listReviews, saveReview, saveTheme } from "@/lib/storage";
+import { DEMO_TEACHER_IMAGE, DEMO_THEME_ID, demoTheme } from "./data";
 import { isDemoMode } from "./mode";
 import { PITCH_REVIEW_ID, deliverPitchReview, preparePitchDemo } from "./pitch";
 
@@ -27,6 +27,7 @@ describe("ピッチ用の入口", () => {
     expect(getStripOpen()).toBe(true);
     expect(listReviews(DEMO_THEME_ID)).toEqual([]);
     expect(getWorkflowMap(DEMO_THEME_ID)?.tasks.length).toBeGreaterThan(0);
+    expect(getTeacherPersona(DEMO_THEME_ID)).toMatchObject({ name: "先生", image: DEMO_TEACHER_IMAGE });
   });
 
   it("届く演出のときに、フックで届いた体の判定を未確認で入れる", async () => {

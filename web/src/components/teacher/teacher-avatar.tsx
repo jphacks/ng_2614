@@ -1,4 +1,8 @@
-// 先生のキャラクター（F-20）の丸いアイコン。画像が無いときは名前の頭文字を出す
+"use client";
+
+// 先生のキャラクター（F-20）の丸いアイコン。画像が無いとき・読み込めないときは名前の頭文字を出す
+
+import { useState } from "react";
 
 export type TeacherLook = { name: string; image?: string };
 
@@ -10,13 +14,16 @@ export function TeacherAvatar({
   size?: number;
 }) {
   const style = { width: size, height: size };
-  if (teacher.image) {
+  // 読み込めなかった画像（デモ用の画像を手元に置いていないときなど）
+  const [failed, setFailed] = useState<string | undefined>(undefined);
+  if (teacher.image && failed !== teacher.image) {
     return (
-      // data URL の画像なので next/image は使わない
+      // data URL（とデモ用のパス）の画像なので next/image は使わない
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={teacher.image}
         alt={teacher.name}
+        onError={() => setFailed(teacher.image)}
         style={style}
         className="shrink-0 rounded-full border border-hair object-cover"
       />
