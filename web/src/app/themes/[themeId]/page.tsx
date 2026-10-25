@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useDemoMode } from "@/lib/demo/mode";
 import {
   getTheme,
   listReviews,
@@ -46,7 +45,6 @@ export default function ThemeDetailPage() {
   const { themeId } = useParams<{ themeId: string }>();
   const [state, setState] = useState<Loaded>({ status: "loading" });
   const [editing, setEditing] = useState(false);
-  const demo = useDemoMode();
 
   useEffect(() => {
     setState(load(themeId));
@@ -93,7 +91,7 @@ export default function ThemeDetailPage() {
         <h1 className="mt-2 text-xl font-bold">{theme.name}</h1>
         <p className="mt-1 font-mono text-xs text-ink-3">{theme.repo}</p>
         <div className="mt-4">
-          <HookIntake themeId={theme.id} />
+          <HookIntake />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link
@@ -108,16 +106,13 @@ export default function ThemeDetailPage() {
           >
             作業フローマップ
           </Link>
-          {/* 取り込みの主な方法はフックなので、コミットからの取り込みは目立たない副ボタンにする。
-              デモモードでは上の案内にボタンがあるので出さない */}
-          {!demo && (
-            <Link
-              href={`/themes/${theme.id}/reviews/new`}
-              className="btn btn-sm"
-            >
-              コミットから取り込む
-            </Link>
-          )}
+          {/* 取り込みの主な方法はフックなので、コミットからの取り込みは目立たない副ボタンにする */}
+          <Link
+            href={`/themes/${theme.id}/reviews/new`}
+            className="btn btn-sm"
+          >
+            コミットから取り込む
+          </Link>
         </div>
       </div>
 

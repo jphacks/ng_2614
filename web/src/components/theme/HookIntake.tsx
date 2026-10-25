@@ -1,34 +1,11 @@
 "use client";
 
 // S-4 の上部に置く、変更の届き方の案内。取り込みの主な方法はフック（F-13）なので、ここを主役にする。
-// デモモードではフックを使わないので、コミットから取り込むよう案内する
+// デモモードでも同じ案内を出す（ピッチ用の入口で、フックの知らせが届くところを見せるため）
 
 import Link from "next/link";
-import { useDemoMode } from "@/lib/demo/mode";
 
-export function HookIntake({ themeId }: { themeId: string }) {
-  const demo = useDemoMode();
-  const importHref = `/themes/${encodeURIComponent(themeId)}/reviews/new`;
-
-  if (demo) {
-    return (
-      <section
-        aria-label="変更の届き方"
-        className="border-l-2 border-ink bg-marker p-4"
-      >
-        <p className="font-semibold text-ink">
-          デモモードでは、Claude Code のフックは使いません
-        </p>
-        <Link
-          href={importHref}
-          className="btn mt-3"
-        >
-          コミットから取り込む
-        </Link>
-      </section>
-    );
-  }
-
+export function HookIntake() {
   return (
     <section
       aria-label="変更の届き方"

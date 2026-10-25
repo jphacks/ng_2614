@@ -1,10 +1,11 @@
 "use client";
 
-// ピッチ用の入口。資料の「先生モード」のスライドからリンクで開き、デモを用意してから判定結果（S-3）に移る
+// ピッチ用の入口。資料の「先生モード」のスライドからリンクで開き、デモを用意してからデモ用のプロジェクト（S-4）に移る。
+// 移ったあと、フックで作業が届いたように右下に知らせを出す（HookInbox）
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { preparePitchDemo } from "@/lib/demo/pitch";
+import { preparePitchDemo, startPitchDelivery } from "@/lib/demo/pitch";
 
 export default function PitchPage() {
   const router = useRouter();
@@ -16,7 +17,10 @@ export default function PitchPage() {
     if (started.current) return;
     started.current = true;
     preparePitchDemo()
-      .then((reviewId) => router.replace(`/reviews/${reviewId}`))
+      .then((themeId) => {
+        router.replace(`/themes/${themeId}`);
+        startPitchDelivery();
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "デモを用意できませんでした。"));
   }, [router]);
 
