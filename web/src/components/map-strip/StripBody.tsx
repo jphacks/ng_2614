@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   setStripOpen,
   setStripOrientation,
@@ -11,13 +11,19 @@ import {
   changedParentIds,
   currentFocus,
   phaseSummaries,
+  progressText,
 } from "@/lib/map/summary";
-import { statusLabel, subtasksOf, unconfirmedCount } from "@/lib/map/view";
-import type { MapStatus, WorkflowMap } from "@/lib/types";
-import { STATUS_ICON, STATUS_ORDER } from "@/components/map/labels";
+import { statusLabel, unconfirmedCount } from "@/lib/map/view";
+import type { WorkflowMap } from "@/lib/types";
+import { STATUS_ORDER } from "@/components/map/labels";
 import { StripLane } from "./StripLane";
+import { useLanePeek } from "./use-lane-peek";
 
-// マップがあるプロジェクトの帯。畳むと1段（約32px）、開くと小さなマップを出す（最大 min(30vh, 240px)）
+// マップがあるプロジェクトの帯。1段（約32px）で、レーン名と進み具合（サブタスクの済み/全体）だけを並べる。開いた状態では、今ここと未確認の件数も出す。
+// レーンをクリックすると、そのレーンの中身を帯の下に重ねて出す（マウスを合わせただけでは開かない）
+
+// 重ねて出すレーンの中身の幅（px）
+const PEEK_WIDTH = 320;
 
 // display を含めない部分。hidden と組み合わせるボタンで display がぶつからないようにする
 const BUTTON_BASE =
@@ -33,22 +39,24 @@ export function StripBody({
 }) {
   const open = useStripOpen();
   const [openSubs, setOpenSubs] = useState<Set<string>>(() => new Set());
+  const rootRef = useRef<HTMLDivElement>(null);
+  const peek = useLanePeek(rootRef);
+
+  // 重ねる中身は、札の左端にそろえる（帯からはみ出さないよう右端で止める）
+  function peekLeft(chip: HTMLElement): number {
+    const root = rootRef.current;
+    if (!root) return 0;
+    const rootBox = root.getBoundingClientRect();
+    const left = chip.getBoundingClientRect().left - rootBox.left;
+    return Math.max(0, Math.min(left, rootBox.width - PEEK_WIDTH));
+  }
 
   const summaries = useMemo(() => phaseSummaries(map), [map]);
+  const peekSummary = summaries.find((s) => s.phase.id === peek.shown);
   const { current, others } = useMemo(() => currentFocus(map), [map]);
   const focusIds = useMemo(() => new Set(current ? [current.id] : []), [current]);
   const changedIds = useMemo(() => new Set(changedParentIds(map)), [map]);
   const unconfirmed = unconfirmedCount(map);
-  // サブタスクを持つタスク（親を持たないもの）の id
-  const parentsWithSubs = useMemo(
-    () =>
-      map.tasks
-        .filter((t) => !t.parentId && subtasksOf(map, t.id).length > 0)
-        .map((t) => t.id),
-    [map],
-  );
-  const allSubsOpen =
-    parentsWithSubs.length > 0 && parentsWithSubs.every((id) => openSubs.has(id));
 
   const mapHref = `/themes/${encodeURIComponent(themeId)}/map`;
 
@@ -61,10 +69,6 @@ export function StripBody({
     });
   }
 
-  function toggleAllSubs() {
-    setOpenSubs(allSubsOpen ? new Set() : new Set(parentsWithSubs));
-  }
-
   // 「今ここ」は1件だけ出す（ほかに進行中・待ちのものはツールチップに）
   const focusTitle = current?.title ?? "";
   const currentPhaseName = map.phases.find((p) => p.id === current?.phaseId)?.name;
@@ -73,64 +77,52 @@ export function StripBody({
 
   return (
     <div
-      className={`relative mx-auto max-w-screen-2xl ${
-        open ? "max-h-[min(30vh,240px)] overflow-y-auto" : ""
-      }`}
+      ref={rootRef}
+      className="relative mx-auto max-w-screen-2xl"
     >
-      {/* 見出しの行。開いて中身をスクロールしても見えるよう、帯の中で固定する */}
-      <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-paper px-4 sm:px-6 lg:px-8">
+      {/* 1段だけの行。開いた状態では、今ここと未確認の件数も出す */}
+      <div className="flex h-8 items-center gap-2 bg-paper px-4 sm:px-6 lg:px-8">
         <span className="shrink-0 font-serif text-xs font-semibold text-ink">
           <span className="hidden sm:inline">作業フローマップ</span>
           <span className="sm:hidden">マップ</span>
         </span>
-        {!open ? (
-          <ul
-            aria-label="レーンごとの状態の件数"
-            className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {summaries.map((s) => {
-              const parts = STATUS_ORDER.filter((st) => s.counts[st] > 0);
-              const spoken = parts
-                .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
-                .join("、");
-              const isCurrent = s.phase.id === current?.phaseId;
-              const label = `${spoken || "タスクなし"}${isCurrent ? "（今の段階）" : ""}`;
-              return (
-                <li
-                  key={s.phase.id}
-                  aria-label={`${s.phase.name}：${label}`}
-                  title={label}
-                  className={`shrink-0 border px-1.5 text-[13px] leading-5 ${
-                    isCurrent
-                      ? "border-ink text-ink"
-                      : "border-hair text-ink-2"
+        <ul
+          aria-label="レーンごとの進み具合"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {summaries.map((s) => {
+            const spoken = STATUS_ORDER.filter((st) => s.counts[st] > 0)
+              .map((st) => `${statusLabel(s.phase, st)} ${s.counts[st]}件`)
+              .join("、");
+            const isCurrent = s.phase.id === current?.phaseId;
+            const isOpen = peek.shown === s.phase.id;
+            const progress = progressText(s);
+            return (
+              <li key={s.phase.id} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => peek.toggle(s.phase.id, peekLeft(e.currentTarget))}
+                  aria-expanded={isOpen}
+                  aria-controls="map-strip-peek"
+                  aria-label={`${s.phase.name}：進み具合 ${progress}${isCurrent ? "（今の段階）" : ""}。${spoken || "タスクなし"}`}
+                  className={`border px-1.5 text-[13px] leading-5 hover:bg-paper-2 ${
+                    isOpen
+                      ? "border-ink bg-paper-2 text-ink"
+                      : isCurrent
+                        ? "border-accent bg-accent-soft font-semibold text-accent-deep"
+                        : "border-hair text-ink-2"
                   }`}
                 >
-                  {isCurrent && (
-                    <span
-                      aria-hidden="true"
-                      className="mr-1 bg-accent px-1 text-[12px] font-semibold text-paper"
-                    >
-                      今
-                    </span>
-                  )}
                   <span className="font-medium">{s.phase.name}</span>
-                  {parts.map((st: MapStatus) => (
-                    <span key={st} className="ml-1" aria-hidden="true">
-                      <span className={STATUS_ICON[st].className}>
-                        {STATUS_ICON[st].mark}
-                      </span>
-                      {s.counts[st]}
-                    </span>
-                  ))}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <span className="flex-1" />
-        )}
-        {focusTitle && (
+                  <span aria-hidden="true" className="ml-1 font-mono tabular-nums">
+                    {progress}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {open && focusTitle && (
           <span
             className="hidden min-w-0 max-w-[20rem] shrink items-center text-[13px] text-ink-2 md:flex"
             title={othersTitle ? `${focusTitle}\n${othersTitle}` : focusTitle}
@@ -149,7 +141,7 @@ export function StripBody({
             )}
           </span>
         )}
-        {unconfirmed > 0 && (
+        {open && unconfirmed > 0 && (
           <span
             className="marker shrink-0 whitespace-nowrap px-1.5 text-[13px] font-medium leading-5"
             title={`AI が作ったままで、まだ確認していないものが ${unconfirmed} 件あります`}
@@ -159,16 +151,6 @@ export function StripBody({
           </span>
         )}
         <div className="flex shrink-0 items-center gap-1">
-          {open && parentsWithSubs.length > 0 && (
-            <button
-              type="button"
-              onClick={toggleAllSubs}
-              className={BUTTON}
-              aria-label={`サブタスクをすべて${allSubsOpen ? "閉じる" : "開く"}`}
-            >
-              サブ{allSubsOpen ? "を閉じる" : "を開く"}
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setStripOrientation("vertical")}
@@ -198,25 +180,23 @@ export function StripBody({
         </div>
       </div>
 
-      {open && (
-        <div className="px-4 pb-1.5 sm:px-6 lg:px-8">
-          <div className="overflow-x-auto">
-            <div className="grid grid-flow-col auto-cols-[minmax(155px,1fr)] gap-1.5">
-              {summaries.map((s) => (
-                <StripLane
-                  key={s.phase.id}
-                  map={map}
-                  themeId={themeId}
-                  summary={s}
-                  changedIds={changedIds}
-                  focusIds={focusIds}
-                  isCurrentPhase={s.phase.id === current?.phaseId}
-                  openSubs={openSubs}
-                  onToggleSub={toggleSub}
-                />
-              ))}
-            </div>
-          </div>
+      {/* クリックしたレーンの中身を、帯の下に重ねて出す */}
+      {peekSummary && (
+        <div
+          id="map-strip-peek"
+          style={{ left: peek.pos, width: PEEK_WIDTH }}
+          className="absolute top-full z-40 max-h-[60vh] overflow-y-auto border border-ink bg-paper shadow-sm"
+        >
+          <StripLane
+            map={map}
+            themeId={themeId}
+            summary={peekSummary}
+            changedIds={changedIds}
+            focusIds={focusIds}
+            isCurrentPhase={peekSummary.phase.id === current?.phaseId}
+            openSubs={openSubs}
+            onToggleSub={toggleSub}
+          />
         </div>
       )}
     </div>

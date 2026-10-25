@@ -6,6 +6,7 @@ import {
   focusTasks,
   isMapPage,
   phaseSummaries,
+  progressText,
   themeIdFromPath,
 } from "./summary";
 
@@ -52,6 +53,42 @@ function mapOf(tasks: MapTask[], changedTaskIds?: string[]): WorkflowMap {
     updatedAt: "2026-10-23T00:00:00.000Z",
   };
 }
+
+describe("steps / progressText", () => {
+  it("サブタスクのないタスクは1件として、不採用を除いて「済み/全体」を返す", () => {
+    const map = mapOf([
+      task("a", { status: "done" }),
+      task("b", { status: "done" }),
+      task("c", { status: "todo" }),
+      task("d", { status: "rejected", rejectReason: "x" }),
+    ]);
+    const [first] = phaseSummaries(map);
+    expect(first.steps).toEqual({ done: 2, total: 3 });
+    expect(progressText(first)).toBe("2/3");
+  });
+
+  it("サブタスクがあるタスクは、親ではなくサブタスクを数える（不採用のサブタスクは除く）", () => {
+    const map = mapOf([
+      task("a", { status: "done" }),
+      task("a1", { parentId: "a", status: "done" }),
+      task("a2", { parentId: "a", status: "rejected", rejectReason: "x" }),
+      task("b", { status: "doing" }),
+      task("b1", { parentId: "b", status: "todo" }),
+      task("b2", { parentId: "b", status: "todo" }),
+      task("b3", { parentId: "b", status: "done" }),
+    ]);
+    const [first] = phaseSummaries(map);
+    expect(first.steps).toEqual({ done: 2, total: 4 });
+    expect(progressText(first)).toBe("2/4");
+  });
+
+  it("数えるものが無いレーンは「—」", () => {
+    const map = mapOf([task("a", { status: "rejected", rejectReason: "x" })]);
+    const [first, , last] = phaseSummaries(map);
+    expect(first.steps).toEqual({ done: 0, total: 0 });
+    expect(progressText(last)).toBe("—");
+  });
+});
 
 describe("phaseSummaries", () => {
   it("レーンの order 順に、親を持たないタスクだけを数える", () => {
