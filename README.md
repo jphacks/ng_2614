@@ -1,11 +1,23 @@
 # TAZUNA
 
-<!-- TODO: デモ動画を撮ったら、下のリンク先（YouTube の URL）と画像を差し替える -->
-[![IMAGE ALT TEXT HERE](https://jphacks.com/wp-content/uploads/2026/07/IMG_5316.png)](https://www.youtube.com/watch?v=piaNsc6ilBI)
-
 **AI が研究のコードを書く時代に、AI が黙って解決した問題を見逃さず、研究と実装の理解を取り戻す Web アプリ。**
 
-![判定結果の画面：AI が黙って対処した「隠れた問題」と、その研究への影響](web/public/guide/review-hidden.png)
+[![TAZUNA のデモ動画（YouTube、5分35秒）](https://img.youtube.com/vi/3dEagmwuUeM/maxresdefault.jpg)](https://youtu.be/3dEagmwuUeM)
+
+### デモ動画（5分35秒）
+
+本物の Claude API と、デモ用の研究リポジトリ（拡散モデルのノイズスケジュールの比較）で、プロジェクトを作るところから通しで動かしています。
+
+- [0:08](https://youtu.be/3dEagmwuUeM?t=8) プロジェクトを作る：研究の目的を「問い・手法・評価」で書く
+- [0:21](https://youtu.be/3dEagmwuUeM?t=21) 作業フローマップを作る：研究の記録から、工程ごとのタスクを1枚に
+- [0:41](https://youtu.be/3dEagmwuUeM?t=41) いつもどおり Claude Code に頼む（ここは早送り）
+- [0:56](https://youtu.be/3dEagmwuUeM?t=56) 作業が終わると、フックで TAZUNA に届いて自動で判定
+- [1:06](https://youtu.be/3dEagmwuUeM?t=66) 判定結果：AI が警告を残したまま比べていた「隠れた問題」と、その研究への影響
+- [2:02](https://youtu.be/3dEagmwuUeM?t=122) 先生モード：「AIがやったのでわかりません」には、答えを教えずに問い返す
+- [4:06](https://youtu.be/3dEagmwuUeM?t=246) 講評と「答えられなかった点」
+- [4:22](https://youtu.be/3dEagmwuUeM?t=262) 問題ログ
+- [4:46](https://youtu.be/3dEagmwuUeM?t=286) 作業フローマップの自動更新
+- [5:15](https://youtu.be/3dEagmwuUeM?t=315) 設定：機能ごとに使う AI のモデルを選び、使用量と料金の目安を見る
 
 ## 製品概要
 
@@ -38,8 +50,16 @@ TAZUNA は、AI の変更を **研究の目的** と照らし合わせ、AI が�
 1. **プロジェクトを作る。** 研究のリポジトリ（GitHub）を選び、研究の目的を **問い・手法・評価** の3つで書く
 2. **いつもどおり Claude Code に頼む。** 研究のリポジトリに Claude Code のフックを入れておくと、作業が終わるたびに、依頼文・変更の差分・作業中に実際に起きたエラー・AI の最終報告が、手元の TAZUNA に自動で届く。コミットしなくてよい
 3. **判定を見る。** AI が変更を **目的どおり／隠れた問題／余計な追加** に分ける。隠れた問題には、AI が避けたエラー、その対処、そして **研究への影響**（その対処で研究の条件が崩れていないか）が付く。関係するコードの差分もその場で見られる
+
+   ![判定結果の「隠れた問題」：範囲外の点の警告が出ていたのに対処しないまま比べていたことと、その研究への影響](web/public/guide/review-hidden.png)
+
 4. **先生モードで確かめる。** AI が先生役になり、保存した問題や研究手法について1問ずつ質問する。答えが足りないと、答えを教えずに問い返す。最後に講評と「答えられなかった点」が残り、ゼミの前に見直せる
-5. **作業フローマップで全体を見る。** 研究の工程（調査・選定・実装・検証・報告）ごとのタスクと目的を1枚にまとめ、隠れた問題が研究の前提に影響するときは、前の工程へ戻る矢印を引く
+
+   ![先生モード：答えに応じた講評と、先生が想定していた観点のうち言えたものに付く ✓](web/public/guide/teacher-point.png)
+
+5. **作業フローマップで全体を見る。** 研究の工程（調査・選定・実装・検証・報告）ごとのタスクと目的を1枚にまとめ、変更を取り込むたびに更新する。隠れた問題が研究の前提に影響するときは、前の工程へ戻る矢印を引く
+
+   ![作業フローマップ：工程ごとのタスクと、変更を取り込んだときの自動更新](web/public/guide/map.png)
 
 アプリの中の「使い方」のページ（`/guide`）で、実際の画面を見ながら流れを確かめられます。
 
@@ -60,6 +80,10 @@ Claude Code のフック（`UserPromptSubmit` と `Stop`）で、依頼文・差
 #### 4. 答えを教えない先生モード
 
 先生役の AI は、質問ごとに想定解答の「観点」を用意し、言えた観点に印を付けます。足りないところは答えを言わずに問い返し、自分で気づけるように導きます。
+
+#### 5. 研究の工程の中で、今どこにいるかが分かる
+
+研究の記録（壁打ち・論文メモ・spec・ゼミの記録・実験記録）と実装リポジトリから、研究の工程ごとのタスクを AI が1枚のマップにします。AI の変更を取り込むたびに自動で更新し、記録に無い実装や、研究の前提に戻って考え直すべきところを示します。目の前の実装に追われて、研究の問いを見失わないためです。
 
 ### 解決出来ること
 
@@ -83,6 +107,7 @@ Claude Code のフック（`UserPromptSubmit` と `Stop`）で、依頼文・差
 * **安全に扱う。** API キーはサーバー側だけで使い、画面にも保存先にも値を出さない。フックの受け取り口は localhost からだけ受け付け、合言葉で守る。研究のコードに含まれる秘密らしき値はフックの段階で伏せ字にする
 * **デモが止まらない工夫。** 外部サービスを呼ばずに通しで動かせるデモモードと、GitHub のコミットから取り込む予備の道を用意した
 * **費用の見える化。** 機能ごとに Claude のモデル（Haiku / Sonnet / Opus）とエフォートを選べ、使ったトークン数と料金の目安を記録する
+* **読みやすい画面。** 論文の査読のような書式と、指摘だけに使う赤ペンの色で、どこが問題かが一目で分かるようにした。字は Noto Sans JP で大きめにそろえた
 
 ## 開発技術
 
@@ -96,10 +121,10 @@ Claude Code のフック（`UserPromptSubmit` と `Stop`）で、依頼文・差
 
 #### フレームワーク・ライブラリ・モジュール
 
-* Next.js 15（App Router、Route Handlers）、React 19、TypeScript
+* Next.js 15（App Router、Route Handlers）、React 19、TypeScript（Node.js 18 以上）
 * Tailwind CSS 4
 * Anthropic TypeScript SDK（`@anthropic-ai/sdk`）、zod 4
-* Vitest（web 564 件）、Node.js のテストランナー（フック 26 件）
+* Vitest（web 595 件）、Node.js のテストランナー（フック 34 件）
 * データの保存はブラウザの localStorage（差分は IndexedDB）。データベースは使わない
 
 #### デバイス
@@ -117,3 +142,22 @@ Claude Code のフック（`UserPromptSubmit` と `Stop`）で、依頼文・差
 * **問い返し型の先生モードと観点による採点**（[web/src/lib/llm/teacher.ts](web/src/lib/llm/teacher.ts)、[#12](https://github.com/jphacks/ng_2614/pull/12)、[#15](https://github.com/jphacks/ng_2614/pull/15)）
 * **作業フローマップ**（[web/src/lib/llm/map.ts](web/src/lib/llm/map.ts)、[#16](https://github.com/jphacks/ng_2614/pull/16)、[#18](https://github.com/jphacks/ng_2614/pull/18)）：research-workspace と実装リポジトリから研究の工程を1枚にし、判定のたびに更新する
 * **AI のモデル・エフォートの切り替えと使用量の記録**（[#19](https://github.com/jphacks/ng_2614/pull/19)）、**画面からの接続の設定**（[#23](https://github.com/jphacks/ng_2614/pull/23)）
+* **判定結果の要約と次の一手**（[#42](https://github.com/jphacks/ng_2614/pull/42)）：隠れた問題と研究への影響の数を1行で見せ、「まとめて保存して先生モードへ」で迷わず次に進める。まだ開いていない判定には印を付ける
+* **デモモードとピッチ用の入口**（[web/src/lib/demo/](web/src/lib/demo)、[#9](https://github.com/jphacks/ng_2614/pull/9)、[#44](https://github.com/jphacks/ng_2614/pull/44)、[#46](https://github.com/jphacks/ng_2614/pull/46)）：API を呼ばずに通しで動かせるデモと、資料のリンクから開くとフックの知らせが届くところから始まる入口（`/pitch`）
+* **使い方ガイド**（[web/src/app/guide/page.tsx](web/src/app/guide/page.tsx)、[#24](https://github.com/jphacks/ng_2614/pull/24)、[#58](https://github.com/jphacks/ng_2614/pull/58)）：アプリの流れを、本物の API で動かした画面で紹介する
+
+## 動かし方
+
+手元の PC で動かします（macOS で確認しています）。Node.js 18 以上と git が要ります。
+
+```bash
+git clone https://github.com/jphacks/ng_2614.git
+cd ng_2614/web
+npm install
+cp .env.example .env.local   # ANTHROPIC_API_KEY と GITHUB_TOKEN を入れる（画面の「設定 → 接続」から入れてもよい）
+npm run dev                  # http://localhost:3000 を開く
+```
+
+- **キーなしで試す**：画面右上の「デモモード」を入れると、Claude API と GitHub を呼ばずに、デモ用のデータで一通り動かせます
+- **Claude Code のフック**：研究のリポジトリの `.claude/settings.local.json` に [hook/research-check.mjs](hook/research-check.mjs) を登録すると、Claude Code に頼んだ作業が自動で届きます。手順は [hook/README.md](hook/README.md) にあります
+- **テスト**：`web/` で `npm test`、`hook/` で `npm test`
