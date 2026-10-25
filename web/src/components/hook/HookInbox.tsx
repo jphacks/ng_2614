@@ -303,7 +303,12 @@ export function HookInbox() {
           className={`float-sheet flex items-start gap-3 p-3 text-sm text-ink ${ACCENT[toneOf(n)]}`}
         >
           <div className="min-w-0 flex-1 space-y-1">
-            <NoticeBody notice={n} now={now} onRetry={retry} />
+            <NoticeBody
+              notice={n}
+              now={now}
+              onRetry={retry}
+              onOpen={() => dismiss(n.id)}
+            />
           </div>
           <button
             type="button"
@@ -346,10 +351,12 @@ function NoticeBody({
   notice,
   now,
   onRetry,
+  onOpen,
 }: {
   notice: Notice;
   now: number;
   onRetry: (change: HookChange) => void;
+  onOpen: () => void; // 「結果を見る」で開いたら、その知らせは閉じる
 }) {
   switch (notice.kind) {
     case "unregistered":
@@ -412,6 +419,7 @@ function NoticeBody({
           <p className="break-words">{notice.title}</p>
           <Link
             href={`/reviews/${notice.reviewId}`}
+            onClick={onOpen}
             className="btn btn-sm"
           >
             結果を見る
