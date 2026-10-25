@@ -6,13 +6,14 @@ const ROWS: { key: "question" | "method" | "evaluation"; label: string }[] = [
   { key: "evaluation", label: "評価" },
 ];
 
+// 研究の目的（問い・手法・評価）。紙の地の上に白い一枚を置き、項目の間を細い罫線で区切って読みやすくする
 export function PurposeView({ theme }: { theme: ResearchTheme }) {
   return (
-    <dl className="space-y-3">
+    <dl className="divide-y divide-hair rounded-[4px] border border-hair bg-sheet">
       {ROWS.map(({ key, label }) => (
-        <div key={key}>
-          <dt className="text-xs font-medium text-ink-3">{label}</dt>
-          <dd className="mt-0.5 whitespace-pre-wrap text-sm text-ink">
+        <div key={key} className="px-4 py-3">
+          <dt className="text-xs font-bold text-ink-2">{label}</dt>
+          <dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">
             {theme[key]}
           </dd>
         </div>
