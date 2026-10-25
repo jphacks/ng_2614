@@ -45,8 +45,7 @@ type Props = {
   repoLocked?: boolean; // true ならリポジトリは表示だけ（新しいプロジェクト S-6 で選んだもの）
 };
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const inputClass = "field mt-1";
 
 export function ThemeForm({
   initial = EMPTY_THEME_VALUES,
@@ -93,10 +92,10 @@ export function ThemeForm({
       />
       {repoLocked ? (
         <div>
-          <span className="text-sm font-medium text-gray-800">
+          <span className="text-sm font-medium text-ink">
             GitHub リポジトリ
           </span>
-          <p className="mt-1 font-mono text-sm text-gray-900">{values.repo}</p>
+          <p className="mt-1 font-mono text-sm text-ink">{values.repo}</p>
         </div>
       ) : (
         <Field
@@ -161,7 +160,7 @@ export function ThemeForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="btn-primary"
         >
           {submitLabel}
         </button>
@@ -169,7 +168,7 @@ export function ThemeForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="btn"
           >
             {cancelLabel}
           </button>
@@ -192,10 +191,10 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-gray-800">{label}</span>
-      {hint && <span className="ml-2 text-xs text-gray-500">{hint}</span>}
+      <span className="text-sm font-medium text-ink">{label}</span>
+      {hint && <span className="ml-2 text-xs text-ink-3">{hint}</span>}
       {input}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-pen">{error}</p>}
     </label>
   );
 }

@@ -11,8 +11,8 @@ export function PurposeView({ theme }: { theme: ResearchTheme }) {
     <dl className="space-y-3">
       {ROWS.map(({ key, label }) => (
         <div key={key}>
-          <dt className="text-xs font-medium text-gray-500">{label}</dt>
-          <dd className="mt-0.5 whitespace-pre-wrap text-sm text-gray-900">
+          <dt className="text-xs font-medium text-ink-3">{label}</dt>
+          <dd className="mt-0.5 whitespace-pre-wrap text-sm text-ink">
             {theme[key]}
           </dd>
         </div>

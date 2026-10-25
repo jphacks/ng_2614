@@ -15,22 +15,23 @@ export const STATUS_ORDER: MapStatus[] = [
   "rejected",
 ];
 
-// 状態の色。色だけに頼らないよう、バッジには必ず文字（statusLabel）も出す
+// 状態の見た目（globals.css の tag と組み合わせる）。進行中は藍、待ちは空、済みは若葉で分け、
+// 色だけに頼らないよう、枠の線を変え、必ず文字（statusLabel）も出す
 export const STATUS_BADGE: Record<MapStatus, string> = {
-  todo: "bg-gray-100 text-gray-700",
-  doing: "bg-blue-100 text-blue-800",
-  waiting: "bg-amber-100 text-amber-800",
-  done: "bg-green-100 text-green-800",
-  rejected: "bg-red-50 text-red-700",
+  todo: "text-ink-3",
+  doing: "border-accent bg-accent text-paper",
+  waiting: "border-dashed text-sky-ink",
+  done: "text-mint-ink",
+  rejected: "text-ink-3 line-through",
 };
 
 export const STATUS_ICON: Record<MapStatus, { mark: string; className: string }> =
   {
-    todo: { mark: "○", className: "text-gray-400" },
-    doing: { mark: "◐", className: "text-blue-600" },
-    waiting: { mark: "⏸", className: "text-amber-600" },
-    done: { mark: "✓", className: "text-green-600" },
-    rejected: { mark: "✕", className: "text-red-500" },
+    todo: { mark: "○", className: "text-ink-3" },
+    doing: { mark: "◐", className: "text-accent" },
+    waiting: { mark: "⏸", className: "text-sky-ink" },
+    done: { mark: "✓", className: "text-mint-ink" },
+    rejected: { mark: "✕", className: "text-ink-3" },
   };
 
 export const STATUS_SOURCE_LABEL: Record<MapStatusSource, string> = {
@@ -56,14 +57,15 @@ export const SOURCE_KIND_LABEL: Record<SourceKind, string> = {
   commit: "コミット",
 };
 
-// マイルストーンの色。マイルストーンの並び順ごとに固定で割り当てる
+// マイルストーンの見た目（tag と組み合わせる）。藍・空・若葉と枠の線で分ける。
+// マイルストーンの並び順ごとに固定で割り当てる
 const MILESTONE_STYLES = [
-  "bg-violet-100 text-violet-800",
-  "bg-sky-100 text-sky-800",
-  "bg-teal-100 text-teal-800",
-  "bg-pink-100 text-pink-800",
-  "bg-orange-100 text-orange-800",
-  "bg-lime-100 text-lime-800",
+  "text-accent-deep",
+  "text-sky-ink",
+  "text-mint-ink",
+  "border-dashed text-accent-deep",
+  "border-dashed text-sky-ink",
+  "border-dashed text-mint-ink",
 ];
 
 export function milestoneStyle(map: WorkflowMap, milestoneId: string): string {

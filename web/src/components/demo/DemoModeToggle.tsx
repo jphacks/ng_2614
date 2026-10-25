@@ -12,9 +12,9 @@ export function DemoModeToggle() {
         type="checkbox"
         checked={on}
         onChange={(e) => setDemoMode(e.target.checked)}
-        className="h-4 w-4"
+        className="h-4 w-4 accent-accent"
       />
-      <span className={on ? "font-bold text-amber-700" : "text-gray-600"}>
+      <span className={on ? "marker font-bold" : "text-ink-2"}>
         デモモード
       </span>
     </label>
@@ -26,7 +26,7 @@ export function DemoModeBanner() {
   const on = useDemoMode();
   if (!on) return null;
   return (
-    <div className="bg-amber-100 px-4 py-1.5 text-center text-xs text-amber-900">
+    <div className="border-b border-ink bg-marker px-4 py-1.5 text-center text-xs text-ink">
       デモモード：GitHub と AI（Claude）は呼ばず、用意したデモデータで動いています
     </div>
   );

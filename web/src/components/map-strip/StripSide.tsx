@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import {
   setStripOpen,
   setStripOrientation,
-  SIDE_OPEN_WIDTH,
   useSideWidth,
   useStripOpen,
 } from "@/lib/map/prefs";
@@ -30,10 +29,10 @@ import { SideLane } from "./SideLane";
 import { SIDE_WIDTH } from "./sizes";
 
 const BUTTON =
-  "rounded border border-gray-300 px-1.5 py-0.5 text-[11px] leading-4 text-gray-700 hover:bg-gray-50";
+  "border border-ink bg-paper px-1.5 py-0.5 text-[11px] leading-4 text-ink hover:bg-paper-2";
 
 const SMALL_BUTTON =
-  "w-full rounded border border-gray-300 py-1 text-[10px] leading-tight text-gray-700 hover:bg-gray-50";
+  "w-full border border-ink bg-paper py-1 text-[10px] leading-tight text-ink hover:bg-paper-2";
 
 export function StripSide({
   themeId,
@@ -83,13 +82,11 @@ export function StripSide({
     <aside
       aria-label="作業フローマップ"
       style={{ width }}
-      className={`fixed inset-y-0 right-0 z-30 overflow-y-auto overflow-x-hidden border-l border-gray-200 bg-white ${
-        open && openWidth > SIDE_OPEN_WIDTH.initial ? "shadow-xl" : ""
-      }`}
+      className="fixed inset-y-0 right-0 z-30 overflow-y-auto overflow-x-hidden border-l border-hair bg-paper"
     >
       {open ? (
         <div className="px-2 py-2">
-          <span className="block text-xs font-semibold leading-tight text-gray-800">
+          <span className="block font-serif text-xs font-semibold leading-tight text-ink">
             作業フローマップ
           </span>
           <div className="mt-1.5 flex flex-wrap gap-1">
@@ -110,7 +107,7 @@ export function StripSide({
             >
               横にする
             </button>
-            <Link href={mapHref} className={`${BUTTON} text-blue-700`}>
+            <Link href={mapHref} className={`${BUTTON} font-semibold`}>
               マップを開く
             </Link>
           </div>
@@ -119,15 +116,15 @@ export function StripSide({
           {current && (
             <section
               aria-label="今の段階と今ここ"
-              className="mt-2 rounded-md border border-indigo-200 bg-indigo-50 p-1.5"
+              className="mt-2 border-2 border-accent bg-paper p-1.5"
             >
-              <p className="text-sm font-bold leading-snug text-indigo-900">
+              <p className="font-serif text-sm font-bold leading-snug text-ink">
                 今は「{phaseById.get(current.phaseId)?.name}」の段階
               </p>
               <div className="mt-1">
                 <PhaseSteps map={map} currentPhaseId={current.phaseId} size="sm" />
               </div>
-              <h2 className="mt-1.5 text-xs font-semibold text-indigo-800">今ここ</h2>
+              <h2 className="mt-1.5 inline-block bg-accent px-1 text-xs font-semibold text-paper">今ここ</h2>
               <FocusLink
                 href={`${mapHref}?task=${encodeURIComponent(current.id)}`}
                 task={current}
@@ -140,13 +137,13 @@ export function StripSide({
 
           {others.length > 0 && (
             <section aria-label="ほかに進行中・待ち" className="mt-1.5 px-0.5">
-              <h2 className="flex items-baseline justify-between text-[11px] font-semibold text-gray-700">
+              <h2 className="flex items-baseline justify-between text-[11px] font-semibold text-ink-2">
                 ほかに進行中・待ち
-                <span className="text-[10px] font-normal text-gray-500">
+                <span className="text-[10px] font-normal text-ink-3">
                   {others.length} 件
                 </span>
               </h2>
-              <ul className="mt-0.5 divide-y divide-gray-200">
+              <ul className="mt-0.5 divide-y divide-hair">
                 {others.map((t) => (
                   <li key={t.id} className="min-w-0 py-1 last:pb-0">
                     <FocusLink
@@ -162,7 +159,7 @@ export function StripSide({
           )}
 
           {unconfirmed > 0 && (
-            <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
+            <p className="marker mt-1.5 w-fit text-[11px] leading-snug">
               未確認 {unconfirmed} 件
             </p>
           )}
@@ -201,7 +198,7 @@ export function StripSide({
             aria-expanded={false}
             aria-label="作業フローマップを開く"
             title="作業フローマップを開く"
-            className="w-full rounded border border-gray-300 py-1 text-sm leading-none text-gray-700 hover:bg-gray-50"
+            className="w-full border border-ink bg-paper py-1 text-sm leading-none text-ink hover:bg-paper-2"
           >
             «
           </button>
@@ -219,16 +216,16 @@ export function StripSide({
                   key={s.phase.id}
                   title={`${s.phase.name}：${text}`}
                   aria-label={`${s.phase.name}：${text}`}
-                  className={`flex flex-col items-center rounded px-0.5 py-1 ${
+                  className={`flex flex-col items-center border px-0.5 py-1 ${
                     hasFocus
-                      ? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-300"
-                      : "bg-gray-100 text-gray-700"
+                      ? "border-accent text-ink ring-1 ring-accent"
+                      : "border-hair text-ink-2"
                   }`}
                 >
                   {hasFocus && (
                     <span
                       aria-hidden="true"
-                      className="rounded bg-indigo-600 px-1 text-[9px] font-semibold leading-3 text-white"
+                      className="bg-accent px-1 text-[9px] font-semibold leading-3 text-paper"
                     >
                       今
                     </span>
@@ -260,7 +257,7 @@ export function StripSide({
             <span
               title={`未確認 ${unconfirmed}件`}
               aria-label={`未確認 ${unconfirmed}件`}
-              className="rounded bg-amber-100 px-1 text-[10px] font-medium leading-4 text-amber-800"
+              className="marker text-[10px] font-medium leading-4"
             >
               <span aria-hidden="true">
                 未{unconfirmed > 99 ? "99+" : unconfirmed}
@@ -272,7 +269,7 @@ export function StripSide({
             href={mapHref}
             aria-label="マップを開く"
             title="マップを開く"
-            className={`${SMALL_BUTTON} text-center text-blue-700`}
+            className={`${SMALL_BUTTON} text-center font-semibold`}
           >
             マップ
           </Link>
@@ -307,17 +304,17 @@ function FocusLink({
 }) {
   return (
     <Link href={href} className="group mt-0.5 block">
-      <span className="flex flex-wrap items-center gap-1 text-[10px] leading-4 text-gray-600">
+      <span className="flex flex-wrap items-center gap-1 text-[10px] leading-4 text-ink-2">
         {phase?.name}
         {phase && (
-          <span className={`rounded px-1 font-medium ${STATUS_BADGE[status]}`}>
+          <span className={`tag px-1 text-[10px] leading-4 ${STATUS_BADGE[status]}`}>
             {statusLabel(phase, status)}
           </span>
         )}
       </span>
       <span
         className={`block break-words leading-snug group-hover:underline ${
-          strong ? "text-xs font-medium text-gray-900" : "text-[11px] text-gray-800"
+          strong ? "text-xs font-medium text-ink" : "text-[11px] text-ink"
         }`}
       >
         {task.title}

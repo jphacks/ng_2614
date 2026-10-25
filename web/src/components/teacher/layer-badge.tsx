@@ -5,17 +5,12 @@ export const LAYER_LABEL: Record<QuestionLayer, string> = {
   implementation: "実装",
 };
 
+// 色の札ではなく、枠だけの小さなラベルで層を見せる
 const LAYER_STYLE: Record<QuestionLayer, string> = {
-  research: "bg-indigo-100 text-indigo-800",
-  implementation: "bg-emerald-100 text-emerald-800",
+  research: "text-ink",
+  implementation: "text-ink-2",
 };
 
 export function LayerBadge({ layer }: { layer: QuestionLayer }) {
-  return (
-    <span
-      className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${LAYER_STYLE[layer]}`}
-    >
-      {LAYER_LABEL[layer]}
-    </span>
-  );
+  return <span className={`tag ${LAYER_STYLE[layer]}`}>{LAYER_LABEL[layer]}</span>;
 }

@@ -246,15 +246,15 @@ export function HookInbox() {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-4 right-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+      className="fixed bottom-4 right-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 md:right-[calc(var(--map-side-w,0px)+1rem)]"
     >
       {older > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white/95 px-3 py-1.5 text-xs text-gray-600 shadow-sm backdrop-blur">
+        <div className="float-sheet flex items-center justify-between px-3 py-1.5 text-xs text-ink-2">
           <span>ほか {older} 件の知らせ</span>
           <button
             type="button"
             onClick={dismissAll}
-            className="text-blue-700 hover:underline"
+            className="link"
           >
             すべて閉じる
           </button>
@@ -264,7 +264,7 @@ export function HookInbox() {
         <div
           key={n.id}
           role="status"
-          className={`flex items-start gap-3 rounded-xl border bg-white p-3 text-sm text-gray-800 shadow-lg ${ACCENT[toneOf(n)]}`}
+          className={`float-sheet flex items-start gap-3 p-3 text-sm text-ink ${ACCENT[toneOf(n)]}`}
         >
           <div className="min-w-0 flex-1 space-y-1">
             <NoticeBody notice={n} now={now} onRetry={retry} />
@@ -273,7 +273,7 @@ export function HookInbox() {
             type="button"
             onClick={() => dismiss(n.id)}
             aria-label="閉じる"
-            className="-mr-1 -mt-1 shrink-0 rounded px-1.5 text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="-mr-1 -mt-1 shrink-0 px-1.5 text-lg leading-none text-ink-3 hover:bg-paper-2 hover:text-ink"
           >
             ×
           </button>
@@ -285,12 +285,12 @@ export function HookInbox() {
 
 type Tone = "info" | "ok" | "warn" | "danger";
 
-// 左の太い線の色で、知らせの種類を分ける
+// 左の太い線で、知らせの種類を分ける。判定中は藍、問題なしは若葉、研究への影響あり・失敗は赤ペン、注意は蛍光ペン
 const ACCENT: Record<Tone, string> = {
-  info: "border-gray-200 border-l-4 border-l-blue-500",
-  ok: "border-gray-200 border-l-4 border-l-green-500",
-  warn: "border-gray-200 border-l-4 border-l-amber-500",
-  danger: "border-red-200 border-l-4 border-l-red-500",
+  info: "border-l-4 border-l-accent",
+  ok: "border-l-4 border-l-mint",
+  warn: "border-l-4 border-l-marker",
+  danger: "border-l-4 border-l-pen",
 };
 
 function toneOf(n: Notice): Tone {
@@ -319,8 +319,8 @@ function NoticeBody({
     case "unregistered":
       return (
         <>
-          <p className="text-xs font-medium text-amber-700">
-            プロジェクトが未登録です
+          <p className="text-xs font-medium">
+            <span className="marker">プロジェクトが未登録です</span>
           </p>
           <p className="break-words">
             {notice.repo
@@ -333,7 +333,7 @@ function NoticeBody({
                 ? `/projects/new?repo=${encodeURIComponent(notice.repo)}`
                 : "/projects/new"
             }
-            className="inline-block rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700"
+            className="btn btn-sm"
           >
             プロジェクトを登録する
           </Link>
@@ -343,10 +343,10 @@ function NoticeBody({
       const sec = Math.max(0, Math.floor((now - notice.startedAt) / 1000));
       return (
         <>
-          <p className="flex items-center gap-2 text-xs font-medium text-blue-700">
+          <p className="flex items-center gap-2 text-xs font-medium text-ink-2">
             <span
               aria-hidden="true"
-              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"
+              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent-soft border-t-accent"
             />
             Claude Code の作業を判定中… {sec} 秒
           </p>
@@ -360,10 +360,10 @@ function NoticeBody({
           <p
             className={`text-xs font-medium ${
               notice.impact > 0
-                ? "text-red-700"
+                ? "text-pen"
                 : notice.hidden > 0
-                  ? "text-amber-700"
-                  : "text-green-700"
+                  ? "text-ink"
+                  : "text-mint-ink"
             }`}
           >
             {notice.impact > 0
@@ -376,7 +376,7 @@ function NoticeBody({
           <p className="break-words">{notice.title}</p>
           <Link
             href={`/reviews/${notice.reviewId}`}
-            className="inline-block rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+            className="btn btn-sm"
           >
             結果を見る
           </Link>
@@ -385,13 +385,13 @@ function NoticeBody({
     case "error":
       return (
         <>
-          <p className="text-xs font-medium text-red-700">判定に失敗しました</p>
+          <p className="text-xs font-medium text-pen">判定に失敗しました</p>
           <p className="break-words">{notice.title}</p>
-          <p className="break-words text-xs text-gray-600">{notice.message}</p>
+          <p className="break-words text-xs text-ink-2">{notice.message}</p>
           <button
             type="button"
             onClick={() => onRetry(notice.change)}
-            className="rounded-md border border-red-300 px-3 py-1 text-xs text-red-700 hover:bg-red-50"
+            className="btn-pen btn-sm"
           >
             もう一度判定する
           </button>

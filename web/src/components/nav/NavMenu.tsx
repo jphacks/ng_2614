@@ -91,7 +91,7 @@ export function NavMenu() {
         aria-label="メニューを開く"
         aria-expanded={open}
         aria-controls="nav-menu"
-        className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+        className="flex h-10 w-10 items-center justify-center rounded-[3px] border border-ink text-ink hover:bg-paper-2"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -107,7 +107,7 @@ export function NavMenu() {
         <div className={`fixed inset-0 z-50 ${shown ? "" : "pointer-events-none"}`}>
           {/* メニューの外を押すと閉じる */}
           <div
-            className={`absolute inset-0 bg-black/30 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+            className={`absolute inset-0 bg-ink/30 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
               shown ? "opacity-100" : "opacity-0"
             }`}
             onClick={() => setOpen(false)}
@@ -116,17 +116,17 @@ export function NavMenu() {
           <nav
             id="nav-menu"
             aria-label="ページ"
-            className={`absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white shadow-xl transition-transform duration-200 ease-out motion-reduce:transition-none ${
+            className={`absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-ink bg-paper transition-transform duration-200 ease-out motion-reduce:transition-none ${
               shown ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-              <span className="font-bold">メニュー</span>
+            <div className="flex items-center justify-between border-b border-ink px-4 py-3">
+              <span className="font-serif font-bold">メニュー</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="メニューを閉じる"
-                className="rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
+                className="p-1.5 text-ink-2 hover:bg-paper-2 hover:text-ink"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
                   <path
@@ -192,9 +192,9 @@ function MenuSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-gray-100 px-2 py-3">
+    <div className="border-b border-hair px-2 py-3">
       {title && (
-        <p className="truncate px-2 pb-1 text-xs font-bold text-gray-500" title={title}>
+        <p className="truncate px-2 pb-1 text-xs font-bold text-ink-3" title={title}>
           {title}
         </p>
       )}
@@ -218,10 +218,10 @@ function MenuLink({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`block truncate rounded-md px-2 py-2 text-sm ${
+        className={`block truncate border-l-2 px-2 py-2 text-sm ${
           active
-            ? "bg-blue-50 font-medium text-blue-800"
-            : "text-gray-800 hover:bg-gray-100"
+            ? "border-ink font-bold text-ink"
+            : "border-transparent text-ink-2 hover:bg-paper-2 hover:text-ink"
         }`}
       >
         {children}

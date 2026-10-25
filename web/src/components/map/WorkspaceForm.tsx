@@ -28,9 +28,11 @@ export function normalizeProject(input: string): string | undefined {
 // ワークスペースの中身を AI に送ることの説明。作る前と、設定の近くに出す
 export function WorkspaceSendNotice() {
   return (
-    <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-      ワークスペースの中身（壁打ち・spec・マイルストーンなどの文書）は、タスクや目的を作るために AI（Claude）へ送られます。
-      AI に見せたくない内容は、ワークスペースに置かないでください。
+    <p className="text-xs leading-5 text-ink">
+      <span className="marker box-decoration-clone">
+        ワークスペースの中身（壁打ち・spec・マイルストーンなどの文書）は、タスクや目的を作るために AI（Claude）へ送られます。
+        AI に見せたくない内容は、ワークスペースに置かないでください。
+      </span>
     </p>
   );
 }
@@ -78,14 +80,14 @@ export function WorkspaceForm({
   }
 
   const inputClass =
-    "mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 disabled:bg-gray-50";
+    "field mt-1 py-1.5";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3" noValidate>
       <div>
         <label
           htmlFor="workspace-repo"
-          className="block text-sm font-medium text-gray-800"
+          className="label"
         >
           research-workspace のリポジトリ
         </label>
@@ -105,7 +107,7 @@ export function WorkspaceForm({
           <p
             id="workspace-repo-error"
             role="alert"
-            className="mt-1 text-xs text-red-700"
+            className="mt-1 text-xs text-pen"
           >
             {repoError}
           </p>
@@ -114,11 +116,11 @@ export function WorkspaceForm({
       <div>
         <label
           htmlFor="workspace-project"
-          className="block text-sm font-medium text-gray-800"
+          className="label"
         >
           プロジェクト名
         </label>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-3">
           <code className="font-mono">.research/lab/projects/</code>
           の下にあるフォルダ名です。
         </p>
@@ -138,7 +140,7 @@ export function WorkspaceForm({
           <p
             id="workspace-project-error"
             role="alert"
-            className="mt-1 text-xs text-red-700"
+            className="mt-1 text-xs text-pen"
           >
             {projectError}
           </p>
@@ -149,7 +151,7 @@ export function WorkspaceForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="btn-primary"
         >
           {busy ? (busyLabel ?? submitLabel) : submitLabel}
         </button>
@@ -158,7 +160,7 @@ export function WorkspaceForm({
             type="button"
             disabled={busy}
             onClick={onCancel}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="btn"
           >
             キャンセル
           </button>

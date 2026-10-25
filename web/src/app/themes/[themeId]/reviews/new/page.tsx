@@ -63,13 +63,13 @@ export default function NewReviewPage() {
   }, [repo, commitsAttempt]);
 
   if (theme === undefined) {
-    return <p className="text-sm text-gray-500">読み込み中…</p>;
+    return <p className="text-sm text-ink-3">読み込み中…</p>;
   }
   if (theme === null) {
     return (
       <div className="space-y-3">
         <p>プロジェクトが見つかりませんでした。</p>
-        <Link href="/" className="text-blue-700 underline">
+        <Link href="/" className="link">
           プロジェクト一覧に戻る
         </Link>
       </div>
@@ -119,16 +119,16 @@ export default function NewReviewPage() {
   }
 
   return (
-    <div className="space-y-6 rounded-xl bg-white p-4 text-gray-900 sm:p-6">
+    <div className="space-y-6 bg-paper p-4 text-ink sm:p-6">
       <div>
         <Link
           href={`/themes/${theme.id}`}
-          className="text-sm text-blue-700 underline"
+          className="link-quiet text-sm"
         >
           ← {theme.name}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">コミットから取り込んで判定する</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <p className="mt-1 text-sm text-ink-2">
           リポジトリ：<code className="font-mono">{theme.repo}</code>
         </p>
       </div>
@@ -138,7 +138,7 @@ export default function NewReviewPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="space-y-2">
           <label htmlFor="purpose" className="block font-bold">
-            作業の目的 <span className="text-sm font-normal text-red-600">必須</span>
+            作業の目的 <span className="text-sm font-normal text-ink-3">必須</span>
           </label>
           <textarea
             id="purpose"
@@ -147,26 +147,26 @@ export default function NewReviewPage() {
             rows={5}
             disabled={busy}
             placeholder="AI に頼んだこと（プロンプトをそのまま貼ってもよい）"
-            className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+            className="field p-3"
           />
         </section>
 
         <section className="space-y-2">
-          <h2 className="font-bold">取り込むコミット</h2>
+          <h2 className="rule-head font-bold">取り込むコミット</h2>
           {commits.status === "loading" && (
-            <p className="text-sm text-gray-600" role="status">
+            <p className="text-sm text-ink-2" role="status">
               コミットを取得中…
             </p>
           )}
           {commits.status === "error" && (
-            <div className="space-y-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm">
-              <p className="text-red-800">
+            <div className="space-y-2 border-l-2 border-pen p-3 text-sm">
+              <p className="text-pen">
                 コミットを取得できませんでした：{commits.message}
               </p>
               <button
                 type="button"
                 onClick={() => setCommitsAttempt((n) => n + 1)}
-                className="rounded border border-red-600 px-3 py-1 text-red-700 hover:bg-red-100"
+                className="btn btn-sm"
               >
                 もう一度取得する
               </button>
@@ -183,19 +183,19 @@ export default function NewReviewPage() {
         </section>
 
         <section className="space-y-3">
-          <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          <p className="border-l-2 border-ink py-1 pl-3 text-sm text-ink-2">
             「判定する」を押すと、選んだコミットのコードの差分と、研究の目的・作業の目的が AI（Claude）に送信されます。
           </p>
 
           {busy && (
-            <p className="text-sm font-medium text-gray-700" role="status">
+            <p className="text-sm font-medium text-ink-2" role="status">
               {submit.status === "fetching-diff"
                 ? "コミットの差分を取得中…"
                 : "AIが判定中…（数十秒かかることがあります）"}
             </p>
           )}
           {submit.status === "error" && (
-            <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+            <div className="border-l-2 border-pen p-3 text-sm text-pen">
               判定に失敗しました：{submit.message}
               <br />
               もう一度「判定する」を押すと再試行できます。
@@ -205,7 +205,7 @@ export default function NewReviewPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="rounded-md bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="btn-primary px-5"
           >
             {busy ? "判定中…" : submit.status === "error" ? "再試行する" : "判定する"}
           </button>

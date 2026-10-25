@@ -15,33 +15,35 @@ export function HookReviewInfo({ review }: { review: Review }) {
   return (
     <>
       {review.headMoved && (
-        <p className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-          作業中に pull
-          やブランチの切り替えがあったため、ほかの人の変更が混ざっている可能性があります。
+        <p className="text-sm">
+          <span className="marker">
+            作業中に pull
+            やブランチの切り替えがあったため、ほかの人の変更が混ざっている可能性があります。
+          </span>
         </p>
       )}
 
       {errors.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-lg font-bold">作業中に起きたエラー</h2>
-          <ul className="space-y-2">
+          <h2 className="rule-head text-lg">作業中に起きたエラー</h2>
+          <ul className="divide-y divide-hair">
             {errors.map((e, i) => (
               <li
                 key={i}
-                className="space-y-1.5 rounded-lg border border-gray-200 p-3"
+                className="space-y-1.5 py-3"
               >
-                <p className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                <p className="flex items-center gap-2 font-mono text-xs font-bold text-ink-2">
                   {e.tool}
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
+                  <span className="tag font-sans text-ink-2">
                     {KIND_LABEL[e.kind ?? "failed"]}
                   </span>
                 </p>
-                <pre className="whitespace-pre-wrap break-words rounded bg-gray-50 p-2 font-mono text-xs text-gray-800">
+                <pre className="whitespace-pre-wrap break-words bg-paper-2 p-2 font-mono text-xs text-ink">
                   {e.input}
                 </pre>
                 {e.output.length > LONG_OUTPUT ? (
                   <details>
-                    <summary className="cursor-pointer text-xs text-blue-700">
+                    <summary className="link cursor-pointer text-xs">
                       エラーの出力を見る
                     </summary>
                     <ErrorOutput text={e.output} />
@@ -57,15 +59,15 @@ export function HookReviewInfo({ review }: { review: Review }) {
 
       {review.aiReport && (
         <section className="space-y-2">
-          <h2 className="text-lg font-bold">
+          <h2 className="rule-head text-lg">
             AI の報告
-            <span className="ml-2 text-sm font-normal text-gray-500">自己申告</span>
+            <span className="tag ml-2 font-sans text-ink-3">自己申告</span>
           </h2>
-          <details className="rounded-lg border border-gray-200 p-3">
-            <summary className="cursor-pointer text-sm text-blue-700">
+          <details>
+            <summary className="link cursor-pointer text-sm">
               報告を読む
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">
+            <p className="mt-2 whitespace-pre-wrap border-l border-hair pl-3 text-sm text-ink">
               {review.aiReport}
             </p>
           </details>
@@ -74,11 +76,11 @@ export function HookReviewInfo({ review }: { review: Review }) {
 
       {files.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-lg font-bold">実行でできたファイル</h2>
-          <p className="text-sm text-gray-600">中身は判定に送っていません。</p>
+          <h2 className="rule-head text-lg">実行でできたファイル</h2>
+          <p className="text-sm text-ink-2">中身は判定に送っていません。</p>
           <ul className="space-y-0.5 text-sm">
             {files.map((f) => (
-              <li key={f} className="break-all font-mono text-xs text-gray-800">
+              <li key={f} className="break-all font-mono text-xs text-ink">
                 {f}
               </li>
             ))}
@@ -91,7 +93,7 @@ export function HookReviewInfo({ review }: { review: Review }) {
 
 function ErrorOutput({ text }: { text: string }) {
   return (
-    <pre className="whitespace-pre-wrap break-words rounded bg-red-50 p-2 font-mono text-xs text-red-900">
+    <pre className="whitespace-pre-wrap break-words border-l-2 border-pen bg-paper-2 p-2 font-mono text-xs text-ink">
       {text}
     </pre>
   );

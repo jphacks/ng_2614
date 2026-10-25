@@ -66,8 +66,8 @@ export function SideResizeHandle({ width }: { width: number }) {
           aria-hidden="true"
           className={`h-full w-0.5 transition-colors ${
             dragging
-              ? "bg-indigo-500"
-              : "bg-transparent group-hover:bg-indigo-300 group-focus-visible:bg-indigo-500"
+              ? "bg-accent"
+              : "bg-transparent group-hover:bg-ink-3 group-focus-visible:bg-accent"
           }`}
         />
       </div>

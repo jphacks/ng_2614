@@ -27,8 +27,8 @@ function buildChips(map: WorkflowMap, taskId: string): Chip[] {
   const { incoming, outgoing } = linksOf(map, taskId);
   const titleOf = (id: string) =>
     map.tasks.find((t) => t.id === id)?.title ?? "（消えたタスク）";
-  const flow = "bg-gray-100 text-gray-700 hover:bg-gray-200";
-  const impact = "bg-red-50 text-red-700 hover:bg-red-100";
+  const flow = "border border-hair text-ink-2 hover:bg-paper-2";
+  const impact = "border border-pen text-pen hover:bg-pen-soft";
   const chips: Chip[] = [];
   const add = (
     l: MapLink,
@@ -74,7 +74,7 @@ function ChipButton({
       type="button"
       title={chip.title}
       onClick={() => onSelect(chip.targetId)}
-      className={`max-w-full rounded px-1.5 py-0.5 text-left text-xs ${chip.className}`}
+      className={`max-w-full px-1.5 py-0.5 text-left text-xs ${chip.className}`}
     >
       <span className="line-clamp-2">{chip.text}</span>
     </button>
@@ -126,31 +126,32 @@ export function TaskCard({
   })).filter((c) => c.count > 0);
 
   const tone = unrecorded
-    ? "border-amber-300 bg-amber-50"
-    : "border-gray-200 bg-white";
+    ? "border-dashed border-ink-3 bg-paper"
+    : "border-hair bg-sheet";
 
   return (
     <li
       id={`map-task-${task.id}`}
-      className={`relative scroll-mt-4 rounded-md border p-2.5 text-sm ${tone} ${
-        selected ? "ring-2 ring-blue-500" : ""
+      className={`relative scroll-mt-4 rounded-[4px] border p-2.5 text-sm ${tone} ${
+        selected ? "ring-2 ring-accent" : ""
       } ${dimmed ? "opacity-40" : ""}`}
     >
       <div className="flex flex-wrap items-center gap-1">
         {milestone && (
           <span
-            className={`rounded px-1.5 py-0.5 text-xs ${milestoneStyle(map, milestone.id)}`}
+            title={milestone.title}
+            className={`tag max-w-full truncate ${milestoneStyle(map, milestone.id)}`}
           >
             {milestone.title}
           </span>
         )}
         {unrecorded && (
-          <span className="rounded bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900">
+          <span className="marker py-0.5 text-xs font-medium">
             記録のない実装
           </span>
         )}
         {updated && (
-          <span className="rounded bg-blue-600 px-1.5 py-0.5 text-xs font-medium text-white">
+          <span className="tag text-ink">
             更新
           </span>
         )}
@@ -160,7 +161,7 @@ export function TaskCard({
             role="img"
             aria-label="未確認"
             title="未確認（AI が作ったまま）"
-            className="ml-auto h-2 w-2 rounded-full bg-amber-400"
+            className="ml-auto h-2 w-2 rounded-full bg-marker ring-1 ring-ink-3"
           />
         )}
       </div>
@@ -169,7 +170,7 @@ export function TaskCard({
         type="button"
         onClick={() => onSelect(task.id)}
         aria-pressed={selected}
-        className="mt-1.5 block w-full rounded text-left font-medium text-gray-900 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-500"
+        className="mt-1.5 block w-full text-left font-medium text-ink hover:underline focus-visible:outline-2 focus-visible:outline-ink"
       >
         {task.title}
       </button>
@@ -180,7 +181,7 @@ export function TaskCard({
 
       {task.purpose && (
         <p
-          className="mt-1.5 line-clamp-1 text-xs text-gray-600"
+          className="mt-1.5 line-clamp-1 text-xs text-ink-2"
           title={task.purpose}
         >
           {task.purpose}
@@ -201,7 +202,7 @@ export function TaskCard({
           onClick={() => onToggle(task.id)}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="mt-1.5 flex w-full items-start gap-1 rounded px-1 py-0.5 text-left text-xs text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500"
+          className="mt-1.5 flex w-full items-start gap-1 px-1 py-0.5 text-left text-xs text-ink-2 hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-ink"
         >
           <span aria-hidden="true" className="shrink-0">
             {expanded ? "▾" : "▸"}
@@ -210,7 +211,7 @@ export function TaskCard({
             {subtasks.length > 0 && (
               <span>
                 サブタスク {subtasks.length}
-                <span className="text-gray-500">
+                <span className="text-ink-3">
                   （
                   {subtaskCounts.map((c, i) => (
                     <span key={c.status}>
@@ -242,17 +243,17 @@ export function TaskCard({
 
       <div id={bodyId} hidden={!expanded}>
         {task.statusRaw && (
-          <p className="mt-1.5 text-xs text-gray-500">
+          <p className="mt-1.5 text-xs text-ink-3">
             元の状態：
-            <span className="font-mono text-gray-400">{task.statusRaw}</span>
+            <span className="font-mono text-ink-3">{task.statusRaw}</span>
           </p>
         )}
         {task.result && (
-          <p className="mt-1 text-xs text-gray-500">結果：{task.result}</p>
+          <p className="mt-1 text-xs text-ink-2">結果：{task.result}</p>
         )}
 
         {subtasks.length > 0 && (
-          <ul className="mt-2 space-y-0.5 border-t border-gray-100 pt-1.5">
+          <ul className="mt-2 space-y-0.5 border-t border-hair pt-1.5">
             {subtasks.map((s) => {
               const icon = STATUS_ICON[s.status];
               const rejected = s.status === "rejected";
@@ -263,8 +264,8 @@ export function TaskCard({
                     type="button"
                     onClick={() => onSelect(s.id)}
                     aria-pressed={sSelected}
-                    className={`flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-100 ${
-                      sSelected ? "bg-blue-50 ring-1 ring-blue-400" : ""
+                    className={`flex w-full items-start gap-1.5 px-1 py-0.5 text-left text-xs hover:bg-paper-2 ${
+                      sSelected ? "bg-accent-soft ring-1 ring-accent" : ""
                     }`}
                   >
                     <span
@@ -277,20 +278,20 @@ export function TaskCard({
                       <span
                         className={
                           rejected
-                            ? "text-gray-400 line-through"
-                            : "text-gray-800"
+                            ? "text-ink-3 line-through"
+                            : "text-ink"
                         }
                       >
                         {s.title}
                       </span>
-                      <span className="ml-1 text-gray-400">
+                      <span className="ml-1 text-ink-3">
                         （{statusLabel(phase, s.status)}）
                       </span>
                       {s.review === "unconfirmed" && (
-                        <span className="ml-1 text-amber-700">未確認</span>
+                        <span className="marker ml-1">未確認</span>
                       )}
                       {rejected && s.rejectReason && (
-                        <span className="block text-gray-500">
+                        <span className="block text-ink-3">
                           理由：{s.rejectReason}
                         </span>
                       )}
@@ -303,7 +304,7 @@ export function TaskCard({
         )}
 
         {flowChips.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1 border-t border-gray-100 pt-1.5">
+          <div className="mt-2 flex flex-wrap gap-1 border-t border-hair pt-1.5">
             {flowChips.map((c) => (
               <ChipButton key={c.key} chip={c} onSelect={onSelect} />
             ))}

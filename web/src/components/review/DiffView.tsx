@@ -1,4 +1,5 @@
 // コードの差分（unified diff の patch）の表示（F-14）。追加は緑、削除は赤で示し、行番号を付ける。
+// 隠れた問題の差分（pen）では、変更した行の左に赤ペンの線を引く（設計書「画面の見た目」）
 
 import type { DiffFile } from "@/lib/api-types";
 import { parsePatch } from "./patch-lines";
@@ -11,24 +12,24 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const ROW_CLASS = {
-  add: "bg-green-50 text-green-900",
-  del: "bg-red-50 text-red-900",
-  ctx: "text-gray-700",
+  add: "bg-add text-add-ink",
+  del: "bg-del text-del-ink",
+  ctx: "text-ink-2",
 } as const;
 
 const NUM_CLASS = {
-  add: "bg-green-100/60 text-green-700",
-  del: "bg-red-100/60 text-red-700",
-  ctx: "text-gray-400",
+  add: "text-add-ink/70",
+  del: "text-del-ink/70",
+  ctx: "text-ink-3",
 } as const;
 
 const MARK = { add: "+", del: "-", ctx: " " } as const;
 
 // 行番号（元・変更後）と、変更のない行を省いたところの印を付けて出す
-export function PatchView({ patch }: { patch: string }) {
+export function PatchView({ patch, pen = false }: { patch: string; pen?: boolean }) {
   const rows = parsePatch(patch);
   return (
-    <div className="overflow-x-auto rounded-md border border-gray-200 bg-white font-mono text-xs leading-5">
+    <div className="overflow-x-auto border border-hair bg-paper font-mono text-xs leading-5">
       <table className="w-full border-collapse">
         <tbody>
           {rows.map((row, i) => {
@@ -36,11 +37,11 @@ export function PatchView({ patch }: { patch: string }) {
               // 先頭のハンクで省いた行も見出しも無ければ、何も出さない
               if (row.skipped === 0 && !row.context && i === 0) return null;
               return (
-                <tr key={i} className="bg-blue-50 text-blue-800">
+                <tr key={i} className="bg-paper-2 text-ink-3">
                   <td colSpan={4} className="px-3 py-0.5 font-sans">
                     {row.skipped > 0 ? `⋯ 変更のない ${row.skipped} 行` : "⋯"}
                     {row.context && (
-                      <span className="ml-2 font-mono text-blue-700/80">
+                      <span className="ml-2 font-mono text-ink-3">
                         {row.context}
                       </span>
                     )}
@@ -50,7 +51,7 @@ export function PatchView({ patch }: { patch: string }) {
             }
             if (row.kind === "note") {
               return (
-                <tr key={i} className="text-gray-400">
+                <tr key={i} className="text-ink-3">
                   <td colSpan={4} className="px-3">
                     {row.text}
                   </td>
@@ -60,12 +61,14 @@ export function PatchView({ patch }: { patch: string }) {
             return (
               <tr key={i} className={ROW_CLASS[row.kind]}>
                 <td
-                  className={`w-10 select-none border-r border-gray-100 px-2 text-right tabular-nums ${NUM_CLASS[row.kind]}`}
+                  className={`w-10 select-none border-l-2 border-r border-r-hair px-2 text-right tabular-nums ${NUM_CLASS[row.kind]} ${
+                    pen && row.kind !== "ctx" ? "border-l-pen" : "border-l-transparent"
+                  }`}
                 >
                   {row.oldNo ?? ""}
                 </td>
                 <td
-                  className={`w-10 select-none border-r border-gray-100 px-2 text-right tabular-nums ${NUM_CLASS[row.kind]}`}
+                  className={`w-10 select-none border-r border-hair px-2 text-right tabular-nums ${NUM_CLASS[row.kind]}`}
                 >
                   {row.newNo ?? ""}
                 </td>
@@ -85,29 +88,31 @@ export function PatchView({ patch }: { patch: string }) {
 export function FileDiff({
   file,
   defaultOpen = false,
+  pen = false,
 }: {
   file: DiffFile;
   defaultOpen?: boolean;
+  pen?: boolean;
 }) {
   return (
     <details
       open={defaultOpen}
-      className="group/file rounded-md border border-gray-200"
+      className="group/file border border-hair"
     >
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 bg-gray-50 px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
-        <span className="text-gray-400 group-open/file:rotate-90">▶</span>
-        <code className="font-mono text-gray-900">{file.filename}</code>
-        <span className="text-xs text-gray-500">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 bg-paper-2 px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+        <span className="text-ink-3 group-open/file:rotate-90">▶</span>
+        <code className="font-mono text-ink">{file.filename}</code>
+        <span className="text-xs text-ink-3">
           {STATUS_LABEL[file.status] ?? file.status}
         </span>
-        <span className="text-xs text-green-700">+{file.additions}</span>
-        <span className="text-xs text-red-700">-{file.deletions}</span>
+        <span className="font-mono text-xs text-add-ink">+{file.additions}</span>
+        <span className="font-mono text-xs text-del-ink">-{file.deletions}</span>
       </summary>
       <div className="p-2">
         {file.patch ? (
-          <PatchView patch={file.patch} />
+          <PatchView patch={file.patch} pen={pen} />
         ) : (
-          <p className="px-1 text-xs text-gray-500">
+          <p className="px-1 text-xs text-ink-3">
             差分の中身はありません（バイナリや大きすぎるファイル、名前の変更だけなど）。
           </p>
         )}
@@ -119,31 +124,33 @@ export function FileDiff({
 export function FileDiffList({
   files,
   openAll = false,
+  pen = false,
 }: {
   files: DiffFile[];
   openAll?: boolean;
+  pen?: boolean;
 }) {
   return (
     <div className="space-y-2">
       {files.map((f) => (
-        <FileDiff key={f.filename} file={f} defaultOpen={openAll} />
+        <FileDiff key={f.filename} file={f} defaultOpen={openAll} pen={pen} />
       ))}
     </div>
   );
 }
 
 // 判定の各項目に、関係するファイルの差分を開いて見られるようにする
-export function FindingDiffs({ files }: { files: DiffFile[] }) {
+export function FindingDiffs({ files, pen = false }: { files: DiffFile[]; pen?: boolean }) {
   if (files.length === 0) return null;
   return (
     <details className="group/finding">
-      <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 hover:underline [&::-webkit-details-marker]:hidden">
+      <summary className="link cursor-pointer list-none text-xs font-medium [&::-webkit-details-marker]:hidden">
         <span className="inline-block group-open/finding:rotate-90">▶</span>{" "}
         コードの差分を見る（{files.length} ファイル）
       </summary>
       <div className="mt-2">
         {/* 1ファイルだけなら、開いたらすぐ中身が見えるようにする */}
-        <FileDiffList files={files} openAll={files.length === 1} />
+        <FileDiffList files={files} openAll={files.length === 1} pen={pen} />
       </div>
     </details>
   );

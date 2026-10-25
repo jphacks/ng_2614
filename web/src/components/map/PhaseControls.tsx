@@ -22,8 +22,8 @@ export function PhaseControls({
   const [newName, setNewName] = useState("");
 
   return (
-    <details className="rounded-md border border-gray-200 p-3 text-sm">
-      <summary className="cursor-pointer text-gray-700">
+    <details className="border-t border-hair pt-3 text-sm">
+      <summary className="cursor-pointer text-ink-2">
         レーンを編集する
       </summary>
       <ul className="mt-3 space-y-2">
@@ -53,19 +53,19 @@ export function PhaseControls({
           if (onAdd(newName.trim())) setNewName("");
         }}
       >
-        <label className="flex items-center gap-2 text-xs text-gray-700">
+        <label className="flex items-center gap-2 text-xs text-ink">
           新しいレーン
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="w-40 rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field w-40 px-2 py-1"
           />
         </label>
         <button
           type="submit"
           disabled={newName.trim() === ""}
-          className="rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="btn btn-sm"
         >
           末尾に足す
         </button>
@@ -93,7 +93,7 @@ function PhaseRow({
 }) {
   const [draft, setDraft] = useState(name);
   const button =
-    "rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40";
+    "btn btn-sm";
   return (
     <li className="flex flex-wrap items-center gap-1.5">
       <input
@@ -101,7 +101,7 @@ function PhaseRow({
         value={draft}
         aria-label={`レーン名：${name}`}
         onChange={(e) => setDraft(e.target.value)}
-        className="w-36 rounded border border-gray-300 px-2 py-1 text-sm"
+        className="field w-36 px-2 py-1"
       />
       <button
         type="button"
@@ -136,12 +136,12 @@ function PhaseRow({
           taskCount > 0 ? "タスクが残っているレーンは消せません" : undefined
         }
         onClick={onDelete}
-        className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40"
+        className="btn btn-sm"
       >
         消す
       </button>
       {taskCount > 0 && (
-        <span className="text-xs text-gray-400">タスク {taskCount}件</span>
+        <span className="text-xs text-ink-3">タスク {taskCount}件</span>
       )}
     </li>
   );

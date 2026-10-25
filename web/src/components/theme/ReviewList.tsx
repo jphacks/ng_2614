@@ -3,69 +3,73 @@ import type { FindingType, Review } from "@/lib/types";
 import { headline } from "@/components/review/labels";
 import { firstLine, formatDate, shortSha } from "./format";
 
+// 件数は札にせず文字で並べる。隠れた問題があるときだけ赤ペンにする
 const TYPE_LABELS: { type: FindingType; label: string; className: string }[] = [
   {
     type: "on_purpose",
     label: "目的どおり",
-    className: "bg-green-100 text-green-800",
+    className: "text-mint-ink",
   },
   {
     type: "hidden_problem",
     label: "隠れた問題",
-    className: "bg-red-100 text-red-800",
+    className: "font-medium text-pen",
   },
   {
     type: "extra_addition",
     label: "余計な追加",
-    className: "bg-yellow-100 text-yellow-800",
+    className: "text-sky-ink",
   },
 ];
 
 export function ReviewList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500">
+      <p className="border border-dashed border-ink-3 p-4 text-sm text-ink-3">
         まだ変更が届いていません。
       </p>
     );
   }
   return (
-    <ul className="space-y-2">
+    <ul className="divide-y divide-hair border-y border-hair">
       {reviews.map((review) => {
         const isHook = review.source === "claude_code_hook";
         return (
           <li key={review.id}>
             <Link
               href={`/reviews/${review.id}`}
-              className="block rounded-md border border-gray-200 p-3 hover:border-blue-400 hover:bg-blue-50"
+              className="block px-2 py-3 hover:bg-paper-2"
             >
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-ink">
                 {isHook
                   ? headline(review.purpose) || "（依頼文なし）"
                   : firstLine(review.commitMessage) ||
                     "(コミットメッセージなし)"}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                {formatDate(review.createdAt)}
-                <span className="mx-2">・</span>
+              <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-ink-3">
+                <span>{formatDate(review.createdAt)}</span>
                 {isHook ? (
-                  "Claude Code の作業"
+                  <span>Claude Code の作業</span>
                 ) : (
                   <span className="font-mono">
                     {shortSha(review.commitSha)}
                   </span>
                 )}
               </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {TYPE_LABELS.map(({ type, label, className }) => (
-                  <span
-                    key={type}
-                    className={`rounded px-2 py-0.5 text-xs ${className}`}
-                  >
-                    {label}{" "}
-                    {review.findings.filter((f) => f.type === type).length}
-                  </span>
-                ))}
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                {TYPE_LABELS.map(({ type, label, className }) => {
+                  const count = review.findings.filter(
+                    (f) => f.type === type,
+                  ).length;
+                  return (
+                    <span
+                      key={type}
+                      className={`text-xs ${count > 0 ? className : "text-ink-3"}`}
+                    >
+                      {label} {count}
+                    </span>
+                  );
+                })}
               </div>
             </Link>
           </li>

@@ -12,9 +12,9 @@ type Props = {
 };
 
 const TITLE_STYLE: Record<FindingType, string> = {
-  hidden_problem: "text-xl text-red-700",
-  extra_addition: "text-base text-orange-800",
-  on_purpose: "text-sm text-gray-600",
+  hidden_problem: "text-xl text-ink",
+  extra_addition: "text-lg text-ink",
+  on_purpose: "text-base text-ink-2",
 };
 
 export function FindingSection({
@@ -25,18 +25,19 @@ export function FindingSection({
   onToggleSaved,
 }: Props) {
   return (
-    <section className="space-y-3">
-      <h2 className={`font-bold ${TITLE_STYLE[type]}`}>
+    <section>
+      <h2 className={`rule-head ${TITLE_STYLE[type]}`}>
         {FINDING_TYPE_LABEL[type]}（{findings.length}）
       </h2>
       {findings.length === 0 ? (
-        <p className="text-sm text-gray-500">該当するものはありません。</p>
+        <p className="pt-3 text-sm text-ink-3">該当するものはありません。</p>
       ) : (
-        <div className="space-y-3">
-          {findings.map((f) => (
+        <div className="divide-y divide-hair">
+          {findings.map((f, i) => (
             <FindingCard
               key={f.id}
               finding={f}
+              no={i + 1}
               diffFiles={(diff?.files ?? []).filter((d) =>
                 f.files.includes(d.filename),
               )}

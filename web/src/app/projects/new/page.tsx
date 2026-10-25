@@ -15,7 +15,7 @@ import { listThemes, newId, saveTheme } from "@/lib/storage";
 // S-6 新しいプロジェクト：① リポジトリを選ぶ → ② 研究の目的を書く
 export default function NewProjectPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-gray-500">読み込み中...</p>}>
+    <Suspense fallback={<p className="text-sm text-ink-3">読み込み中...</p>}>
       <NewProject />
     </Suspense>
   );
@@ -47,32 +47,32 @@ function NewProject() {
   };
 
   if (!registered) {
-    return <p className="text-sm text-gray-500">読み込み中...</p>;
+    return <p className="text-sm text-ink-3">読み込み中...</p>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/" className="text-sm text-blue-700 hover:underline">
+        <Link href="/" className="link-quiet text-sm">
           ← プロジェクト一覧
         </Link>
         <h1 className="mt-2 text-xl font-bold">新しいプロジェクト</h1>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-ink-3">
           ステップ {repo ? 2 : 1} / 2
         </p>
       </div>
 
       {repo === null ? (
         <section>
-          <h2 className="text-lg font-bold">GitHub のリポジトリを選ぶ</h2>
+          <h2 className="rule-head text-lg font-bold">GitHub のリポジトリを選ぶ</h2>
           <div className="mt-4">
             <RepoPicker registered={registered} onSelect={setRepo} />
           </div>
         </section>
       ) : (
         <section>
-          <h2 className="text-lg font-bold">研究の目的を書く</h2>
-          <p className="mt-1 text-sm text-gray-600">
+          <h2 className="rule-head text-lg font-bold">研究の目的を書く</h2>
+          <p className="mt-1 text-sm text-ink-2">
             研究の目的（問い・手法・評価）を書いておくと、AI
             の変更が研究にどう影響するかを照らし合わせられます。
           </p>

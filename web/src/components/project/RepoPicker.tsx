@@ -80,13 +80,13 @@ export function RepoPicker({ registered, onSelect }: Props) {
   return (
     <div className="space-y-4">
       {state.kind === "loading" && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-3">
           GitHub からリポジトリを読み込み中...
         </p>
       )}
 
       {state.kind === "error" && (
-        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <p className="border-l-2 border-pen p-3 text-sm text-pen">
           リポジトリの一覧を取得できませんでした：{state.message}
           <br />
           下の欄に owner/name を入力してください。
@@ -94,9 +94,9 @@ export function RepoPicker({ registered, onSelect }: Props) {
       )}
 
       {state.kind === "loaded" && !state.tokenSet && (
-        <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="border-l-2 border-ink bg-marker p-3 text-sm text-ink">
           GitHub のトークンが設定されていないため、一覧を出せません。
-          <Link href="/settings" className="font-medium underline">
+          <Link href="/settings" className="link font-medium">
             設定画面の「接続」
           </Link>
           で入れるとリポジトリを選べるようになります。今は下の欄に owner/name
@@ -111,28 +111,28 @@ export function RepoPicker({ registered, onSelect }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="リポジトリを名前で絞り込む"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="field"
             autoCapitalize="none"
             spellCheck={false}
           />
           {repos.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">
+            <p className="mt-3 text-sm text-ink-3">
               {state.repos.length === 0
                 ? "読めるリポジトリがありません。"
                 : "当てはまるリポジトリがありません。"}
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200">
+            <ul className="mt-3 divide-y divide-hair overflow-hidden border-y border-ink">
               {repos.map((repo) => {
                 const themeId = registeredId(repo.fullName);
                 return (
                   <li key={repo.fullName}>
                     {themeId ? (
-                      <div className="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3 bg-paper-2 px-4 py-3">
                         <RepoLabel repo={repo} />
                         <Link
                           href={`/themes/${themeId}`}
-                          className="shrink-0 text-xs text-blue-700 underline"
+                          className="link shrink-0 text-xs"
                         >
                           登録済み：開く
                         </Link>
@@ -141,10 +141,10 @@ export function RepoPicker({ registered, onSelect }: Props) {
                       <button
                         type="button"
                         onClick={() => onSelect(repo.fullName)}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-blue-50"
+                        className="flex w-full items-center justify-between gap-3 border-l-2 border-transparent px-4 py-3 text-left hover:border-ink hover:bg-paper-2"
                       >
                         <RepoLabel repo={repo} />
-                        <span className="shrink-0 text-xs text-blue-700">
+                        <span className="shrink-0 text-xs font-medium text-ink">
                           選ぶ →
                         </span>
                       </button>
@@ -160,7 +160,7 @@ export function RepoPicker({ registered, onSelect }: Props) {
       {state.kind !== "loading" && (
         <form onSubmit={submitManual} noValidate>
           <label className="block">
-            <span className="text-sm font-medium text-gray-800">
+            <span className="label">
               {listUsable
                 ? "一覧に無いときは直接入力する"
                 : "GitHub リポジトリ"}
@@ -174,20 +174,20 @@ export function RepoPicker({ registered, onSelect }: Props) {
                   setManualError("");
                 }}
                 placeholder="tamaki-lab/my-experiment"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="field font-mono"
                 autoCapitalize="none"
                 spellCheck={false}
               />
               <button
                 type="submit"
-                className="shrink-0 rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="btn shrink-0"
               >
                 次へ
               </button>
             </div>
           </label>
           {manualError && (
-            <p className="mt-1 text-xs text-red-600">{manualError}</p>
+            <p className="mt-1 text-xs text-pen">{manualError}</p>
           )}
         </form>
       )}
@@ -198,23 +198,21 @@ export function RepoPicker({ registered, onSelect }: Props) {
 function RepoLabel({ repo }: { repo: RepoSummary }) {
   return (
     <div className="min-w-0">
-      <p className="break-all font-mono text-sm text-gray-900">
+      <p className="break-all font-mono text-sm text-ink">
         {repo.fullName}
         {repo.private && (
-          <span className="ml-2 inline-block whitespace-nowrap rounded border border-gray-300 px-1.5 py-0.5 font-sans text-[11px] text-gray-600">
+          <span className="tag ml-2 font-sans text-ink-2">
             private
           </span>
         )}
       </p>
-      <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
-        {[
-          repo.language,
-          repo.pushedAt && `最後の push ${formatDate(repo.pushedAt)}`,
-          repo.description,
-        ]
-          .filter(Boolean)
-          .join(" ・ ")}
+      <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-ink-3">
+        {repo.language && <span>{repo.language}</span>}
+        {repo.pushedAt && <span>最後の push {formatDate(repo.pushedAt)}</span>}
       </p>
+      {repo.description && (
+        <p className="mt-0.5 line-clamp-2 text-xs text-ink-3">{repo.description}</p>
+      )}
     </div>
   );
 }

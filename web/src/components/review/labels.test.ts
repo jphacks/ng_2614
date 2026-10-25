@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headline } from "./labels";
+import { circled, headline } from "./labels";
 
 describe("headline", () => {
   it("最初の文（「。」まで）を返す", () => {
@@ -20,5 +20,16 @@ describe("headline", () => {
 
   it("空なら空文字", () => {
     expect(headline("")).toBe("");
+  });
+});
+
+describe("circled", () => {
+  it("1〜20 は丸数字にする", () => {
+    expect(circled(1)).toBe("①");
+    expect(circled(20)).toBe("⑳");
+  });
+
+  it("21 以上は括弧の数字にする", () => {
+    expect(circled(21)).toBe("(21)");
   });
 });

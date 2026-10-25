@@ -29,7 +29,7 @@ export function AddTaskForm({
 
   return (
     <form
-      className="space-y-2 rounded-md border border-gray-200 bg-white p-2"
+      className="space-y-2 border border-ink bg-paper p-2"
       onSubmit={(e) => {
         e.preventDefault();
         if (!canSubmit) return;
@@ -45,31 +45,31 @@ export function AddTaskForm({
         }
       }}
     >
-      <label className="block text-xs text-gray-700">
+      <label className="block text-xs text-ink">
         タイトル
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+          className="field mt-0.5 px-2 py-1"
         />
       </label>
-      <label className="block text-xs text-gray-700">
+      <label className="block text-xs text-ink">
         目的（なくてもよい）
         <textarea
           value={purpose}
           onChange={(e) => setPurpose(e.target.value)}
           rows={2}
-          className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+          className="field mt-0.5 px-2 py-1"
         />
       </label>
       {milestones && milestones.length > 0 && (
-        <label className="block text-xs text-gray-700">
+        <label className="block text-xs text-ink">
           マイルストーン
           <select
             value={milestoneId}
             onChange={(e) => setMilestoneId(e.target.value)}
-            className="mt-0.5 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field mt-0.5 px-2 py-1"
           >
             <option value="">なし</option>
             {milestones.map((m) => (
@@ -84,14 +84,14 @@ export function AddTaskForm({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="btn btn-sm"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50"
+          className="btn btn-sm"
         >
           やめる
         </button>

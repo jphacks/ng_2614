@@ -26,7 +26,7 @@ function Mark({
   return (
     <span
       title={title}
-      className={`inline-block rounded px-1 text-[10px] font-medium leading-4 ${className}`}
+      className={`tag px-1 text-[10px] leading-4 ${className}`}
     >
       {children}
     </span>
@@ -61,23 +61,23 @@ function TaskRow({
 
   return (
     <li
-      className={`rounded border px-1.5 py-1 ${
-        isFocus ? "border-indigo-300 bg-indigo-50 ring-1 ring-indigo-200" : "border-gray-200 bg-white"
+      className={`border bg-paper px-1.5 py-1 ${
+        isFocus ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
       <div className="flex flex-wrap items-center gap-1">
         <span
-          className={`inline-block rounded px-1 text-[10px] font-medium leading-4 ${STATUS_BADGE[status]}`}
+          className={`tag px-1 text-[10px] leading-4 ${STATUS_BADGE[status]}`}
         >
           {statusLabel(summary.phase, status)}
         </span>
         {isFocus && (
-          <Mark className="bg-indigo-100 text-indigo-800">今ここ</Mark>
+          <Mark className="border-accent bg-accent text-paper">今ここ</Mark>
         )}
-        {isChanged && <Mark className="bg-sky-100 text-sky-800">更新</Mark>}
+        {isChanged && <Mark className="text-ink">更新</Mark>}
         {task.flag === "unrecorded" && (
           <Mark
-            className="bg-amber-100 text-amber-800"
+            className="border-ink-3 bg-marker text-ink"
             title="どのドキュメントにも出てこない実装です"
           >
             記録なし
@@ -85,7 +85,7 @@ function TaskRow({
         )}
         {impact && (
           <Mark
-            className="bg-red-100 text-red-700"
+            className="text-pen"
             title={impact.reason ?? "隠れた問題が研究の前提に影響しています"}
           >
             影響あり
@@ -94,7 +94,7 @@ function TaskRow({
       </div>
       <Link
         href={href}
-        className="mt-0.5 block text-[11px] font-medium leading-snug text-gray-900 hover:underline"
+        className="mt-0.5 block text-[11px] font-medium leading-snug text-ink hover:underline"
       >
         {task.title}
       </Link>
@@ -105,12 +105,12 @@ function TaskRow({
             onClick={onToggleSub}
             aria-expanded={subOpen}
             aria-controls={subId}
-            className="mt-0.5 text-[11px] leading-snug text-gray-600 hover:text-gray-900 hover:underline"
+            className="mt-0.5 text-[11px] leading-snug text-ink-2 hover:text-ink hover:underline"
           >
             {subOpen ? "▾" : "▸"} サブタスク {subtasks.length}
           </button>
           {subOpen && (
-            <ul id={subId} className="mt-0.5 space-y-0.5 border-l border-gray-200 pl-2">
+            <ul id={subId} className="mt-0.5 space-y-0.5 border-l border-hair pl-2">
               {subtasks.map((s) => {
                 const icon = STATUS_ICON[s.status];
                 return (
@@ -127,8 +127,8 @@ function TaskRow({
                     <span
                       className={
                         s.status === "rejected"
-                          ? "text-gray-400 line-through"
-                          : "text-gray-700"
+                          ? "text-ink-3 line-through"
+                          : "text-ink-2"
                       }
                     >
                       {s.title}
@@ -167,25 +167,25 @@ export function StripLane({
   return (
     <section
       aria-label={`レーン：${summary.phase.name}`}
-      className={`min-w-0 rounded-md p-1 ${
-        isCurrentPhase ? "bg-indigo-50 ring-1 ring-indigo-300" : "bg-gray-50"
+      className={`min-w-0 border bg-paper p-1 ${
+        isCurrentPhase ? "border-accent ring-1 ring-accent" : "border-hair"
       }`}
     >
-      <h3 className="mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[11px] font-semibold text-gray-800">
+      <h3 className="rule-head mb-1 flex items-baseline justify-between gap-1 px-0.5 text-[11px] font-semibold text-ink">
         <span className="truncate">
           {summary.phase.name}
           {isCurrentPhase && (
-            <span className="ml-1 rounded bg-indigo-600 px-1 text-[10px] font-semibold text-white">
+            <span className="ml-1 bg-accent px-1 text-[10px] font-semibold text-paper">
               今の段階
             </span>
           )}
         </span>
-        <span className="shrink-0 font-normal text-gray-500">
+        <span className="shrink-0 font-normal text-ink-3">
           {summary.counts.done}/{summary.total}
         </span>
       </h3>
       {tasks.length === 0 ? (
-        <p className="px-0.5 text-[11px] text-gray-400">タスクなし</p>
+        <p className="px-0.5 text-[11px] text-ink-3">タスクなし</p>
       ) : (
         <ul className="space-y-1">
           {tasks.map((t) => (

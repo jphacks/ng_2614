@@ -22,16 +22,16 @@ export function PhaseSteps({
         return (
           <li key={phase.id} className="flex items-center gap-0.5">
             {i > 0 && (
-              <span aria-hidden="true" className="text-gray-400">
+              <span aria-hidden="true" className="text-ink-3">
                 ›
               </span>
             )}
             <span
               aria-current={current ? "step" : undefined}
-              className={`rounded-full ${text} ${
+              className={`border ${text} ${
                 current
-                  ? "bg-indigo-600 font-semibold text-white"
-                  : "bg-white text-gray-600 ring-1 ring-gray-200"
+                  ? "border-accent bg-accent font-semibold text-paper"
+                  : "border-hair bg-paper text-ink-2"
               }`}
             >
               {phase.name}

@@ -61,22 +61,22 @@ export function ConnectionsSection() {
 
   return (
     <section>
-      <h2 className="text-lg font-bold">接続</h2>
-      <p className="mt-1 text-sm text-gray-600">
+      <h2 className="rule-head text-lg font-bold">接続</h2>
+      <p className="mt-2 text-sm text-ink-2">
         キーはこのアプリのサーバーが手元のファイル
         {data && (
-          <code className="mx-1 rounded bg-gray-100 px-1 text-xs">
+          <code className="mx-1 bg-paper-2 px-1 font-mono text-xs">
             {data.configPath}
           </code>
         )}
         に、本人だけが読める形で保存します。ブラウザには残さず、画面に値は出しません（末尾4文字だけ）。
       </p>
       {loadError && (
-        <p className="mt-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+        <p className="mt-3 border-l-2 border-pen p-3 text-sm text-pen">
           {loadError}
         </p>
       )}
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 divide-y divide-hair border-y border-hair">
         {SPECS.map((spec) => (
           <ConnectionCard
             key={spec.name}
@@ -151,10 +151,10 @@ function ConnectionCard({
   const showForm = editing || status?.source === null;
 
   return (
-    <div className="rounded-xl border border-gray-200 p-4">
+    <div className="py-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <p className="font-medium text-gray-900">{spec.label}</p>
+          <p className="font-medium text-ink">{spec.label}</p>
           <StatusBadge status={status} />
         </div>
         {status && status.source !== null && !editing && (
@@ -163,14 +163,14 @@ function ConnectionCard({
               type="button"
               onClick={test}
               disabled={busy !== null}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+              className="btn btn-sm disabled:opacity-50"
             >
               {busy === "test" ? "確かめています…" : "接続を確かめる"}
             </button>
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="text-blue-700 hover:underline"
+              className="link"
             >
               {status.source === "app" ? "入れ直す" : "画面で入れる"}
             </button>
@@ -179,7 +179,7 @@ function ConnectionCard({
                 type="button"
                 onClick={remove}
                 disabled={busy !== null}
-                className="text-red-600 hover:underline disabled:opacity-50"
+                className="text-pen underline decoration-pen/40 underline-offset-4 hover:decoration-pen disabled:opacity-50"
               >
                 削除
               </button>
@@ -187,7 +187,7 @@ function ConnectionCard({
           </div>
         )}
       </div>
-      {spec.usedFor && <p className="mt-1 text-xs text-gray-500">{spec.usedFor}</p>}
+      {spec.usedFor && <p className="mt-1 text-xs text-ink-3">{spec.usedFor}</p>}
 
       {showForm && (
         <form
@@ -206,12 +206,12 @@ function ConnectionCard({
               autoComplete="off"
               spellCheck={false}
               aria-label={spec.label}
-              className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+              className="field w-auto min-w-0 flex-1 font-mono"
             />
             <button
               type="submit"
               disabled={!value.trim() || busy !== null}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="btn"
             >
               {busy === "save" ? "保存しています…" : "保存して確かめる"}
             </button>
@@ -222,18 +222,18 @@ function ConnectionCard({
                   setEditing(false);
                   setValue("");
                 }}
-                className="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100"
+                className="link-quiet px-3 py-2 text-sm"
               >
                 やめる
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-3">
             <a
               href={spec.issueUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-blue-700 hover:underline"
+              className="link"
             >
               {spec.issueLabel} ↗
             </a>
@@ -245,8 +245,8 @@ function ConnectionCard({
       {note && (
         <p
           role="status"
-          className={`mt-3 rounded-md px-3 py-2 text-sm ${
-            note.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+          className={`mt-3 border-l-2 px-3 py-2 text-sm ${
+            note.ok ? "border-ink text-ink" : "border-pen text-pen"
           }`}
         >
           {note.ok ? "✓ " : "✕ "}
@@ -259,19 +259,19 @@ function ConnectionCard({
 
 function StatusBadge({ status }: { status: ConnectionStatus | undefined }) {
   if (!status) {
-    return <span className="text-xs text-gray-400">読み込み中…</span>;
+    return <span className="text-xs text-ink-3">読み込み中…</span>;
   }
   const [text, cls] =
     status.source === "app"
       ? [
           status.last4 ? `設定済み（…${status.last4}）` : "設定済み",
-          "bg-green-50 text-green-800",
+          "text-ink",
         ]
       : status.source === "env"
-        ? [".env.local の値を使用中", "bg-blue-50 text-blue-800"]
-        : ["未設定", "bg-amber-50 text-amber-900"];
+        ? [".env.local の値を使用中", "text-ink-2"]
+        : ["未設定", "bg-marker text-ink"]; // 未設定は注意なので蛍光ペン
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>
+    <span className={`tag ${cls}`}>
       {text}
     </span>
   );

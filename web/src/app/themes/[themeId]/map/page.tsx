@@ -146,15 +146,15 @@ export default function WorkflowMapPage() {
   }, [selectedId]);
 
   if (state.status === "loading") {
-    return <p className="text-sm text-gray-500">読み込み中...</p>;
+    return <p className="text-sm text-ink-3">読み込み中...</p>;
   }
   if (state.status === "notFound") {
     return (
       <div>
-        <p className="text-gray-700">プロジェクトが見つかりません。</p>
+        <p className="text-ink-2">プロジェクトが見つかりません。</p>
         <Link
           href="/"
-          className="mt-2 inline-block text-blue-700 hover:underline"
+          className="link mt-2 inline-block"
         >
           プロジェクト一覧へ戻る
         </Link>
@@ -330,39 +330,39 @@ export default function WorkflowMapPage() {
       <div>
         <Link
           href={`/themes/${theme.id}`}
-          className="text-sm text-blue-700 hover:underline"
+          className="link-quiet text-sm"
         >
           ← プロジェクト
         </Link>
         <h1 className="mt-2 text-xl font-bold">作業フローマップ</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          <span className="font-medium text-gray-700">研究の問い：</span>
+        <p className="mt-1 text-sm text-ink-2">
+          <span className="font-medium text-ink">研究の問い：</span>
           {theme.question}
         </p>
         {map && (
-          <p className="mt-1 text-sm text-amber-800">
+          <p className="marker mt-1 w-fit text-sm">
             AI作成・未確認 {unconfirmedCount(map)}件
           </p>
         )}
       </div>
 
       {!map ? (
-        <section className="space-y-3 rounded-md border border-gray-200 p-4">
-          <p className="text-sm text-gray-700">まだマップがありません。</p>
+        <section className="space-y-3 border-y border-hair py-4">
+          <p className="text-sm text-ink">まだマップがありません。</p>
           {demo ? (
             <>
               <button
                 type="button"
                 disabled={generating}
                 onClick={() => void generate({})}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="btn-primary"
               >
                 {generating ? "マップを作っています…" : "マップを作る"}
               </button>
             </>
           ) : (
             <>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-2">
                 マップの元にする research-workspace を入力してください。
               </p>
               <WorkspaceForm
@@ -374,12 +374,12 @@ export default function WorkflowMapPage() {
             </>
           )}
           {generating && (
-            <p role="status" className="text-sm text-gray-500">
+            <p role="status" className="text-sm text-ink-3">
               {demo ? "マップを作っています…" : "ワークスペースを読んでいます…"}
             </p>
           )}
           {generateError && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-pen">
               {generateError}
             </p>
           )}
@@ -389,7 +389,7 @@ export default function WorkflowMapPage() {
           {actionError && (
             <p
               role="alert"
-              className="rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700"
+              className="border-l-2 border-pen py-1 pl-2 text-sm text-pen"
             >
               {actionError}
             </p>
@@ -405,7 +405,7 @@ export default function WorkflowMapPage() {
                   type="button"
                   disabled={refreshing || generating || !hasWorkspace}
                   onClick={() => void handleRefresh()}
-                  className="rounded-md border border-blue-600 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn py-1.5"
                 >
                   {refreshing
                     ? "ワークスペースを読んでいます…"
@@ -413,23 +413,23 @@ export default function WorkflowMapPage() {
                 </button>
               )}
               {!demo && !hasWorkspace && (
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-ink-2">
                   ワークスペースが未設定です。下の「ワークスペースの設定」で入力してください。
                 </span>
               )}
             </div>
             {refreshing && (
-              <p role="status" className="text-xs text-gray-500">
+              <p role="status" className="text-xs text-ink-3">
                 変わったファイルを AI（Claude）に送って、マップへの変更を考えています…
               </p>
             )}
             {refreshResult && (
-              <p role="status" className="text-sm text-blue-900">
+              <p role="status" className="text-sm text-ink">
                 {refreshResult}
               </p>
             )}
             {refreshError && (
-              <p role="alert" className="text-sm text-red-700">
+              <p role="alert" className="text-sm text-pen">
                 {refreshError}
               </p>
             )}
@@ -453,7 +453,7 @@ export default function WorkflowMapPage() {
                   }
                 />
                 {!selected && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-ink-3">
                     カードやサブタスクを選ぶと、目的のつながりや出典などの詳細が見られます。
                   </p>
                 )}
@@ -507,28 +507,28 @@ export default function WorkflowMapPage() {
             />
             <section
               aria-labelledby="map-workspace-heading"
-              className="space-y-3 rounded-md border border-gray-200 p-3"
+              className="space-y-3 border-t border-hair pt-3"
             >
               <h2
                 id="map-workspace-heading"
-                className="text-sm font-semibold text-gray-800"
+                className="rule-head text-sm font-semibold text-ink"
               >
                 ワークスペース
               </h2>
               {demo ? (
-                <p className="text-sm text-gray-600">デモ用のデータを使います。</p>
+                <p className="text-sm text-ink-2">デモ用のデータを使います。</p>
               ) : hasWorkspace ? (
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-ink">
                   <code className="font-mono">{map.workspaceRepo}</code> の{" "}
                   <code className="font-mono">{map.workspaceProject}</code>
                 </p>
               ) : (
-                <p className="text-sm text-amber-800">
+                <p className="marker text-sm">
                   ワークスペースが未設定です。下の設定で入力すると、「ワークスペースから更新」と「マップを作り直す」が使えます。
                 </p>
               )}
               {settingsSaved && !settingsOpen && (
-                <p role="status" className="text-sm text-green-700">
+                <p role="status" className="text-sm text-ink">
                   ワークスペースの設定を保存しました。
                 </p>
               )}
@@ -542,7 +542,7 @@ export default function WorkflowMapPage() {
                       setSettingsOpen((v) => !v);
                       setSettingsSaved(false);
                     }}
-                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                    className="btn py-1.5"
                   >
                     {settingsOpen
                       ? "ワークスペースの設定を閉じる"
@@ -562,7 +562,7 @@ export default function WorkflowMapPage() {
                   </div>
                 </div>
               )}
-              <div className="space-y-2 border-t border-gray-100 pt-3">
+              <div className="space-y-2 border-t border-hair pt-3">
                 {!settingsOpen && !demo && <WorkspaceSendNotice />}
                 <div>
                   <button
@@ -571,7 +571,7 @@ export default function WorkflowMapPage() {
                       generating || refreshing || (!demo && !hasWorkspace)
                     }
                     onClick={handleRegenerate}
-                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn py-1.5"
                   >
                     {generating
                       ? demo
@@ -581,7 +581,7 @@ export default function WorkflowMapPage() {
                   </button>
                 </div>
                 {generateError && (
-                  <p role="alert" className="text-sm text-red-700">
+                  <p role="alert" className="text-sm text-pen">
                     {generateError}
                   </p>
                 )}

@@ -172,14 +172,14 @@ export default function TeacherPage() {
   }
 
   if (theme === undefined) {
-    return <p className="text-gray-500">読み込み中…</p>;
+    return <p className="text-ink-3">読み込み中…</p>;
   }
 
   if (theme === null) {
     return (
       <div>
         <p>プロジェクトが見つかりません。</p>
-        <Link href="/" className="mt-2 inline-block text-blue-700 underline">
+        <Link href="/" className="link mt-2 inline-block">
           プロジェクト一覧へ戻る
         </Link>
       </div>
@@ -195,19 +195,19 @@ export default function TeacherPage() {
     <div>
       <Link
         href={`/themes/${themeId}`}
-        className="text-sm text-blue-700 underline"
+        className="link-quiet text-sm"
       >
         ← {theme.name} に戻る
       </Link>
       <h1 className="mt-2 text-2xl font-bold">先生モード</h1>
-      <p className="mt-2 text-xs text-gray-600">
+      <p className="mt-2 text-xs text-ink-3">
         研究の目的・保存した問題・あなたの回答は AI（Claude）に送られます。
       </p>
 
       {error && (
         <p
           role="alert"
-          className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="mt-4 border-l-2 border-pen pl-3 text-sm text-pen"
         >
           {error}
         </p>
@@ -215,7 +215,7 @@ export default function TeacherPage() {
 
       {(phase === "idle" || phase === "loadingQuestions") && (
         <section className="mt-6">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-ink-2">
             保存した問題：{problems.length} 件
             {problems.length === 0 &&
               "（無くても、研究の目的についての質問ができます）"}
@@ -224,7 +224,7 @@ export default function TeacherPage() {
             type="button"
             onClick={start}
             disabled={phase === "loadingQuestions"}
-            className="mt-3 rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800 disabled:opacity-50"
+            className="btn-primary mt-3"
           >
             {phase === "loadingQuestions"
               ? "先生が質問を考えています…"
@@ -236,17 +236,18 @@ export default function TeacherPage() {
       )}
 
       {phase === "answering" && current && (
-        <section className="mt-6 rounded border border-gray-200 p-4">
+        <section className="mt-6 border-t border-ink pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-ink-2">
               質問 {index + 1} / {questions.length}
             </span>
             <LayerBadge layer={current.layer} />
             {result === null && (
-              <span className="text-xs text-gray-500">
-                言えた観点 {covered.length} / {current.viewpoints.length}
-                {" ・ "}
-                あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます
+              <span className="flex gap-x-3 text-xs text-ink-3">
+                <span>
+                  言えた観点 {covered.length} / {current.viewpoints.length}
+                </span>
+                <span>あと {MAX_STUDENT_TURNS - answeredCount} 回答えられます</span>
               </span>
             )}
           </div>
@@ -266,14 +267,14 @@ export default function TeacherPage() {
                 disabled={submitting}
                 rows={4}
                 placeholder="あなたの回答（分からないときは「分かりません」ボタン）"
-                className="w-full rounded border border-gray-300 p-2 text-sm disabled:bg-gray-50"
+                className="field"
               />
               <div className="mt-2 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => submitAnswer()}
                   disabled={submitting || answer.trim() === ""}
-                  className="rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800 disabled:opacity-50"
+                  className="btn-primary"
                 >
                   {submitting ? "先生が考えています…" : "答える"}
                 </button>
@@ -281,7 +282,7 @@ export default function TeacherPage() {
                   type="button"
                   onClick={() => submitAnswer("分かりません")}
                   disabled={submitting}
-                  className="rounded border border-gray-400 px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="btn"
                 >
                   分かりません
                 </button>
@@ -289,31 +290,25 @@ export default function TeacherPage() {
             </div>
           ) : (
             <div className="mt-4">
-              <div
-                className={`rounded border p-3 ${
-                  result.understood
-                    ? "border-green-200 bg-green-50"
-                    : "border-amber-200 bg-amber-50"
-                }`}
-              >
-                <p
-                  className={`text-sm font-bold ${
-                    result.understood ? "text-green-800" : "text-amber-800"
-                  }`}
-                >
+              {/* 講評は先生の赤ペンの書き込み。左の余白に赤ペンの縦線を引く */}
+              <div className="border-l-2 border-pen pl-4">
+                <p className="pen-note text-base font-bold">
+                  <span aria-hidden="true" className="mr-1">
+                    {result.understood ? "◎" : "△"}
+                  </span>
                   講評：{result.understood ? "理解できた" : "まだ理解できていない"}
                 </p>
-                <p className="mt-2 text-sm whitespace-pre-wrap">
+                <p className="pen-note mt-2 text-[15px] leading-relaxed whitespace-pre-wrap">
                   {result.feedback}
                 </p>
-                <div className="mt-3 border-t border-black/10 pt-3">
+                <div className="mt-3 border-t border-hair pt-3">
                   <ViewpointList viewpoints={current.viewpoints} covered={covered} />
                 </div>
               </div>
               <button
                 type="button"
                 onClick={next}
-                className="mt-3 rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800"
+                className="btn-primary mt-3"
               >
                 {index + 1 >= questions.length ? "結果を見る" : "次の質問へ"}
               </button>
@@ -323,7 +318,7 @@ export default function TeacherPage() {
       )}
 
       {phase === "done" && (
-        <section className="mt-6 rounded border border-gray-200 p-4">
+        <section className="mt-6 border-t border-ink pt-4">
           <h2 className="font-bold">おつかれさまでした</h2>
           <p className="mt-2 text-sm">
             {items.length} 問中 {understoodCount} 問を理解できていました。
@@ -338,13 +333,13 @@ export default function TeacherPage() {
                 setQuestions([]);
                 setItems([]);
               }}
-              className="rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800"
+              className="btn-primary"
             >
               もう一度質問してもらう
             </button>
             <Link
               href={`/themes/${themeId}`}
-              className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
+              className="btn"
             >
               テーマの詳細へ戻る
             </Link>
